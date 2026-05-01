@@ -1,0 +1,34 @@
+{
+  "expo": {
+    "name": "Eos",
+    "slug": "eos",
+    "scheme": "eos",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.eos.skincare"
+    },
+    "android": {
+      "package": "com.eos.skincare",
+      "adaptiveIcon": {
+        "backgroundColor": "#F7F5F0"
+      }
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      [
+        "expo-notifications",
+        {
+          "defaultChannel": "eos-reminders"
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
