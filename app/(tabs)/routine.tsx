@@ -5,109 +5,134 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { RoutineStepCard } from '@/components/RoutineStepCard';
 import { colors } from '@/constants/colors';
 import { useRoutine } from '@/hooks/useRoutine';
+import type { RoutineStep, StepStatus } from '@/types/routine';
 import { Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
 
 export default function RoutineScreen() {
-  const { routine } = useRoutine();
+  const { routine, setRoutine } = useRoutine();
   const router = useRouter();
 
   if (!routine) {
     return <SafeAreaView style={styles.screen} />;
   }
 
+  const toggleStep = (id: string) => {
+const updatedSteps: RoutineStep[] = routine.steps.map(step =>
+    step.id === id
+      ? {
+          ...step,
+          status: (step.status === 'completed' ? 'pending' : 'completed') as StepStatus
+        }
+        : step
+    );
+
+    setRoutine({
+      ...routine,
+      steps: updatedSteps
+    });
+  };
+
   const currentIndex = routine.steps.findIndex(s => s.status !== 'completed');
 
   return (
-    <SafeAreaView style={styles.screen}>
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <View style={styles.header}>
-          <Text style={styles.title}>Rutina</Text>
-          <Ionicons name="notifications-outline" size={20} color={colors.textSecondary} />
+  <SafeAreaView style={styles.screen}>
+    <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+
+      <View style={styles.header}>
+        <Text style={styles.title}>Rutina</Text>
+        <Ionicons name="notifications-outline" size={20} color={colors.textSecondary} />
+      </View>
+
+      <Text style={styles.subtitle}>
+        Cuidar tu piel cada día hace la diferencia
+      </Text>
+
+      <View style={styles.selector}>
+        <View style={styles.selectorItemActive}>
+          <Text style={styles.selectorTextActive}>🌤 Rutina matutina</Text>
+        </View>
+        <View style={styles.selectorItem}>
+          <Text style={styles.selectorText}>🌙 Rutina nocturna</Text>
+        </View>
+      </View>
+
+      <View style={styles.todayCard}>
+        <View style={styles.todayHeader}>
+          <Text style={styles.todayTitle}>Rutina de hoy</Text>
+
+          <Pressable
+            onPress={() => router.push('/routine/routine-edit')}
+            accessibilityLabel="Editar rutina"
+            accessibilityRole="button"
+            hitSlop={10}
+          >
+            <MaterialCommunityIcons
+              name="pencil-outline"
+              size={24}
+              color={colors.textSecondary}
+            />
+          </Pressable>
         </View>
 
-        <Text style={styles.subtitle}>
-          Cuidar tu piel cada día hace la diferencia
-        </Text>
+        <View style={styles.timeline}>
+          {routine.steps.map((step, index) => {
+            const isDone = index < currentIndex;
+            const isCurrent = index === currentIndex;
+            const isPending = index > currentIndex;
 
-        <View style={styles.selector}>
-          <View style={styles.selectorItemActive}>
-            <Text style={styles.selectorTextActive}>🌤 Rutina matutina</Text>
-          </View>
-          <View style={styles.selectorItem}>
-            <Text style={styles.selectorText}>🌙 Rutina nocturna</Text>
-          </View>
-        </View>
-
-        <View style={styles.todayCard}>
-          <View style={styles.todayHeader}>
-            <Text style={styles.todayTitle}>Rutina de hoy</Text>
-            <Pressable
-              onPress={() => router.push('/routine/edit')}
-              accessibilityLabel="Editar rutina"
-              accessibilityRole="button"
-              hitSlop={10}
-            >
-              <MaterialCommunityIcons
-                name="pencil-outline"
-                size={24}
-                color={colors.textSecondary}
-              />
-            </Pressable>
-          </View>
-
-          <View style={styles.timeline}>
-            {routine.steps.map((step, index) => {
-              const isDone = index < currentIndex;
-              const isCurrent = index === currentIndex;
-              const isPending = index > currentIndex;
-
-              return (
-                <View key={step.id} style={styles.col}>
-                  <View style={styles.row}>
-                    <View
+            return (
+              <View key={step.id} style={styles.col}>
+                <View style={styles.row}>
+                  <View
+                    style={[
+                      styles.circle,
+                      isDone && styles.done,
+                      isCurrent && styles.current,
+                      isPending && styles.pending
+                    ]}
+                  >
+                    <Text
                       style={[
-                        styles.circle,
-                        isDone && styles.done,
-                        isCurrent && styles.current,
-                        isPending && styles.pending
+                        isDone && styles.textDone,
+                        isCurrent && styles.textCurrent,
+                        isPending && styles.textPending
                       ]}
                     >
-                      <Text
-                        style={[
-                          isDone && styles.textDone,
-                          isCurrent && styles.textCurrent,
-                          isPending && styles.textPending
-                        ]}
-                      >
-                        {isDone ? '✓' : index + 1}
-                      </Text>
-                    </View>
-
-                    {index < routine.steps.length - 1 && (
-                      <View style={styles.line} />
-                    )}
+                      {isDone ? '✓' : index + 1}
+                    </Text>
                   </View>
 
-                  <Text style={styles.label} numberOfLines={1}>
-                    {step.title}
-                  </Text>
+                  {index < routine.steps.length - 1 && (
+                    <View style={styles.line} />
+                  )}
                 </View>
-              );
-            })}
-          </View>
-        </View>
 
-        <Text style={styles.sectionTitle}>Pasos de tu rutina</Text>
-
-        <View style={styles.steps}>
-          {routine.steps.map((step, index) => (
-            <RoutineStepCard key={step.id} step={step} index={index} />
-          ))}
+                <Text style={styles.label} numberOfLines={1}>
+                  {step.title}
+                </Text>
+              </View>
+            );
+          })}
         </View>
-      </ScrollView>
-    </SafeAreaView>
-  );
+      </View>
+
+      <Text style={styles.sectionTitle}>Pasos de tu rutina</Text>
+
+      <View style={styles.steps}>
+        {routine.steps.map((step, index) => (
+          <RoutineStepCard
+            key={step.id}
+            step={step}
+            index={index}
+            onToggle={toggleStep}
+          />
+        ))}
+      </View>
+
+    </ScrollView>
+  </SafeAreaView>
+);
 }
 
 const styles = StyleSheet.create({
@@ -175,10 +200,6 @@ const styles = StyleSheet.create({
   todayTitle: {
     fontWeight: '700',
     color: colors.textPrimary
-  },
-  editBtn: {
-    fontSize: 13,
-    color: colors.textSecondary
   },
 
   timeline: {

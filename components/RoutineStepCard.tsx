@@ -1,5 +1,5 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View, Pressable } from 'react-native';
 import { colors } from '@/constants/colors';
 import type { RoutineStep } from '@/types/routine';
 import { Card } from './Card';
@@ -7,7 +7,9 @@ import { Card } from './Card';
 type RoutineStepCardProps = {
   step: RoutineStep;
   index: number;
+  onToggle: (id: string) => void;
 };
+
 const getIcon = (title: string) => {
   const t = title.toLowerCase();
 
@@ -19,22 +21,23 @@ const getIcon = (title: string) => {
   return 'bottle-tonic-outline';
 };
 
-export function RoutineStepCard({ step, index }: RoutineStepCardProps) {
+export function RoutineStepCard({ step, index, onToggle }: RoutineStepCardProps) {
   const completed = step.status === 'completed';
 
   return (
     <Card style={styles.card}>
 
-      {/* Check */}
-      <View style={[styles.check, completed ? styles.checkDone : styles.checkPending]}>
+      <Pressable
+        onPress={() => onToggle(step.id)}
+        style={[styles.check, completed ? styles.checkDone : styles.checkPending]}
+      >
         <MaterialCommunityIcons
           name={completed ? 'check' : 'circle-outline'}
           size={18}
           color={completed ? colors.surface : colors.textSecondary}
         />
-      </View>
+      </Pressable>
 
-      {/* Icon */}
       <View style={styles.icon}>
         <MaterialCommunityIcons
           name={getIcon(step.title)}
@@ -43,7 +46,6 @@ export function RoutineStepCard({ step, index }: RoutineStepCardProps) {
         />
       </View>
 
-      {/* Content */}
       <View style={styles.content}>
         <Text style={styles.title}>
           {index + 1}. {step.title}
@@ -56,11 +58,10 @@ export function RoutineStepCard({ step, index }: RoutineStepCardProps) {
         ))}
 
         <Text style={completed ? styles.badgeDone : styles.badgePending}>
-          {completed ? 'completado' : 'Pendiente'}
+          {completed ? 'Completado' : 'Pendiente'}
         </Text>
       </View>
 
-      {/* Menu */}
       <MaterialCommunityIcons
         name="dots-vertical"
         size={24}
@@ -80,6 +81,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     backgroundColor: colors.surface
   },
+
   check: {
     width: 28,
     height: 28,
@@ -88,14 +90,17 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginTop: 2
   },
+
   checkDone: {
-    backgroundColor: colors.primaryDark,
+    backgroundColor: colors.primaryDark
   },
+
   checkPending: {
     backgroundColor: colors.surfaceSoft,
     borderWidth: 1,
     borderColor: colors.border
   },
+
   icon: {
     width: 40,
     height: 40,
@@ -104,19 +109,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center'
   },
+
   content: {
     flex: 1,
     gap: 4
   },
+
   title: {
     color: colors.textPrimary,
     fontSize: 15,
     fontWeight: '700'
   },
+
   product: {
     color: colors.textSecondary,
     fontSize: 13
   },
+
   badgeDone: {
     marginTop: 4,
     alignSelf: 'flex-start',
@@ -128,6 +137,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600'
   },
+
   badgePending: {
     marginTop: 4,
     alignSelf: 'flex-start',
