@@ -1,6 +1,10 @@
 import { Router } from 'express';
-import { productsHealth } from './products.controller';
+import { createProduct, deleteProduct, getProductById, getProducts, updateProduct } from './products.controller';
 
 export const productsRouter = Router();
 
-productsRouter.get('/health', productsHealth);
+productsRouter.get('/', getProducts);
+productsRouter.get('/:id', getProductById);
+productsRouter.post('/', createProduct);
+productsRouter.patch('/:id', updateProduct);
+productsRouter.delete('/:id', deleteProduct);

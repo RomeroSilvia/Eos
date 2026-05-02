@@ -1,11 +1,12 @@
-import type { Request, Response } from 'express';
+import type { Request, Response, RequestHandler } from 'express';
 import { asyncHandler } from '../../utils/asyncHandler';
 import { productsService } from './products.service';
+
+const getProductsHealth = () => ({ status: 'ok' });
 
 export const productsHealth: RequestHandler = (_req, res) => {
   res.json(getProductsHealth());
 };
-
 
 // TODO: reemplazar cuando esté auth implementada
 const TEMP_USER_ID = 'temp-user-id';
