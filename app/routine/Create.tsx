@@ -2,6 +2,7 @@ import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors } from '@/constants/colors';
 import { useRouter } from 'expo-router';
+import { RoutineIllustration } from '@/components/icons/RoutineIllustration';
 
 export default function CreateRoutineScreen() {
   const router = useRouter();
@@ -27,7 +28,9 @@ export default function CreateRoutineScreen() {
           Cuidar tu piel cada día hace la diferencia
         </Text>
 
-        <View style={styles.illustration} />
+        <View style={styles.illustration}>
+          <RoutineIllustration />
+        </View>
 
         <Text style={styles.heading}>Crea tu rutina</Text>
         <Text style={styles.description}>
