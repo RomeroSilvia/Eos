@@ -8,7 +8,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 const goals = [
     { id: 1, label: 'Hidratación', icon: 'water-outline' },
-    { id: 2, label: 'Piel más luminosa', icon: 'sparkles' },
+    { id: 2, label: 'Piel más luminosa', icon: 'shimmer' },
     { id: 3, label: 'Control de acne', icon: 'target' },
     { id: 4, label: 'Calmar y reducir rojeces', icon: 'leaf' },
     { id: 5, label: 'Anti-edad', icon: 'emoticon-happy-outline' }
