@@ -3,6 +3,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors } from '@/constants/colors';
 import { useRouter } from 'expo-router';
 import { RoutineIllustration } from '@/components/icons/RoutineIllustration';
+import { Stepper } from '@/components/Stepper';
 
 export default function CreateRoutineScreen() {
   const router = useRouter();
@@ -13,16 +14,7 @@ export default function CreateRoutineScreen() {
 
         <Text style={styles.title}>Nueva Rutina</Text>
 
-        <View style={styles.stepper}>
-          {[1, 2, 3, 4].map((step) => (
-            <View key={step} style={styles.step}>
-              <View style={[styles.circle, step === 1 && styles.circleActive]}>
-                <Text style={styles.stepText}>{step}</Text>
-              </View>
-              {step < 4 && <View style={styles.line} />}
-            </View>
-          ))}
-        </View>
+        <Stepper current={1} />
 
         <Text style={styles.subtitle}>
           Cuidar tu piel cada día hace la diferencia
@@ -39,7 +31,7 @@ export default function CreateRoutineScreen() {
 
         <Pressable
           style={styles.button}
-          onPress={() => router.push('/routine/Create')}
+          onPress={() => router.push('/routine/Step2')}
         >
           <Text style={styles.buttonText}>Comenzar</Text>
         </Pressable>
