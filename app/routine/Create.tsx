@@ -36,7 +36,7 @@ export default function CreateRoutineScreen() {
 
         <Pressable
           style={styles.button}
-          onPress={() => router.push('/routine/create/step2')}
+          onPress={() => router.push('/routine/Create')}
         >
           <Text style={styles.buttonText}>Comenzar</Text>
         </Pressable>
@@ -83,7 +83,7 @@ const styles = StyleSheet.create({
   circleActive: {
     borderWidth: 2,
     borderColor: colors.secondary,
-    backgroundColor: colors.surface
+    backgroundColor: colors.primaryLight
   },
   stepText: {
     fontSize: 12
@@ -104,8 +104,10 @@ const styles = StyleSheet.create({
     width: 150,
     height: 150,
     borderRadius: 75,
-    backgroundColor: colors.surfaceSoft,
-    marginTop: 30
+    backgroundColor: colors.primaryLight,
+    marginTop: 30,
+    alignItems: 'center',
+    justifyContent: 'center'
   },
 
   heading: {
