@@ -6,12 +6,20 @@ import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
-const goals = [
-    { id: 1, label: 'Hidratación', icon: 'water-outline' },
-    { id: 2, label: 'Piel más luminosa', icon: 'shimmer' },
-    { id: 3, label: 'Control de acne', icon: 'target' },
-    { id: 4, label: 'Calmar y reducir rojeces', icon: 'leaf' },
-    { id: 5, label: 'Anti-edad', icon: 'emoticon-happy-outline' }
+type IconName = keyof typeof MaterialCommunityIcons.glyphMap;
+
+type Goal = {
+  id: number;
+  label: string;
+  icon: IconName;
+};
+
+const goals: Goal[] = [
+  { id: 1, label: 'Hidratación', icon: 'water-outline' },
+  { id: 2, label: 'Piel más luminosa', icon: 'white-balance-sunny' },
+  { id: 3, label: 'Control de acne', icon: 'target' },
+  { id: 4, label: 'Calmar y reducir rojeces', icon: 'leaf' },
+  { id: 5, label: 'Anti-edad', icon: 'emoticon-happy-outline' }
 ];
 
 export default function Step2() {

@@ -1,0 +1,164 @@
+import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { colors } from '@/constants/colors';
+import { Stepper } from '@/components/Stepper';
+import { RoutineSectionCard } from '@/components/RoutineSectionCard';
+import { useRouter } from 'expo-router';
+import { useState } from 'react';
+
+export default function Step4() {
+  const router = useRouter();
+
+  const [sections, setSections] = useState({
+    limpieza: [
+      {
+        id: '1',
+        nombre: 'Primer paso',
+        producto: 'Aceite de limpieza Skin1004'
+      },
+      {
+        id: '2',
+        nombre: 'Segundo paso',
+        producto: 'Gel de limpieza Cerave'
+      }
+    ],
+    tratamientos: [],
+    hidratacion: [],
+    proteccion: [],
+    complementario: []
+  });
+
+  const goToAddStep = (section: string) => {
+    router.push({
+      pathname: '/routine/Add-step',
+      params: { section }
+    });
+  };
+
+  return (
+    <SafeAreaView style={styles.screen}>
+      <View style={styles.container}>
+        <Text style={styles.title}>Nueva Rutina</Text>
+
+        <View style={{ alignItems: 'center' }}>
+          <Stepper current={4} />
+        </View>
+
+        <Text style={styles.section}>Pasos de la rutina</Text>
+
+        <Text style={styles.question}>
+          ¿Qué pasos quieres incluir?
+        </Text>
+
+        <Text style={styles.desc}>
+          Organiza los pasos de tu rutina por categorías.{"\n"}
+          Puedes añadir más de un producto o paso dentro de cada sección.
+        </Text>
+
+        <ScrollView contentContainerStyle={styles.list}>
+          <RoutineSectionCard
+            title="Limpieza"
+            description="Elimina impurezas y prepara la piel"
+            icon="spray-bottle"
+            steps={sections.limpieza}
+            onAddStep={() => goToAddStep('limpieza')}
+          />
+
+          <RoutineSectionCard
+            title="Tratamientos"
+            description="Activos específicos según tus objetivos."
+            icon="eyedropper"
+            steps={sections.tratamientos}
+            onAddStep={() => goToAddStep('tratamientos')}
+          />
+
+          <RoutineSectionCard
+            title="Hidratación"
+            description="Ayuda a mantener la barrera cutánea."
+            icon="water-outline"
+            steps={sections.hidratacion}
+            onAddStep={() => goToAddStep('hidratacion')}
+          />
+
+          <RoutineSectionCard
+            title="Protección solar"
+            description=""
+            icon="weather-sunny"
+            steps={sections.proteccion}
+            onAddStep={() => goToAddStep('proteccion')}
+          />
+
+          <RoutineSectionCard
+            title="Cuidado complementario"
+            description="Pasos opcionales o de uso semanal para completar tu rutina."
+            icon="face-mask"
+            steps={sections.complementario}
+            onAddStep={() => goToAddStep('complementario')}
+          />
+        </ScrollView>
+
+        <Pressable style={styles.button}>
+          <Text style={styles.buttonText}>Continuar</Text>
+        </Pressable>
+      </View>
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  screen: {
+    flex: 1,
+    backgroundColor: colors.background
+  },
+  container: {
+    flex: 1,
+    padding: 20
+  },
+
+  title: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: colors.textPrimary
+  },
+
+  section: {
+    marginTop: 12,
+    fontSize: 13,
+    color: colors.textSecondary
+  },
+
+  question: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: colors.textPrimary,
+    marginTop: 4
+  },
+
+  desc: {
+    marginTop: 6,
+    color: colors.textSecondary,
+    lineHeight: 18
+  },
+
+  list: {
+    marginTop: 16,
+    gap: 14,
+    paddingBottom: 120
+  },
+
+  button: {
+    position: 'absolute',
+    bottom: 20,
+    left: 20,
+    right: 20,
+    backgroundColor: colors.secondary,
+    padding: 14,
+    borderRadius: 10,
+    alignItems: 'center'
+  },
+
+  buttonText: {
+    color: colors.surface,
+    fontWeight: '700'
+  }
+});

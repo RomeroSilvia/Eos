@@ -101,8 +101,9 @@ export default function Step3() {
                     <Text>Agregar recordatorio</Text>
                 </Pressable>
 
-                <Pressable style={styles.button}>
+                <Pressable style={styles.button} onPress={() => router.push('/routine/Step4')}>
                     <Text style={styles.buttonText}>Continuar</Text>
+
                 </Pressable>
             </View>
         </SafeAreaView>
