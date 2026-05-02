@@ -1,87 +1,36 @@
-export type Timestamp = string;
-export type Uuid = string;
+/**
+* Aliases de conveniencia derivados de Database.
+*
+* Todos los tipos se derivan del tipo central en database.types.ts
+* para mantener la consistencia y evitar duplicación de tipos.
+ */
 
-export type ProfileRow = {
-  id: Uuid;
-  full_name: string;
-  email: string | null;
-  skin_type: string | null;
-  created_at: Timestamp;
-  updated_at: Timestamp;
-};
+import type { Tables, TablesInsert, TablesUpdate } from './database.types';
 
-export type RoutineRow = {
-  id: Uuid;
-  user_id: Uuid;
-  name: string;
-  description: string | null;
-  time_of_day: string | null;
-  is_active: boolean;
-  created_at: Timestamp;
-  updated_at: Timestamp;
-};
+// ─── Row types (lectura) ──────────────────────────────────────────────────────
 
-export type RoutineStepRow = {
-  id: Uuid;
-  routine_id: Uuid;
-  name: string;
-  description: string | null;
-  category: string | null;
-  step_order: number;
-  is_required: boolean;
-  created_at: Timestamp;
-  updated_at: Timestamp;
-};
+export type ProfileRow            = Tables<'profiles'>;
+export type RoutineRow            = Tables<'routines'>;
+export type RoutineStepRow        = Tables<'routine_steps'>;
+export type ProductRow            = Tables<'products'>;
+export type RoutineStepProductRow = Tables<'routine_step_products'>;
+export type RoutineLogRow         = Tables<'routine_logs'>;
+export type RoutineStepLogRow     = Tables<'routine_step_logs'>;
 
-export type ProductRow = {
-  id: Uuid;
-  user_id: Uuid;
-  name: string;
-  brand: string | null;
-  category: string | null;
-  notes: string | null;
-  created_at: Timestamp;
-  updated_at: Timestamp;
-};
+// ─── Insert types (escritura) ─────────────────────────────────────────────────
 
-export type RoutineStepProductRow = {
-  id: Uuid;
-  step_id: Uuid;
-  product_id: Uuid;
-  created_at: Timestamp;
-};
+export type ProfileInsert        = TablesInsert<'profiles'>;
+export type RoutineInsert        = TablesInsert<'routines'>;
+export type RoutineStepInsert    = TablesInsert<'routine_steps'>;
+export type ProductInsert        = TablesInsert<'products'>;
+export type RoutineLogInsert     = TablesInsert<'routine_logs'>;
+export type RoutineStepLogInsert = TablesInsert<'routine_step_logs'>;
 
-export type RoutineLogRow = {
-  id: Uuid;
-  user_id: Uuid;
-  routine_id: Uuid;
-  log_date: string;
-  completed_at: Timestamp | null;
-  completion_percentage: number;
-  created_at: Timestamp;
-  updated_at: Timestamp;
-};
+// ─── Update types (actualización parcial) ─────────────────────────────────────
 
-export type RoutineStepLogRow = {
-  id: Uuid;
-  routine_log_id: Uuid;
-  step_id: Uuid;
-  is_completed: boolean;
-  completed_at: Timestamp | null;
-  created_at: Timestamp;
-  updated_at: Timestamp;
-};
-
-export type ProfileInsert = Omit<ProfileRow, 'id' | 'created_at' | 'updated_at'>;
-export type RoutineInsert = Omit<RoutineRow, 'id' | 'created_at' | 'updated_at'>;
-export type RoutineStepInsert = Omit<RoutineStepRow, 'id' | 'created_at' | 'updated_at'>;
-export type ProductInsert = Omit<ProductRow, 'id' | 'created_at' | 'updated_at'>;
-export type RoutineLogInsert = Omit<RoutineLogRow, 'id' | 'created_at' | 'updated_at'>;
-export type RoutineStepLogInsert = Omit<RoutineStepLogRow, 'id' | 'created_at' | 'updated_at'>;
-
-export type ProfileUpdate = Partial<Omit<ProfileRow, 'id' | 'created_at' | 'updated_at'>>;
-export type RoutineUpdate = Partial<Omit<RoutineRow, 'id' | 'user_id' | 'created_at' | 'updated_at'>>;
-export type RoutineStepUpdate = Partial<Omit<RoutineStepRow, 'id' | 'routine_id' | 'created_at' | 'updated_at'>>;
-export type ProductUpdate = Partial<Omit<ProductRow, 'id' | 'user_id' | 'created_at' | 'updated_at'>>;
-export type RoutineLogUpdate = Partial<Omit<RoutineLogRow, 'id' | 'user_id' | 'routine_id' | 'created_at' | 'updated_at'>>;
-export type RoutineStepLogUpdate = Partial<Omit<RoutineStepLogRow, 'id' | 'routine_log_id' | 'step_id' | 'created_at' | 'updated_at'>>;
+export type ProfileUpdate        = TablesUpdate<'profiles'>;
+export type RoutineUpdate        = TablesUpdate<'routines'>;
+export type RoutineStepUpdate    = TablesUpdate<'routine_steps'>;
+export type ProductUpdate        = TablesUpdate<'products'>;
+export type RoutineLogUpdate     = TablesUpdate<'routine_logs'>;
+export type RoutineStepLogUpdate = TablesUpdate<'routine_step_logs'>;
