@@ -6,10 +6,16 @@ export type ProductCategory =
   | 'sunscreen'
   | 'other';
 
+export type ProductBrand =
+  | 'Cerave'
+  | 'L’Oreal'
+  | 'The Ordinary'
+  | 'other';  
+
 export type Product = {
   id: string;
   name: string;
-  brand?: string;
+  brand?: ProductBrand;
   category: ProductCategory;
   description?: string;
 };

@@ -5,7 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from '@/components/Button';
 import { colors } from '@/constants/colors';
 import { useProducts } from '@/hooks/useProducts';
-import type { ProductCategory } from '@/types/product';
+import type { ProductCategory, ProductBrand } from '@/types/product';
 
 const CATEGORIES: { label: string; value: ProductCategory }[] = [
   { label: 'Limpiador', value: 'cleanser' },
@@ -16,18 +16,26 @@ const CATEGORIES: { label: string; value: ProductCategory }[] = [
   { label: 'Otro', value: 'other' }
 ];
 
+const BRANDS: { label: string; value: ProductBrand }[] = [
+  { label: 'Cerave', value: 'Cerave' },
+  { label: 'L’Oreal', value: 'L’Oreal' },
+  { label: 'The Ordinary', value: 'The Ordinary' },
+  { label: 'Otra', value: 'other' }
+];
+
 export default function NewProductScreen() {
   const { createProduct } = useProducts();
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState<ProductCategory>('other');
+  const [brand, setBrand] = useState<ProductBrand>('other');
   const [loading, setLoading] = useState(false);
 
   const handleSave = async () => {
     if (!name.trim()) return;
     setLoading(true);
     try {
-      await createProduct({ name: name.trim(), description: description.trim() || undefined, category });
+      await createProduct({ name: name.trim(), description: description.trim() || undefined, category, brand });
       router.replace('/products/result?status=success');
     } catch {
       router.replace('/products/result?status=error');
@@ -70,6 +78,21 @@ export default function NewProductScreen() {
               style={[styles.input, styles.textarea]}
               value={description}
             />
+
+            <Text style={styles.label}>Marca</Text>
+            <View style={styles.categories}>
+              {BRANDS.map((br) => (
+                <Pressable
+                  key={br.value}
+                  onPress={() => setBrand(br.value)}
+                  style={[styles.chip, brand === br.value && styles.chipActive]}
+                >
+                  <Text style={[styles.chipText, brand === br.value && styles.chipTextActive]}>
+                    {br.label}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
 
             <Text style={styles.label}>Categoría</Text>
             <View style={styles.categories}>

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { createProduct as createProductService, getProducts } from '@/services/products';
-import type { Product, ProductCategory } from '@/types/product';
+import type { Product, ProductCategory, ProductBrand } from '@/types/product';
 
 export function useProducts() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -13,6 +13,7 @@ export function useProducts() {
     name: string;
     description?: string;
     category: ProductCategory;
+    brand: ProductBrand;
   }) => {
     const newProduct = await createProductService(data);
     setProducts((prev) => [newProduct, ...prev]);
