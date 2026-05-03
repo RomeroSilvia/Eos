@@ -39,5 +39,6 @@ export const mockProducts: Product[] = [
 ];
 
 export async function getProducts(): Promise<Product[]> {
-  return mockProducts;
+  //return mockProducts;
+  return []
 }
