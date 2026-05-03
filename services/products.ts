@@ -39,7 +39,7 @@ export const mockProducts: Product[] = [
 ];
 
 export async function getProducts(): Promise<Product[]> {
-  return [];
+  return mockProducts;
 }
 
 export async function createProduct(data: {

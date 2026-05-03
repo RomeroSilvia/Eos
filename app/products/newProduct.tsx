@@ -44,7 +44,12 @@ export default function NewProductScreen() {
           style={{ flex: 1 }}
         >
           <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-            <Text style={styles.title}>Nuevo producto</Text>
+            <View style={styles.header}>
+              <Text style={styles.title}>Nuevo producto</Text>
+              <Pressable onPress={() => router.replace('/(tabs)/products')} style={styles.closeButton}>
+                <Text style={styles.closeIcon}>✕</Text>
+              </Pressable>
+            </View>
 
             <Text style={styles.label}>Nombre del producto</Text>
             <TextInput
@@ -60,7 +65,7 @@ export default function NewProductScreen() {
               multiline
               numberOfLines={4}
               onChangeText={setDescription}
-              placeholder="Describe el paso o lo que veas relevante"
+              placeholder="Describe el producto o lo que veas relevante"
               placeholderTextColor={colors.textMuted}
               style={[styles.input, styles.textarea]}
               value={description}
@@ -188,5 +193,24 @@ const styles = StyleSheet.create({
   },
   buttonDisabled: {
     opacity: 0.5
+  },
+    header: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 16
+  },
+  closeButton: {
+    alignItems: 'center',
+    backgroundColor: colors.background,
+    borderRadius: 999,
+    height: 36,
+    justifyContent: 'center',
+    width: 36
+  },
+  closeIcon: {
+    color: colors.textSecondary,
+    fontSize: 16,
+    fontWeight: '600'
   }
 });
