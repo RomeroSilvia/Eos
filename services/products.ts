@@ -1,4 +1,4 @@
-import type { Product } from '@/types/product';
+import type { Product, ProductCategory } from '@/types/product';
 
 export const mockProducts: Product[] = [
   {
@@ -39,6 +39,21 @@ export const mockProducts: Product[] = [
 ];
 
 export async function getProducts(): Promise<Product[]> {
-  //return mockProducts;
-  return []
+  return [];
+}
+
+export async function createProduct(data: {
+  name: string;
+  description?: string;
+  category: ProductCategory;
+}): Promise<Product> {
+  // TODO: reemplazar por llamada real al backend cuando esté conectado
+  const newProduct: Product = {
+    id: `product-${Date.now()}`,
+    name: data.name,
+    category: data.category,
+    description: data.description
+  };
+  mockProducts.push(newProduct);
+  return newProduct;
 }
