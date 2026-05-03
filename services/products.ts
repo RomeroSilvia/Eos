@@ -5,7 +5,8 @@ export const mockProducts: Product[] = [
     id: 'product-cerave-cleanser',
     name: 'Gel de limpieza suave de Cerave',
     brand: 'Cerave',
-    category: 'cleanser'
+    category: 'cleanser',
+    description: 'Ideal para piel normal a seca, ayuda a mantener la barrera natural de la piel.'
   },
   {
     id: 'product-loreal-toner',

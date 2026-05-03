@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
@@ -30,7 +30,7 @@ export default function ProductsScreen() {
         </View>
 
         <View style={styles.footer}>
-          <Button onPress={() => router.push('/products/newProduct')} style={styles.button}>
+          <Button onPress={() => router.push('/products/new')} style={styles.button}>
             Comenzar
           </Button>
         </View>
@@ -46,7 +46,8 @@ export default function ProductsScreen() {
           <Ionicons color={colors.textSecondary} name="notifications-outline" size={24} />
         </View>
         {products.map((product) => (
-          <Card key={product.id} style={styles.product}>
+          <Pressable key={product.id} onPress={() => router.push({ pathname: '/products/[id]', params: { id: product.id } })} style={({ pressed }) => [{ opacity: pressed ? 0.75 : 1 }]}>
+          <Card style={styles.product}>
             <View style={styles.icon}>
               <Ionicons color={colors.primaryDark} name="sparkles-outline" size={22} />
             </View>
@@ -57,6 +58,7 @@ export default function ProductsScreen() {
               </Text>
             </View>
           </Card>
+          </Pressable>
         ))}
       </ScrollView>
     </SafeAreaView>

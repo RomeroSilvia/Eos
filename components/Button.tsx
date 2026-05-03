@@ -1,14 +1,15 @@
 import type { PropsWithChildren } from 'react';
-import { Pressable, StyleSheet, Text, type ViewStyle } from 'react-native';
+import { Pressable, StyleSheet, Text, type ViewStyle, type TextStyle } from 'react-native';
 import { colors } from '@/constants/colors';
 
 type ButtonProps = PropsWithChildren<{
   onPress?: () => void;
   variant?: 'primary' | 'secondary' | 'ghost';
   style?: ViewStyle;
+  textStyle?: TextStyle; 
 }>;
 
-export function Button({ children, onPress, variant = 'primary', style }: ButtonProps) {
+export function Button({ children, onPress, variant = 'primary', style, textStyle }: ButtonProps) {
   return (
     <Pressable
       accessibilityRole="button"
@@ -20,7 +21,7 @@ export function Button({ children, onPress, variant = 'primary', style }: Button
         style
       ]}
     >
-      <Text style={[styles.label, variant === 'ghost' && styles.ghostLabel]}>{children}</Text>
+      <Text style={[styles.label, variant === 'ghost' && styles.ghostLabel, textStyle]}>{children}</Text>
     </Pressable>
   );
 }

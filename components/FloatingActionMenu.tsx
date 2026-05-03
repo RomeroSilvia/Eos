@@ -6,7 +6,7 @@ import { colors } from '@/constants/colors';
 const ROUTE_MAP: Record<string, string> = {
   '/home':     '/routine/newRoutine',
   '/routine':  '/routine/newRoutine',
-  '/products': '/products/newProduct',
+  '/products': '/products/new',
   '/progress': '/routine/newRoutine',
   '/profile':  '/profile/editProfile',
 };
