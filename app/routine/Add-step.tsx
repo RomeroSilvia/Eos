@@ -2,22 +2,55 @@ import { View, Text, StyleSheet, TextInput, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors } from '@/constants/colors';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useState } from 'react';
-import { createStep, getStepsByRoutine } from '@/services/routines';
+import { useEffect, useState } from 'react';
+import { createStep, getStepsByRoutine, updateStep } from '@/services/routines';
 
 export default function AddStep() {
   const router = useRouter();
-  const { section, routineId } = useLocalSearchParams<{
+  const { section, routineId, stepId } = useLocalSearchParams<{
     section: string;
     routineId: string;
+    stepId?: string;
   }>();
 
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
+  const isEditing = typeof stepId === 'string' && stepId.length > 0;
+
+  useEffect(() => {
+    if (!routineId || !isEditing) return;
+
+    const loadStep = async () => {
+      try {
+        const steps = await getStepsByRoutine(routineId);
+        const currentStep = steps.find((step) => step.id === stepId);
+
+        if (!currentStep) return;
+
+        setName(currentStep.name);
+        setDescription(currentStep.description ?? '');
+      } catch (e) {
+        console.error(e);
+      }
+    };
+
+    void loadStep();
+  }, [isEditing, routineId, stepId]);
 
   const handleSave = async () => {
     try {
       if (!routineId || !name.trim()) return;
+
+      if (isEditing) {
+        await updateStep(stepId, {
+          name: name.trim(),
+          description: description || null,
+          category: section
+        });
+
+        router.back();
+        return;
+      }
 
       const existingSteps = await getStepsByRoutine(routineId);
       const sectionSteps = existingSteps.filter((step) => step.category === section);
@@ -43,7 +76,7 @@ export default function AddStep() {
       <View style={styles.container}>
 
         <Text style={styles.title}>
-          {section?.charAt(0).toUpperCase() + section?.slice(1)}
+          {isEditing ? 'Editar paso' : section?.charAt(0).toUpperCase() + section?.slice(1)}
         </Text>
 
         <Text style={styles.label}>Nombre del paso</Text>

@@ -9,6 +9,8 @@ type RoutineStepCardProps = {
   index: number;
   completed: boolean;
   onToggle: (id: string) => void;
+  onEdit: (step: RoutineStep) => void;
+  onDelete: (step: RoutineStep) => void;
 };
 
 const getIcon = (step: RoutineStep) => {
@@ -22,7 +24,14 @@ const getIcon = (step: RoutineStep) => {
   return 'bottle-tonic-outline';
 };
 
-export function RoutineStepCard({ step, index, completed, onToggle }: RoutineStepCardProps) {
+export function RoutineStepCard({
+  step,
+  index,
+  completed,
+  onToggle,
+  onEdit,
+  onDelete
+}: RoutineStepCardProps) {
   return (
     <Card style={styles.card}>
       <Pressable
@@ -58,11 +67,25 @@ export function RoutineStepCard({ step, index, completed, onToggle }: RoutineSte
         </Text>
       </View>
 
-      <MaterialCommunityIcons
-        name="dots-vertical"
-        size={24}
-        color={colors.textSecondary}
-      />
+      <View style={styles.actions}>
+        <Pressable
+          onPress={() => onEdit(step)}
+          accessibilityLabel="Editar paso"
+          accessibilityRole="button"
+          hitSlop={8}
+        >
+          <MaterialCommunityIcons name="pencil-outline" size={22} color={colors.textSecondary} />
+        </Pressable>
+
+        <Pressable
+          onPress={() => onDelete(step)}
+          accessibilityLabel="Eliminar paso"
+          accessibilityRole="button"
+          hitSlop={8}
+        >
+          <MaterialCommunityIcons name="trash-can-outline" size={22} color={colors.error} />
+        </Pressable>
+      </View>
     </Card>
   );
 }
@@ -119,6 +142,11 @@ const styles = StyleSheet.create({
   description: {
     color: colors.textSecondary,
     fontSize: 13
+  },
+
+  actions: {
+    alignItems: 'center',
+    gap: 12
   },
 
   badgeDone: {
