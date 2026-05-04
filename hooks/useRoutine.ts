@@ -1,5 +1,11 @@
 import { useCallback, useEffect, useState } from 'react';
-import { getActiveRoutine, getRoutineById, getRoutines } from '@/services/routines';
+import {
+  deleteRoutine,
+  deleteStep,
+  getActiveRoutine,
+  getRoutineById,
+  getRoutines
+} from '@/services/routines';
 import { getRoutineDayProgress, setRoutineStepCompletion } from '@/services/progress';
 import type { Routine } from '@/types/routine';
 
@@ -74,6 +80,62 @@ export function useRoutine() {
     }
   };
 
+  const refreshSelectedRoutine = useCallback(async () => {
+    try {
+      setError(null);
+      const allRoutines = await getRoutines();
+      const sortedRoutines = allRoutines.sort(
+        (a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
+      );
+      const selectedId = routine?.id ?? sortedRoutines[0]?.id;
+
+      setRoutines(sortedRoutines);
+
+      if (!selectedId) {
+        setRoutine(null);
+        setCompletedStepIds(new Set());
+        return;
+      }
+
+      const selectedRoutine = await getRoutineById(selectedId);
+      const progress = await getRoutineDayProgress(selectedId);
+      setRoutine(selectedRoutine);
+      setCompletedStepIds(new Set(progress.completed_step_ids));
+    } catch (err) {
+      console.error(err);
+      setError('No pudimos actualizar la rutina.');
+    }
+  }, [routine?.id]);
+
+
+  const removeRoutine = async (id: string) => {
+    try {
+      setError(null);
+      await deleteRoutine(id);
+      await refreshRoutine();
+    } catch (err) {
+      console.error(err);
+      setError('No pudimos eliminar la rutina.');
+    }
+  };
+
+  const removeStep = async (id: string) => {
+    try {
+      setError(null);
+      await deleteStep(id);
+
+      if (routine) {
+        const updatedRoutine = await getRoutineById(routine.id);
+        const progress = await getRoutineDayProgress(routine.id);
+        setRoutine(updatedRoutine);
+        setCompletedStepIds(new Set(progress.completed_step_ids));
+      }
+    } catch (err) {
+      console.error(err);
+      setError('No pudimos eliminar el paso.');
+    }
+  };
+
   return {
     routine,
     routines,
@@ -81,7 +143,10 @@ export function useRoutine() {
     isLoading,
     error,
     refreshRoutine,
+    refreshSelectedRoutine,
     selectRoutine,
+    removeRoutine,
+    removeStep,
     toggleStep
   };
 }

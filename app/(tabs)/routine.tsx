@@ -1,7 +1,9 @@
-import { ScrollView, StyleSheet, Text, View, Pressable } from 'react-native';
+import { Alert, ScrollView, StyleSheet, Text, View, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { useFocusEffect } from '@react-navigation/native';
+import { useCallback } from 'react';
 import { RoutineStepCard } from '@/components/RoutineStepCard';
 import { colors } from '@/constants/colors';
 import { useRoutine } from '@/hooks/useRoutine';
@@ -14,14 +16,68 @@ export default function RoutineScreen() {
     completedStepIds,
     isLoading,
     error,
+    refreshSelectedRoutine,
     selectRoutine,
+    removeRoutine,
+    removeStep,
     toggleStep
   } = useRoutine();
   const router = useRouter();
 
+  useFocusEffect(
+    useCallback(() => {
+      void refreshSelectedRoutine();
+    }, [refreshSelectedRoutine])
+  );
+
   const steps = routine?.routine_steps ?? [];
   const currentIndex = steps.findIndex((step) => !completedStepIds.has(step.id));
   const activeIndex = currentIndex === -1 ? steps.length : currentIndex;
+
+  const editStep = (stepId: string, section: string | null) => {
+    if (!routine) return;
+
+    router.push({
+      pathname: '/routine/Add-step',
+      params: {
+        routineId: routine.id,
+        stepId,
+        section: section ?? 'complementario'
+      }
+    });
+  };
+
+  const confirmDeleteRoutine = () => {
+    if (!routine) return;
+
+    Alert.alert(
+      'Eliminar rutina',
+      `Se eliminara "${routine.name}" con todos sus pasos. Esta accion no se puede deshacer.`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Eliminar',
+          style: 'destructive',
+          onPress: () => void removeRoutine(routine.id)
+        }
+      ]
+    );
+  };
+
+  const confirmDeleteStep = (stepId: string, stepName: string) => {
+    Alert.alert(
+      'Eliminar paso',
+      `Se eliminara "${stepName}". Esta accion no se puede deshacer.`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Eliminar',
+          style: 'destructive',
+          onPress: () => void removeStep(stepId)
+        }
+      ]
+    );
+  };
 
   if (isLoading) {
     return (
@@ -84,18 +140,38 @@ export default function RoutineScreen() {
             <View style={styles.todayHeader}>
               <Text style={styles.todayTitle}>{routine.name}</Text>
 
-              <Pressable
-                onPress={() => router.push('/routine/routine-edit')}
-                accessibilityLabel="Editar rutina"
-                accessibilityRole="button"
-                hitSlop={10}
-              >
-                <MaterialCommunityIcons
-                  name="pencil-outline"
-                  size={24}
-                  color={colors.textSecondary}
-                />
-              </Pressable>
+              <View style={styles.headerActions}>
+                <Pressable
+                  onPress={() =>
+                    router.push({
+                      pathname: '/routine/routine-edit',
+                      params: { routineId: routine.id }
+                    })
+                  }
+                  accessibilityLabel="Editar rutina"
+                  accessibilityRole="button"
+                  hitSlop={10}
+                >
+                  <MaterialCommunityIcons
+                    name="pencil-outline"
+                    size={24}
+                    color={colors.textSecondary}
+                  />
+                </Pressable>
+
+                <Pressable
+                  onPress={confirmDeleteRoutine}
+                  accessibilityLabel="Eliminar rutina"
+                  accessibilityRole="button"
+                  hitSlop={10}
+                >
+                  <MaterialCommunityIcons
+                    name="trash-can-outline"
+                    size={24}
+                    color={colors.error}
+                  />
+                </Pressable>
+              </View>
             </View>
 
             <View style={styles.timeline}>
@@ -153,6 +229,8 @@ export default function RoutineScreen() {
                   index={index}
                   completed={completedStepIds.has(step.id)}
                   onToggle={toggleStep}
+                  onEdit={(selectedStep) => editStep(selectedStep.id, selectedStep.category)}
+                  onDelete={(selectedStep) => confirmDeleteStep(selectedStep.id, selectedStep.name)}
                 />
               ))}
             </View>
@@ -293,11 +371,19 @@ const styles = StyleSheet.create({
   todayHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: 12
   },
   todayTitle: {
+    flex: 1,
     fontWeight: '700',
     color: colors.textPrimary
+  },
+
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14
   },
 
   timeline: {

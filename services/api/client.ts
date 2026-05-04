@@ -30,5 +30,9 @@ export async function apiRequest<TResponse>({ path, headers, ...options }: ApiRe
     throw new Error(`API request failed with status ${response.status}: ${text}`);
   }
 
+  if (response.status === 204) {
+    return undefined as TResponse;
+  }
+
   return response.json() as Promise<TResponse>;
 }

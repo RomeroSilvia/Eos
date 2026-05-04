@@ -36,13 +36,23 @@ export async function createRoutine(data: {
 export async function updateRoutine(
   id: string,
   data: {
+    name?: string;
+    description?: string | null;
     time_of_day?: 'morning' | 'night' | 'custom';
+    is_active?: boolean;
   }
 ): Promise<Routine> {
   return apiRequest<Routine>({
     path: `/routines/${id}`,
     method: 'PATCH',
     body: JSON.stringify(data)
+  });
+}
+
+export async function deleteRoutine(id: string): Promise<void> {
+  await apiRequest<void>({
+    path: `/routines/${id}`,
+    method: 'DELETE'
   });
 }
 
@@ -66,6 +76,30 @@ export async function getStepsByRoutine(routineId: string): Promise<RoutineStep[
   return apiRequest<RoutineStep[]>({
     path: `/routines/${routineId}/steps`,
     method: 'GET'
+  });
+}
+
+export async function updateStep(
+  id: string,
+  data: {
+    name?: string;
+    description?: string | null;
+    category?: string | null;
+    step_order?: number;
+    is_required?: boolean;
+  }
+): Promise<RoutineStep> {
+  return apiRequest<RoutineStep>({
+    path: `/routines/steps/${id}`,
+    method: 'PATCH',
+    body: JSON.stringify(data)
+  });
+}
+
+export async function deleteStep(id: string): Promise<void> {
+  await apiRequest<void>({
+    path: `/routines/steps/${id}`,
+    method: 'DELETE'
   });
 }
 
