@@ -1,4 +1,5 @@
 import * as ImagePicker from 'expo-image-picker';
+import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { Image, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
@@ -71,7 +72,7 @@ export default function NewProductScreen() {
   };
 
   return (
-    <Modal animationType="slide" transparent presentationStyle="pageSheet">
+
       <SafeAreaView style={styles.screen}>
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -79,10 +80,15 @@ export default function NewProductScreen() {
         >
           <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
             <View style={styles.header}>
-              <Text style={styles.title}>Nuevo producto</Text>
-              <Pressable onPress={() => router.replace('/(tabs)/products')} style={styles.closeButton}>
-                <Text style={styles.closeIcon}>✕</Text>
+              <Pressable onPress={() => router.back()} style={styles.backBtn}>
+                <Ionicons color={colors.textPrimary} name="chevron-back" size={18} />
+                <Text style={styles.backText}>Volver atras</Text>
               </Pressable>
+              <Ionicons color={colors.textSecondary} name="notifications-outline" size={24} />
+            </View>
+
+            <View style={styles.header}>
+              <Text style={styles.title}>Nuevo producto</Text>
             </View>
 
             <Text style={styles.label}>Nombre del producto</Text>
@@ -155,7 +161,7 @@ export default function NewProductScreen() {
           </ScrollView>
         </KeyboardAvoidingView>
       </SafeAreaView>
-    </Modal>
+
   );
 }
 
@@ -272,5 +278,15 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     fontSize: 16,
     fontWeight: '600'
+  },
+  backText: {
+    color: colors.textPrimary,
+    fontSize: 15,
+    fontWeight: '600'
+  },
+  backBtn: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 4
   }
 });

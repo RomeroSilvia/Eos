@@ -75,6 +75,7 @@ export default function ProductsScreen() {
                   {product.brand ?? 'Producto personal'} · {product.category}
                 </Text>
               </View>
+              <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
             </Card>
           </Pressable>
         ))}
