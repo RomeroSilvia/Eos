@@ -22,14 +22,25 @@ El servidor levanta por defecto en:
 http://localhost:3000
 ```
 
-## Endpoints placeholder
+## Endpoints principales
 
 ```txt
 GET /api/health
 GET /api/auth/health
 GET /api/routines/health
+GET /api/routines
+GET /api/routines/:id
+POST /api/routines
+PATCH /api/routines/:id
+DELETE /api/routines/:id
+GET /api/routines/:id/steps
+POST /api/routines/:id/steps
+PATCH /api/routines/steps/:stepId
+DELETE /api/routines/steps/:stepId
 GET /api/products/health
 GET /api/progress/health
+GET /api/progress/routines/:routineId/today
+PATCH /api/progress/routines/:routineId/today/steps/:stepId
 GET /api/profile/health
 ```
 
@@ -42,6 +53,8 @@ npm run start
 npm run typecheck
 ```
 
-## Importante
+## Estado actual
 
-Este backend todavia no implementa CRUD, autenticacion real ni reglas de negocio. Solo deja montada la estructura para trabajar por modulos.
+El backend ya implementa CRUD de rutinas y pasos usando Supabase. Tambien guarda el progreso diario de pasos en `routine_logs` y `routine_step_logs`.
+
+La autenticacion real todavia esta pendiente: por ahora las rutas de rutinas/progreso usan `mockAuth` con un usuario fijo de desarrollo.

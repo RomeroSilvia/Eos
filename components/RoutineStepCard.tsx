@@ -1,83 +1,147 @@
-import { Ionicons } from '@expo/vector-icons';
-import { StyleSheet, Text, View } from 'react-native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { StyleSheet, Text, View, Pressable } from 'react-native';
 import { colors } from '@/constants/colors';
 import type { RoutineStep } from '@/types/routine';
 import { Card } from './Card';
 
 type RoutineStepCardProps = {
   step: RoutineStep;
+  index: number;
+  completed: boolean;
+  onToggle: (id: string) => void;
 };
 
-export function RoutineStepCard({ step }: RoutineStepCardProps) {
-  const completed = step.status === 'completed';
+const getIcon = (step: RoutineStep) => {
+  const text = `${step.category ?? ''} ${step.name}`.toLowerCase();
 
+  if (text.includes('limpieza')) return 'lotion';
+  if (text.includes('serum') || text.includes('tratamiento')) return 'eyedropper';
+  if (text.includes('hidrat')) return 'water-outline';
+  if (text.includes('proteccion') || text.includes('protector')) return 'sun-thermometer';
+
+  return 'bottle-tonic-outline';
+};
+
+export function RoutineStepCard({ step, index, completed, onToggle }: RoutineStepCardProps) {
   return (
     <Card style={styles.card}>
-      <View style={[styles.check, completed ? styles.checkDone : styles.checkPending]}>
-        <Ionicons
-          color={completed ? colors.surface : colors.textMuted}
-          name={completed ? 'checkmark' : 'ellipse-outline'}
+      <Pressable
+        onPress={() => onToggle(step.id)}
+        style={[styles.check, completed ? styles.checkDone : styles.checkPending]}
+      >
+        <MaterialCommunityIcons
+          name={completed ? 'check' : 'circle-outline'}
           size={18}
+          color={completed ? colors.surface : colors.textSecondary}
+        />
+      </Pressable>
+
+      <View style={styles.icon}>
+        <MaterialCommunityIcons
+          name={getIcon(step)}
+          size={20}
+          color={colors.background}
         />
       </View>
+
       <View style={styles.content}>
-        <Text style={styles.title}>{step.title}</Text>
-        <Text style={styles.products}>{step.products.map((product) => product.name).join(', ')}</Text>
+        <Text style={styles.title}>
+          {index + 1}. {step.name}
+        </Text>
+
+        {!!step.description && (
+          <Text style={styles.description}>{step.description}</Text>
+        )}
+
+        <Text style={completed ? styles.badgeDone : styles.badgePending}>
+          {completed ? 'Completado' : 'Pendiente'}
+        </Text>
       </View>
-      <Text style={[styles.status, completed ? styles.doneText : styles.pendingText]}>
-        {completed ? 'Completado' : 'Pendiente'}
-      </Text>
+
+      <MaterialCommunityIcons
+        name="dots-vertical"
+        size={24}
+        color={colors.textSecondary}
+      />
     </Card>
   );
 }
 
 const styles = StyleSheet.create({
   card: {
-    alignItems: 'center',
     flexDirection: 'row',
-    gap: 12
-  },
-  check: {
-    alignItems: 'center',
+    alignItems: 'flex-start',
+    gap: 12,
+    padding: 14,
     borderRadius: 16,
-    height: 34,
+    backgroundColor: colors.surface
+  },
+
+  check: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
     justifyContent: 'center',
-    width: 34
+    marginTop: 2
   },
+
   checkDone: {
-    backgroundColor: colors.primary
+    backgroundColor: colors.primaryDark
   },
+
   checkPending: {
-    backgroundColor: colors.pending
+    backgroundColor: colors.surfaceSoft,
+    borderWidth: 1,
+    borderColor: colors.border
   },
+
+  icon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.primaryDark,
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+
   content: {
     flex: 1,
     gap: 4
   },
+
   title: {
     color: colors.textPrimary,
-    fontSize: 16,
-    fontWeight: '800'
+    fontSize: 15,
+    fontWeight: '700'
   },
-  products: {
+
+  description: {
     color: colors.textSecondary,
-    fontSize: 13,
-    lineHeight: 18
+    fontSize: 13
   },
-  status: {
-    borderRadius: 999,
-    fontSize: 12,
-    fontWeight: '700',
-    overflow: 'hidden',
-    paddingHorizontal: 10,
-    paddingVertical: 6
-  },
-  doneText: {
+
+  badgeDone: {
+    marginTop: 4,
+    alignSelf: 'flex-start',
     backgroundColor: colors.primaryLight,
-    color: colors.primaryDark
+    color: colors.primaryDark,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    fontSize: 12,
+    fontWeight: '600'
   },
-  pendingText: {
+
+  badgePending: {
+    marginTop: 4,
+    alignSelf: 'flex-start',
     backgroundColor: colors.pending,
-    color: colors.textSecondary
+    color: colors.textSecondary,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    fontSize: 12,
+    fontWeight: '600'
   }
 });

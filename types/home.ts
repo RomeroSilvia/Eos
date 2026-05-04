@@ -11,7 +11,7 @@ export type HomeMetric = {
 
 export type DailyHomeSummary = {
   user: UserProfile;
-  activeRoutine: Routine;
+  activeRoutine: Routine | null;
   completedSteps: number;
   totalSteps: number;
   metrics: HomeMetric[];

@@ -14,10 +14,10 @@ Variables:
 
 ```txt
 EXPO_PUBLIC_API_URL=http://localhost:3000/api
-EXPO_PUBLIC_USE_MOCKS=true
+EXPO_PUBLIC_USE_MOCKS=false
 ```
 
-`EXPO_PUBLIC_USE_MOCKS=true` mantiene los servicios mock actuales. En tareas futuras se podra cambiar a `false` para empezar a usar la API real.
+El modulo Rutinas ya usa la API real. Otros modulos pueden conservar mocks hasta que se migren.
 
 ## Backend Node.js
 
