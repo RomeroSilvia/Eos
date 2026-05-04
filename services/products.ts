@@ -38,14 +38,31 @@ export async function createProduct(data: {
     formData.append('category', data.category);
     formData.append('brand', data.brand);
     if (data.description) formData.append('notes', data.description);
+
     if (data.imageUri) {
-      const ext = data.imageUri.split('.').pop() ?? 'jpg';
+      const uri = data.imageUri;
+      const filename = uri.split('/').pop() ?? 'product.jpg';
+      const ext = filename.includes('.')
+        ? filename.split('.').pop()!.toLowerCase()
+        : 'jpg';
+ 
+      const mimeMap: Record<string, string> = {
+        jpg: 'image/jpeg',
+        jpeg: 'image/jpeg',
+        png: 'image/png',
+        webp: 'image/webp',
+        heic: 'image/heic',
+      };
+      const mimeType = mimeMap[ext] ?? 'image/jpeg';
+      const normalizedExt = ext === 'jpeg' ? 'jpg' : (mimeMap[ext] ? ext : 'jpg');
+ 
       formData.append('image', {
-        uri: data.imageUri,
-        type: `image/${ext}`,
-        name: `product.${ext}`,
+        uri,
+        type: mimeType,
+        name: `product.${normalizedExt}`,
       } as unknown as Blob);
     }
+
     const res = await fetch(`${BASE_URL}/products`, {
       method: 'POST',
       body: formData,

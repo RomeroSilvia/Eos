@@ -14,7 +14,7 @@ export default function ProductsScreen() {
     return (
       <SafeAreaView style={styles.screen}>
         <View style={styles.center}>
-          <Text style={styles.emptyText}>Cargando rutina...</Text>
+          <Text style={styles.emptyText}>Cargando productos...</Text>
         </View>
       </SafeAreaView>
     );
