@@ -4,10 +4,10 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { colors } from '@/constants/colors';
 
 const ROUTE_MAP: Record<string, string> = {
-  '/home':     '/routine/newRoutine',
-  '/routine':  '/routine/newRoutine',
+  '/home':     '/routine/Create',
+  '/routine':  '/routine/Create',
   '/products': '/products/new',
-  '/progress': '/routine/newRoutine',
+  '/progress': '/routine/Create',
   '/profile':  '/profile/editProfile',
 };
 
@@ -15,7 +15,7 @@ export function FloatingActionMenu() {
   const pathname = usePathname();
 
   const handlePress = () => {
-    const route = ROUTE_MAP[pathname] ?? '/routine/newRoutine';
+    const route = ROUTE_MAP[pathname] ?? '/routine/Create';
     router.push(route as never);
   }
 

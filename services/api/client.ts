@@ -10,7 +10,7 @@ type ApiRequestOptions = RequestInit & {
 };
 
 export async function apiRequest<TResponse>({ path, headers, ...options }: ApiRequestOptions): Promise<TResponse> {
-  const url = `${apiConfig.baseUrl}${path.startsWith('/') ? path : `/${path}`}`;
+  const url = `${apiConfig.baseUrl}/${path.replace(/^\//, '')}`;
 
   const response = await fetch(url, {
     ...options,
@@ -20,8 +20,18 @@ export async function apiRequest<TResponse>({ path, headers, ...options }: ApiRe
     }
   });
 
+  if (response.status === 404) {
+    console.error('URL NO EXISTE:', url);
+  }
+
   if (!response.ok) {
-    throw new Error(`API request failed with status ${response.status}`);
+    const text = await response.text();
+    console.error('RESPONSE ERROR:', text);
+    throw new Error(`API request failed with status ${response.status}: ${text}`);
+  }
+
+  if (response.status === 204) {
+    return undefined as TResponse;
   }
 
   return response.json() as Promise<TResponse>;
