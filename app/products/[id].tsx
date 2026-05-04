@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
@@ -47,9 +47,13 @@ export default function ProductDetailScreen() {
         <Text style={styles.title}>Detalle del Producto</Text>
 
         <Card style={styles.imageCard}>
-          <View style={styles.imagePlaceholder}>
-            <Ionicons color={colors.textMuted} name="image-outline" size={48} />
-          </View>
+          {product.image_url ? (
+            <Image source={{ uri: product.image_url }} style={styles.productImage} />
+          ) : (
+            <View style={styles.imagePlaceholder}>
+              <Ionicons color={colors.textMuted} name="image-outline" size={48} />
+            </View>
+          )}
         </Card>
 
         <Card style={styles.infoCard}>
@@ -115,6 +119,10 @@ const styles = StyleSheet.create({
   imageCard: {
     padding: 0,
     overflow: 'hidden'
+  },
+  productImage: {
+    height: 200,
+    width: '100%'
   },
   imagePlaceholder: {
     alignItems: 'center',

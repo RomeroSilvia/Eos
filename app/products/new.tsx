@@ -1,6 +1,7 @@
+import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Image, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from '@/components/Button';
 import { colors } from '@/constants/colors';
@@ -18,7 +19,7 @@ const CATEGORIES: { label: string; value: ProductCategory }[] = [
 
 const BRANDS: { label: string; value: ProductBrand }[] = [
   { label: 'Cerave', value: 'Cerave' },
-  { label: 'L’Oreal', value: 'L’Oreal' },
+  { label: 'L\'Oreal', value: 'L´Oreal' },
   { label: 'The Ordinary', value: 'The Ordinary' },
   { label: 'Otra', value: 'other' }
 ];
@@ -29,13 +30,38 @@ export default function NewProductScreen() {
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState<ProductCategory>('other');
   const [brand, setBrand] = useState<ProductBrand>('other');
+  const [imageUri, setImageUri] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  const handlePickImage = async () => {
+    try {
+      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permission.granted) return;
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+      if (!result.canceled) {
+        setImageUri(result.assets[0].uri);
+      }
+    } catch (error) {
+      console.error('[handlePickImage]', error);
+    }
+  };
 
   const handleSave = async () => {
     if (!name.trim()) return;
     setLoading(true);
     try {
-      await createProduct({ name: name.trim(), description: description.trim() || undefined, category, brand });
+      await createProduct({
+        name: name.trim(),
+        description: description.trim() || undefined,
+        category,
+        brand,
+        imageUri: imageUri ?? undefined,
+      });
       router.replace('/products/result?status=success');
     } catch {
       router.replace('/products/result?status=error');
@@ -109,10 +135,16 @@ export default function NewProductScreen() {
               ))}
             </View>
 
-            <View style={styles.photoBox}>
-              <Text style={styles.photoPlaceholder}>🖼</Text>
-              <Text style={styles.photoLabel}>Foto del producto</Text>
-            </View>
+            <Pressable onPress={handlePickImage} style={styles.photoBox}>
+              {imageUri ? (
+                <Image source={{ uri: imageUri }} style={styles.photoPreview} />
+              ) : (
+                <>
+                  <Text style={styles.photoPlaceholder}>🖼</Text>
+                  <Text style={styles.photoLabel}>Foto del producto</Text>
+                </>
+              )}
+            </Pressable>
 
             <Button
               onPress={handleSave}
@@ -196,10 +228,15 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     borderRadius: 14,
     borderWidth: 1,
-    gap: 8,
     justifyContent: 'center',
     marginTop: 8,
-    minHeight: 120
+    minHeight: 120,
+    overflow: 'hidden',
+    gap: 8,
+  },
+  photoPreview: {
+    height: 200,
+    width: '100%'
   },
   photoPlaceholder: {
     fontSize: 36
@@ -217,7 +254,7 @@ const styles = StyleSheet.create({
   buttonDisabled: {
     opacity: 0.5
   },
-    header: {
+  header: {
     alignItems: 'center',
     flexDirection: 'row',
     justifyContent: 'space-between',

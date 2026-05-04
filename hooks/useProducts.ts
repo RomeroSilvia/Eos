@@ -14,6 +14,7 @@ export function useProducts() {
     description?: string;
     category: ProductCategory;
     brand: ProductBrand;
+    imageUri?: string;
   }) => {
     const newProduct = await createProductService(data);
     setProducts((prev) => [newProduct, ...prev]);

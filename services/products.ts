@@ -1,46 +1,28 @@
 import type { Product, ProductCategory, ProductBrand } from '@/types/product';
 
-export const mockProducts: Product[] = [
-  {
-    id: 'product-cerave-cleanser',
-    name: 'Gel de limpieza suave de Cerave',
-    brand: 'Cerave',
-    category: 'cleanser',
-    description: 'Ideal para piel normal a seca, ayuda a mantener la barrera natural de la piel.'
-  },
-  {
-    id: 'product-loreal-toner',
-    name: 'Tonico hidratante L’Oreal',
-    brand: 'L’Oreal',
-    category: 'toner'
-  },
-  {
-    id: 'product-loreal-cream',
-    name: 'Crema hidratante L’Oreal',
-    brand: 'L’Oreal',
-    category: 'moisturizer'
-  },
-  {
-    id: 'product-ordinary-niacinamide',
-    name: 'The Ordinary Niacinamide',
-    brand: 'The Ordinary',
-    category: 'serum'
-  },
-  {
-    id: 'product-ordinary-caffeine',
-    name: 'The Ordinary Caffeine',
-    brand: 'The Ordinary',
-    category: 'serum'
-  },
-  {
-    id: 'product-sunscreen',
-    name: 'Protector solar facial',
-    category: 'sunscreen'
-  }
-];
+const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3000';
+
+function mapToProduct(row: Record<string, unknown>): Product {
+  return {
+    id: row.id as string,
+    name: row.name as string,
+    brand: (row.brand as ProductBrand) ?? undefined,
+    category: row.category as ProductCategory,
+    description: (row.notes as string) ?? undefined,
+    image_url: (row.image_url as string) ?? null,
+  };
+}
 
 export async function getProducts(): Promise<Product[]> {
-  return mockProducts;
+  try {
+    const res = await fetch(`${BASE_URL}/api/products`);
+    if (!res.ok) throw new Error('Error al obtener productos');
+    const rows = await res.json() as Record<string, unknown>[];
+    return rows.map(mapToProduct);
+  } catch (error) {
+    console.error('[getProducts]', error);
+    throw error instanceof Error ? error : new Error(`Error del servidor: ${String(error)}`);
+  }
 }
 
 export async function createProduct(data: {
@@ -48,15 +30,30 @@ export async function createProduct(data: {
   description?: string;
   category: ProductCategory;
   brand: ProductBrand;
+  imageUri?: string;
 }): Promise<Product> {
-  // TODO: reemplazar por llamada real al backend cuando esté conectado
-  const newProduct: Product = {
-    id: `product-${Date.now()}`,
-    name: data.name,
-    brand: data.brand,
-    category: data.category,
-    description: data.description
-  };
-  mockProducts.push(newProduct);
-  return newProduct;
+  try {
+    const formData = new FormData();
+    formData.append('name', data.name);
+    formData.append('category', data.category);
+    formData.append('brand', data.brand);
+    if (data.description) formData.append('notes', data.description);
+    if (data.imageUri) {
+      const ext = data.imageUri.split('.').pop() ?? 'jpg';
+      formData.append('image', {
+        uri: data.imageUri,
+        type: `image/${ext}`,
+        name: `product.${ext}`,
+      } as unknown as Blob);
+    }
+    const res = await fetch(`${BASE_URL}/api/products`, {
+      method: 'POST',
+      body: formData,
+    });
+    if (!res.ok) throw new Error('Error al crear producto');
+    return mapToProduct(await res.json() as Record<string, unknown>);
+  } catch (error) {
+    console.error('[createProduct]', error);
+    throw error instanceof Error ? error : new Error(`Error del servidor: ${String(error)}`);
+  }
 }

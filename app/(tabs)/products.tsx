@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { ScrollView, StyleSheet, Text, View, Pressable } from 'react-native';
+import { Image, ScrollView, StyleSheet, Text, View, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
@@ -46,18 +46,26 @@ export default function ProductsScreen() {
           <Ionicons color={colors.textSecondary} name="notifications-outline" size={24} />
         </View>
         {products.map((product) => (
-          <Pressable key={product.id} onPress={() => router.push({ pathname: '/products/[id]', params: { id: product.id } })} style={({ pressed }) => [{ opacity: pressed ? 0.75 : 1 }]}>
-          <Card style={styles.product}>
-            <View style={styles.icon}>
-              <Ionicons color={colors.primaryDark} name="sparkles-outline" size={22} />
-            </View>
-            <View style={styles.productText}>
-              <Text style={styles.productName}>{product.name}</Text>
-              <Text style={styles.productMeta}>
-                {product.brand ?? 'Producto personal'} · {product.category}
-              </Text>
-            </View>
-          </Card>
+          <Pressable
+            key={product.id}
+            onPress={() => router.push({ pathname: '/products/[id]', params: { id: product.id } })}
+            style={({ pressed }) => [{ opacity: pressed ? 0.75 : 1 }]}
+          >
+            <Card style={styles.product}>
+              <View style={styles.thumbnail}>
+                {product.image_url ? (
+                  <Image source={{ uri: product.image_url }} style={styles.thumbnailImage} />
+                ) : (
+                  <Ionicons color={colors.primaryDark} name="sparkles-outline" size={22} />
+                )}
+              </View>
+              <View style={styles.productText}>
+                <Text style={styles.productName}>{product.name}</Text>
+                <Text style={styles.productMeta}>
+                  {product.brand ?? 'Producto personal'} · {product.category}
+                </Text>
+              </View>
+            </Card>
           </Pressable>
         ))}
       </ScrollView>
@@ -134,12 +142,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 12
   },
-  icon: {
+  thumbnail: {
     alignItems: 'center',
     backgroundColor: colors.surfaceSoft,
     borderRadius: 18,
     height: 44,
     justifyContent: 'center',
+    overflow: 'hidden',
+    width: 44
+  },
+  thumbnailImage: {
+    height: 44,
     width: 44
   },
   productText: {
