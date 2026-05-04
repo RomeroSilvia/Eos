@@ -18,4 +18,5 @@ export type Product = {
   brand?: ProductBrand;
   category: ProductCategory;
   description?: string;
+  image_url?: string | null;
 };

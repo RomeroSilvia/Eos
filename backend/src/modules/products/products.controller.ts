@@ -22,7 +22,7 @@ export const getProductById = asyncHandler(async (req: Request, res: Response) =
 });
 
 export const createProduct = asyncHandler(async (req: Request, res: Response) => {
-  const product = await productsService.create(TEMP_USER_ID, req.body);
+  const product = await productsService.create(TEMP_USER_ID, req.body, req.file);
   res.status(201).json(product);
 });
 

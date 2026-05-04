@@ -103,6 +103,7 @@ export type Database = {
           brand: string | null;
           category: string | null;
           notes: string | null;
+          image_url: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -113,6 +114,7 @@ export type Database = {
           brand?: string | null;
           category?: string | null;
           notes?: string | null;
+          image_url?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -121,6 +123,7 @@ export type Database = {
           brand?: string | null;
           category?: string | null;
           notes?: string | null;
+          image_url?: string | null;
           updated_at?: string;
         };
       };
