@@ -4,9 +4,11 @@ import { colors } from '@/constants/colors';
 import { Stepper } from '@/components/Stepper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 
 export default function Step5Products() {
     const router = useRouter();
+    const { routineId } = useLocalSearchParams();
     return (
         <SafeAreaView style={styles.screen}>
             <View style={styles.container}>
@@ -73,7 +75,12 @@ export default function Step5Products() {
 
                 <Pressable
                     style={styles.button}
-                    onPress={() => router.push('/routine/Step6-confirm')}
+                    onPress={() =>
+                        router.push({
+                            pathname: '/routine/Step6-confirm',
+                            params: { routineId }
+                        })
+                    }
                 >
                     <Text style={styles.buttonText}>Continuar</Text>
                 </Pressable>

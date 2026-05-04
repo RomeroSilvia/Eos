@@ -3,134 +3,183 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors } from '@/constants/colors';
 import { Stepper } from '@/components/Stepper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useEffect, useMemo, useState } from 'react';
+import { getRoutineById } from '@/services/routines';
+import type { Routine, RoutineStep, RoutineTimeOfDay } from '@/types/routine';
+
+type SectionKey = 'limpieza' | 'tratamientos' | 'hidratacion' | 'proteccion' | 'complementario';
+
+const sections: Array<{
+  key: SectionKey;
+  title: string;
+  icon: keyof typeof MaterialCommunityIcons.glyphMap;
+}> = [
+  { key: 'limpieza', title: 'Limpieza', icon: 'spray-bottle' },
+  { key: 'tratamientos', title: 'Tratamientos', icon: 'eyedropper' },
+  { key: 'hidratacion', title: 'Hidratacion', icon: 'water-outline' },
+  { key: 'proteccion', title: 'Proteccion solar', icon: 'weather-sunny' },
+  { key: 'complementario', title: 'Cuidado complementario', icon: 'face-mask' }
+];
 
 export default function Step6Confirm() {
   const router = useRouter();
+  const { routineId } = useLocalSearchParams<{ routineId: string }>();
 
-  const [expanded, setExpanded] = useState({
+  const [routine, setRoutine] = useState<Routine | null>(null);
+  const [expanded, setExpanded] = useState<Record<SectionKey, boolean>>({
     limpieza: true,
+    tratamientos: false,
     hidratacion: false,
-    proteccion: false
+    proteccion: false,
+    complementario: false
   });
 
-  const toggle = (key: string) => {
+  useEffect(() => {
+    if (!routineId) return;
+
+    getRoutineById(routineId)
+      .then(setRoutine)
+      .catch((error) => console.error(error));
+  }, [routineId]);
+
+  const groupedSteps = useMemo(() => {
+    const grouped = sections.reduce<Record<SectionKey, RoutineStep[]>>((acc, section) => {
+      acc[section.key] = [];
+      return acc;
+    }, {} as Record<SectionKey, RoutineStep[]>);
+
+    const steps = routine?.routine_steps ?? [];
+
+    steps.forEach((step) => {
+      const key = getSectionKey(step.category);
+      grouped[key].push(step);
+    });
+
+    return grouped;
+  }, [routine]);
+
+  const toggle = (key: SectionKey) => {
     setExpanded((prev) => ({
       ...prev,
-      [key]: !prev[key as keyof typeof prev]
+      [key]: !prev[key]
     }));
   };
 
   return (
     <SafeAreaView style={styles.screen}>
       <View style={styles.container}>
-
         <Text style={styles.title}>Nueva Rutina</Text>
 
         <View style={{ alignItems: 'center' }}>
           <Stepper current={4} />
         </View>
 
-        <Text style={styles.section}>Confirmación</Text>
+        <Text style={styles.section}>Confirmacion</Text>
         <Text style={styles.question}>Resumen de tu rutina</Text>
 
         <ScrollView contentContainerStyle={styles.content}>
-
           <View style={styles.card}>
-
             <Text style={styles.label}>Nombre</Text>
-            <Text style={styles.value}>Rutina piel luminosa</Text>
+            <Text style={styles.value}>{routine?.name ?? 'Cargando...'}</Text>
 
             <Text style={styles.label}>Objetivo</Text>
-            <View style={styles.row}>
-              <MaterialCommunityIcons name="white-balance-sunny" size={18} color={colors.primaryDark} />
-              <Text style={styles.value}>Piel más luminosa</Text>
-            </View>
+            <Text style={styles.value}>{routine?.description ?? 'Sin objetivo definido'}</Text>
 
             <Text style={styles.label}>Tipo de rutina</Text>
             <View style={styles.row}>
-              <MaterialCommunityIcons name="weather-sunny" size={18} color={colors.primaryDark} />
-              <Text style={styles.value}>Rutina matutina</Text>
+              <MaterialCommunityIcons
+                name={routine?.time_of_day === 'night' ? 'weather-night' : 'weather-sunny'}
+                size={18}
+                color={colors.primaryDark}
+              />
+              <Text style={styles.value}>{getRoutineTimeLabel(routine?.time_of_day)}</Text>
             </View>
 
             <View style={styles.divider} />
 
             <Text style={styles.label}>Pasos incluidos</Text>
 
-            {/* LIMPIEZA */}
-            <Pressable style={styles.sectionRow} onPress={() => toggle('limpieza')}>
-              <View style={styles.row}>
-                <View style={styles.icon}>
-                  <MaterialCommunityIcons name="spray-bottle" size={20} color={colors.surface} />
+            {sections.map((section) => {
+              const steps = groupedSteps[section.key];
+
+              if (steps.length === 0) return null;
+
+              return (
+                <View key={section.key}>
+                  <Pressable style={styles.sectionRow} onPress={() => toggle(section.key)}>
+                    <View style={styles.row}>
+                      <View style={styles.icon}>
+                        <MaterialCommunityIcons name={section.icon} size={20} color={colors.surface} />
+                      </View>
+                      <Text style={styles.sectionTitle}>{section.title}</Text>
+                    </View>
+
+                    <MaterialCommunityIcons
+                      name={expanded[section.key] ? 'chevron-up' : 'chevron-down'}
+                      size={20}
+                      color={colors.textSecondary}
+                    />
+                  </Pressable>
+
+                  {expanded[section.key] && (
+                    <View style={styles.steps}>
+                      {steps.map((step) => (
+                        <Text key={step.id} style={styles.step}>
+                          {step.step_order}. {step.name}
+                        </Text>
+                      ))}
+                    </View>
+                  )}
                 </View>
-                <Text style={styles.sectionTitle}>Limpieza</Text>
-              </View>
-
-              <MaterialCommunityIcons
-                name={expanded.limpieza ? 'chevron-up' : 'chevron-down'}
-                size={20}
-                color={colors.textSecondary}
-              />
-            </Pressable>
-
-            {expanded.limpieza && (
-              <View style={styles.steps}>
-                <Text style={styles.step}>• Primer paso - Aceite de limpieza Skin1004</Text>
-                <Text style={styles.step}>• Segundo paso - Gel de limpieza Cerave</Text>
-              </View>
-            )}
-
-            {/* HIDRATACIÓN */}
-            <Pressable style={styles.sectionRow} onPress={() => toggle('hidratacion')}>
-              <View style={styles.row}>
-                <View style={styles.icon}>
-                  <MaterialCommunityIcons name="water-outline" size={20} color={colors.surface} />
-                </View>
-                <Text style={styles.sectionTitle}>Hidratación</Text>
-              </View>
-
-              <MaterialCommunityIcons
-                name={expanded.hidratacion ? 'chevron-up' : 'chevron-down'}
-                size={20}
-                color={colors.textSecondary}
-              />
-            </Pressable>
-
-            {/* PROTECCIÓN */}
-            <Pressable style={styles.sectionRow} onPress={() => toggle('proteccion')}>
-              <View style={styles.row}>
-                <View style={styles.icon}>
-                  <MaterialCommunityIcons name="weather-sunny" size={20} color={colors.surface} />
-                </View>
-                <Text style={styles.sectionTitle}>Protección solar</Text>
-              </View>
-
-              <MaterialCommunityIcons
-                name={expanded.proteccion ? 'chevron-up' : 'chevron-down'}
-                size={20}
-                color={colors.textSecondary}
-              />
-            </Pressable>
-
+              );
+            })}
           </View>
-
         </ScrollView>
 
-        <Pressable style={styles.editBtn}>
-          <Text style={styles.editText}>Editar información</Text>
+        <Pressable
+          style={styles.editBtn}
+          onPress={() =>
+            router.push({
+              pathname: '/routine/Step4',
+              params: { routineId }
+            })
+          }
+        >
+          <Text style={styles.editText}>Editar pasos</Text>
         </Pressable>
 
         <Pressable
-            style={styles.button}
-            onPress={() => router.push('/routine/success')}
-            >
-            <Text style={styles.buttonText}>Confirmar</Text>
+          style={styles.button}
+          onPress={() =>
+            router.push({
+              pathname: '/routine/success',
+              params: { routineId }
+            })
+          }
+        >
+          <Text style={styles.buttonText}>Confirmar</Text>
         </Pressable>
-
       </View>
     </SafeAreaView>
   );
+}
+
+function getSectionKey(category: string | null): SectionKey {
+  if (category === 'limpieza') return 'limpieza';
+  if (category === 'tratamientos') return 'tratamientos';
+  if (category === 'hidratacion') return 'hidratacion';
+  if (category === 'proteccion') return 'proteccion';
+
+  return 'complementario';
+}
+
+function getRoutineTimeLabel(timeOfDay?: RoutineTimeOfDay | null) {
+  if (timeOfDay === 'morning') return 'Rutina matutina';
+  if (timeOfDay === 'night') return 'Rutina nocturna';
+  if (timeOfDay === 'custom') return 'Rutina personalizada';
+
+  return 'Sin tipo definido';
 }
 
 const styles = StyleSheet.create({

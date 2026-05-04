@@ -1,56 +1,87 @@
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import { getActiveRoutine, getRoutineById, getRoutines } from '@/services/routines';
+import { getRoutineDayProgress, setRoutineStepCompletion } from '@/services/progress';
 import type { Routine } from '@/types/routine';
 
 export function useRoutine() {
-  const [routine, setRoutine] = useState<Routine>({
-    id: '1',
-    name: 'Rutina piel luminosa',
-    category: 'morning' as const,
-    steps: [
-      {
-        id: '1',
-        title: 'Limpieza',
-        status: 'pending' as const,
-        category: 'morning' as const,
-        order: 1,
-        products: [
-          {
-            id: 'p1',
-            name: 'Gel de limpieza Cerave',
-            category: 'cleanser'
-          }
-        ]
-      },
-      {
-        id: '2',
-        title: 'Serum',
-        status: 'pending' as const,
-        category: 'morning' as const,
-        order: 2,
-        products: [
-          {
-            id: 'p2',
-            name: 'Niacinamida The Ordinary',
-            category: 'serum'
-          }
-        ]
-      },
-      {
-        id: '3',
-        title: 'Hidratación',
-        status: 'pending' as const,
-        category: 'morning' as const,
-        order: 3,
-        products: [
-          {
-            id: 'p3',
-            name: 'Crema hidratante',
-            category: 'moisturizer'
-          }
-        ]
-      }
-    ]
-  });
+  const [routine, setRoutine] = useState<Routine | null>(null);
+  const [routines, setRoutines] = useState<Routine[]>([]);
+  const [completedStepIds, setCompletedStepIds] = useState<Set<string>>(new Set());
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  return { routine, setRoutine };
+  const refreshRoutine = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      const [allRoutines, activeRoutine] = await Promise.all([
+        getRoutines(),
+        getActiveRoutine()
+      ]);
+
+      setRoutines(
+        allRoutines.sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())
+      );
+      setRoutine(activeRoutine);
+
+      if (activeRoutine) {
+        const progress = await getRoutineDayProgress(activeRoutine.id);
+        setCompletedStepIds(new Set(progress.completed_step_ids));
+      } else {
+        setCompletedStepIds(new Set());
+      }
+    } catch (err) {
+      console.error(err);
+      setError('No pudimos cargar tu rutina.');
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void refreshRoutine();
+  }, [refreshRoutine]);
+
+  const selectRoutine = async (id: string) => {
+    try {
+      setError(null);
+      const selectedRoutine = await getRoutineById(id);
+      const progress = await getRoutineDayProgress(id);
+      setRoutine(selectedRoutine);
+      setCompletedStepIds(new Set(progress.completed_step_ids));
+    } catch (err) {
+      console.error(err);
+      setError('No pudimos cargar esa rutina.');
+    }
+  };
+
+  const toggleStep = async (id: string) => {
+    if (!routine) return;
+
+    const isCompleted = !completedStepIds.has(id);
+
+    try {
+      const progress = await setRoutineStepCompletion({
+        routineId: routine.id,
+        stepId: id,
+        isCompleted
+      });
+
+      setCompletedStepIds(new Set(progress.completed_step_ids));
+    } catch (err) {
+      console.error(err);
+      setError('No pudimos actualizar el progreso del paso.');
+    }
+  };
+
+  return {
+    routine,
+    routines,
+    completedStepIds,
+    isLoading,
+    error,
+    refreshRoutine,
+    selectRoutine,
+    toggleStep
+  };
 }

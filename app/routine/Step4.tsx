@@ -3,165 +3,219 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors } from '@/constants/colors';
 import { Stepper } from '@/components/Stepper';
 import { RoutineSectionCard } from '@/components/RoutineSectionCard';
-import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useCallback, useState } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
+import { getStepsByRoutine } from '@/services/routines';
+
+type Step = {
+  id: string;
+  name: string;
+  description: string | null;
+  category: string | null;
+};
+
+type SectionItem = {
+  id: string;
+  nombre: string;
+  producto: string;
+};
+
+type Sections = {
+  limpieza: SectionItem[];
+  tratamientos: SectionItem[];
+  hidratacion: SectionItem[];
+  proteccion: SectionItem[];
+  complementario: SectionItem[];
+};
 
 export default function Step4() {
-    const router = useRouter();
+  const router = useRouter();
+  const { routineId } = useLocalSearchParams<{ routineId: string }>();
 
-    const [sections, setSections] = useState({
-        limpieza: [
-            {
-                id: '1',
-                nombre: 'Primer paso',
-                producto: 'Aceite de limpieza Skin1004'
-            },
-            {
-                id: '2',
-                nombre: 'Segundo paso',
-                producto: 'Gel de limpieza Cerave'
-            }
-        ],
-        tratamientos: [],
-        hidratacion: [],
-        proteccion: [],
-        complementario: []
-    });
+  const [sections, setSections] = useState<Sections>({
+    limpieza: [],
+    tratamientos: [],
+    hidratacion: [],
+    proteccion: [],
+    complementario: []
+  });
 
-    const goToAddStep = (section: string) => {
-        router.push({
-            pathname: '/routine/Add-step',
-            params: { section }
+  useFocusEffect(useCallback(() => {
+    if (!routineId) return;
+
+    const fetchSteps = async () => {
+      try {
+        const steps = await getStepsByRoutine(routineId);
+
+        const grouped: Sections = {
+          limpieza: [],
+          tratamientos: [],
+          hidratacion: [],
+          proteccion: [],
+          complementario: []
+        };
+
+        steps.forEach((step) => {
+          const category = (step.category ?? 'complementario') as keyof Sections;
+
+          if (!grouped[category]) return;
+
+          grouped[category].push({
+            id: step.id,
+            nombre: step.name ?? 'Paso',
+            producto: step.description ?? ''
+          });
         });
+
+        setSections(grouped);
+      } catch (e) {
+        console.error(e);
+      }
     };
 
-    return (
-        <SafeAreaView style={styles.screen}>
-            <View style={styles.container}>
-                <Text style={styles.title}>Nueva Rutina</Text>
+    fetchSteps();
+  }, [routineId]));
 
-                <View style={{ alignItems: 'center' }}>
-                    <Stepper current={4} />
-                </View>
+  const goToAddStep = (section: string) => {
+    router.push({
+      pathname: '/routine/Add-step',
+      params: { section, routineId }
+    });
+  };
 
-                <Text style={styles.section}>Pasos de la rutina</Text>
+  return (
+    <SafeAreaView style={styles.screen}>
+      <View style={styles.container}>
+        <Text style={styles.title}>Nueva Rutina</Text>
 
-                <Text style={styles.question}>
-                    ¿Qué pasos quieres incluir?
-                </Text>
+        <View style={{ alignItems: 'center' }}>
+          <Stepper current={4} />
+        </View>
 
-                <Text style={styles.desc}>
-                    Organiza los pasos de tu rutina por categorías.{"\n"}
-                    Puedes añadir más de un producto o paso dentro de cada sección.
-                </Text>
+        <Text style={styles.section}>Pasos de la rutina</Text>
 
-                <ScrollView contentContainerStyle={styles.list}>
-                    <RoutineSectionCard
-                        title="Limpieza"
-                        description="Elimina impurezas y prepara la piel"
-                        icon="spray-bottle"
-                        steps={sections.limpieza}
-                        onAddStep={() => goToAddStep('limpieza')}
-                    />
+        <Text style={styles.question}>
+          ¿Qué pasos quieres incluir?
+        </Text>
 
-                    <RoutineSectionCard
-                        title="Tratamientos"
-                        description="Activos específicos según tus objetivos."
-                        icon="eyedropper"
-                        steps={sections.tratamientos}
-                        onAddStep={() => goToAddStep('tratamientos')}
-                    />
+        <Text style={styles.desc}>
+          Organiza los pasos de tu rutina por categorías.{"\n"}
+          Puedes añadir más de un producto o paso dentro de cada sección.
+        </Text>
 
-                    <RoutineSectionCard
-                        title="Hidratación"
-                        description="Ayuda a mantener la barrera cutánea."
-                        icon="water-outline"
-                        steps={sections.hidratacion}
-                        onAddStep={() => goToAddStep('hidratacion')}
-                    />
+        <ScrollView contentContainerStyle={styles.list}>
+          <RoutineSectionCard
+            title="Limpieza"
+            description="Elimina impurezas y prepara la piel"
+            icon="spray-bottle"
+            steps={sections.limpieza}
+            onAddStep={() => goToAddStep('limpieza')}
+          />
 
-                    <RoutineSectionCard
-                        title="Protección solar"
-                        description=""
-                        icon="weather-sunny"
-                        steps={sections.proteccion}
-                        onAddStep={() => goToAddStep('proteccion')}
-                    />
+          <RoutineSectionCard
+            title="Tratamientos"
+            description="Activos específicos según tus objetivos."
+            icon="eyedropper"
+            steps={sections.tratamientos}
+            onAddStep={() => goToAddStep('tratamientos')}
+          />
 
-                    <RoutineSectionCard
-                        title="Cuidado complementario"
-                        description="Pasos opcionales o de uso semanal para completar tu rutina."
-                        icon="face-mask"
-                        steps={sections.complementario}
-                        onAddStep={() => goToAddStep('complementario')}
-                    />
-                </ScrollView>
+          <RoutineSectionCard
+            title="Hidratación"
+            description="Ayuda a mantener la barrera cutánea."
+            icon="water-outline"
+            steps={sections.hidratacion}
+            onAddStep={() => goToAddStep('hidratacion')}
+          />
 
-                <Pressable
-                    style={styles.button}
-                    onPress={() => router.push('/routine/Step5-products')}
-                >
-                    <Text style={styles.buttonText}>Continuar</Text>
-                </Pressable>
-            </View>
-        </SafeAreaView>
-    );
+          <RoutineSectionCard
+            title="Protección solar"
+            description=""
+            icon="weather-sunny"
+            steps={sections.proteccion}
+            onAddStep={() => goToAddStep('proteccion')}
+          />
+
+          <RoutineSectionCard
+            title="Cuidado complementario"
+            description="Pasos opcionales o de uso semanal para completar tu rutina."
+            icon="face-mask"
+            steps={sections.complementario}
+            onAddStep={() => goToAddStep('complementario')}
+          />
+        </ScrollView>
+
+        <Pressable
+          style={styles.button}
+          onPress={() =>
+            router.push({
+              pathname: '/routine/Step6-confirm',
+              params: { routineId }
+            })
+          }
+        >
+          <Text style={styles.buttonText}>Continuar</Text>
+        </Pressable>
+      </View>
+    </SafeAreaView>
+  );
 }
 
 const styles = StyleSheet.create({
-    screen: {
-        flex: 1,
-        backgroundColor: colors.background
-    },
-    container: {
-        flex: 1,
-        padding: 20
-    },
+  screen: {
+    flex: 1,
+    backgroundColor: colors.background
+  },
+  container: {
+    flex: 1,
+    padding: 20
+  },
 
-    title: {
-        fontSize: 22,
-        fontWeight: '800',
-        color: colors.textPrimary
-    },
+  title: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: colors.textPrimary
+  },
 
-    section: {
-        marginTop: 12,
-        fontSize: 13,
-        color: colors.textSecondary
-    },
+  section: {
+    marginTop: 12,
+    fontSize: 13,
+    color: colors.textSecondary
+  },
 
-    question: {
-        fontSize: 18,
-        fontWeight: '700',
-        color: colors.textPrimary,
-        marginTop: 4
-    },
+  question: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: colors.textPrimary,
+    marginTop: 4
+  },
 
-    desc: {
-        marginTop: 6,
-        color: colors.textSecondary,
-        lineHeight: 18
-    },
+  desc: {
+    marginTop: 6,
+    color: colors.textSecondary,
+    lineHeight: 18
+  },
 
-    list: {
-        marginTop: 16,
-        gap: 14,
-        paddingBottom: 120
-    },
+  list: {
+    marginTop: 16,
+    gap: 14,
+    paddingBottom: 120
+  },
 
-    button: {
-        position: 'absolute',
-        bottom: 20,
-        left: 20,
-        right: 20,
-        backgroundColor: colors.secondary,
-        padding: 14,
-        borderRadius: 10,
-        alignItems: 'center'
-    },
+  button: {
+    position: 'absolute',
+    bottom: 20,
+    left: 20,
+    right: 20,
+    backgroundColor: colors.secondary,
+    padding: 14,
+    borderRadius: 10,
+    alignItems: 'center'
+  },
 
-    buttonText: {
-        color: colors.surface,
-        fontWeight: '700'
-    }
+  buttonText: {
+    color: colors.surface,
+    fontWeight: '700'
+  }
 });

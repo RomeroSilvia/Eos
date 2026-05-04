@@ -3,16 +3,39 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors } from '@/constants/colors';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
+import { createStep, getStepsByRoutine } from '@/services/routines';
 
 export default function AddStep() {
   const router = useRouter();
-  const { section } = useLocalSearchParams<{ section: string }>();
+  const { section, routineId } = useLocalSearchParams<{
+    section: string;
+    routineId: string;
+  }>();
 
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
 
-  const handleSave = () => {
-    router.back();
+  const handleSave = async () => {
+    try {
+      if (!routineId || !name.trim()) return;
+
+      const existingSteps = await getStepsByRoutine(routineId);
+      const sectionSteps = existingSteps.filter((step) => step.category === section);
+      const nextOrder =
+        Math.max(0, ...sectionSteps.map((step) => step.step_order ?? 0)) + 1;
+
+      await createStep({
+        routine_id: routineId,
+        name: name.trim(),
+        description: description || null,
+        category: section,
+        step_order: nextOrder
+      });
+
+      router.back();
+    } catch (e) {
+      console.error(e);
+    }
   };
 
   return (

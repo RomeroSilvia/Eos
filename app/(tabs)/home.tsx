@@ -16,7 +16,8 @@ export default function HomeScreen() {
     return <SafeAreaView style={styles.screen} />;
   }
 
-  const progress = summary.completedSteps / summary.totalSteps;
+  const progress = summary.totalSteps > 0 ? summary.completedSteps / summary.totalSteps : 0;
+  const routineTitle = summary.activeRoutine?.name ?? 'Sin rutina activa';
 
   return (
     <SafeAreaView style={styles.screen}>
@@ -28,7 +29,7 @@ export default function HomeScreen() {
 
         <Card variant="soft" style={styles.routineCard}>
           <Text style={styles.sectionLabel}>Tu rutina hoy</Text>
-          <Text style={styles.routineTitle}>Mañana ☀️</Text>
+          <Text style={styles.routineTitle}>{routineTitle}</Text>
           <Text style={styles.description}>{formatStepCount(summary.completedSteps, summary.totalSteps)}</Text>
           <View style={styles.progressTrack}>
             <View style={[styles.progressFill, { width: `${progress * 100}%` }]} />

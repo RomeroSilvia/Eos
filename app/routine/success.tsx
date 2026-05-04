@@ -2,38 +2,56 @@ import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors } from '@/constants/colors';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useEffect, useState } from 'react';
+import { getRoutineById } from '@/services/routines';
+import type { Routine, RoutineTimeOfDay } from '@/types/routine';
 
 export default function SuccessScreen() {
   const router = useRouter();
+  const { routineId } = useLocalSearchParams<{ routineId: string }>();
+  const [routine, setRoutine] = useState<Routine | null>(null);
+
+  useEffect(() => {
+    if (!routineId) return;
+
+    getRoutineById(routineId)
+      .then(setRoutine)
+      .catch((error) => console.error(error));
+  }, [routineId]);
+
+  const stepsCount = routine?.routine_steps?.length ?? 0;
 
   return (
     <SafeAreaView style={styles.screen}>
       <View style={styles.container}>
-
         <View style={styles.iconOuter}>
           <View style={styles.iconInner}>
             <MaterialCommunityIcons name="check" size={48} color={colors.surface} />
           </View>
         </View>
 
-        <Text style={styles.title}>¡Rutina creada con éxito!</Text>
+        <Text style={styles.title}>Rutina creada con exito</Text>
 
         <Text style={styles.subtitle}>
           Tu nueva rutina ha sido creada correctamente.
         </Text>
 
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Rutina piel luminosa</Text>
+          <Text style={styles.cardTitle}>{routine?.name ?? 'Cargando rutina...'}</Text>
 
           <View style={styles.row}>
-            <MaterialCommunityIcons name="weather-sunny" size={18} color={colors.primaryDark} />
-            <Text style={styles.cardText}>Rutina matutina</Text>
+            <MaterialCommunityIcons
+              name={routine?.time_of_day === 'night' ? 'weather-night' : 'weather-sunny'}
+              size={18}
+              color={colors.primaryDark}
+            />
+            <Text style={styles.cardText}>{getRoutineTimeLabel(routine?.time_of_day)}</Text>
           </View>
 
           <View style={styles.row}>
             <MaterialCommunityIcons name="format-list-numbered" size={18} color={colors.primaryDark} />
-            <Text style={styles.cardText}>3 pasos</Text>
+            <Text style={styles.cardText}>{stepsCount} {stepsCount === 1 ? 'paso' : 'pasos'}</Text>
           </View>
         </View>
 
@@ -43,10 +61,17 @@ export default function SuccessScreen() {
         >
           <Text style={styles.buttonText}>Ver mi rutina</Text>
         </Pressable>
-
       </View>
     </SafeAreaView>
   );
+}
+
+function getRoutineTimeLabel(timeOfDay?: RoutineTimeOfDay | null) {
+  if (timeOfDay === 'morning') return 'Rutina matutina';
+  if (timeOfDay === 'night') return 'Rutina nocturna';
+  if (timeOfDay === 'custom') return 'Rutina personalizada';
+
+  return 'Sin tipo definido';
 }
 
 const styles = StyleSheet.create({

@@ -7,26 +7,24 @@ import { Card } from './Card';
 type RoutineStepCardProps = {
   step: RoutineStep;
   index: number;
+  completed: boolean;
   onToggle: (id: string) => void;
 };
 
-const getIcon = (title: string) => {
-  const t = title.toLowerCase();
+const getIcon = (step: RoutineStep) => {
+  const text = `${step.category ?? ''} ${step.name}`.toLowerCase();
 
-  if (t.includes('limpieza')) return 'lotion';
-  if (t.includes('serum') || t.includes('tonificación')) return 'eyedropper';
-  if (t.includes('hidrat')) return 'water-outline';
-  if (t.includes('proteccion') || t.includes('protector')) return 'sun-thermometer';
+  if (text.includes('limpieza')) return 'lotion';
+  if (text.includes('serum') || text.includes('tratamiento')) return 'eyedropper';
+  if (text.includes('hidrat')) return 'water-outline';
+  if (text.includes('proteccion') || text.includes('protector')) return 'sun-thermometer';
 
   return 'bottle-tonic-outline';
 };
 
-export function RoutineStepCard({ step, index, onToggle }: RoutineStepCardProps) {
-  const completed = step.status === 'completed';
-
+export function RoutineStepCard({ step, index, completed, onToggle }: RoutineStepCardProps) {
   return (
     <Card style={styles.card}>
-
       <Pressable
         onPress={() => onToggle(step.id)}
         style={[styles.check, completed ? styles.checkDone : styles.checkPending]}
@@ -40,7 +38,7 @@ export function RoutineStepCard({ step, index, onToggle }: RoutineStepCardProps)
 
       <View style={styles.icon}>
         <MaterialCommunityIcons
-          name={getIcon(step.title)}
+          name={getIcon(step)}
           size={20}
           color={colors.background}
         />
@@ -48,14 +46,12 @@ export function RoutineStepCard({ step, index, onToggle }: RoutineStepCardProps)
 
       <View style={styles.content}>
         <Text style={styles.title}>
-          {index + 1}. {step.title}
+          {index + 1}. {step.name}
         </Text>
 
-        {step.products.map((product) => (
-          <Text key={product.id} style={styles.product}>
-            • {product.name}
-          </Text>
-        ))}
+        {!!step.description && (
+          <Text style={styles.description}>{step.description}</Text>
+        )}
 
         <Text style={completed ? styles.badgeDone : styles.badgePending}>
           {completed ? 'Completado' : 'Pendiente'}
@@ -67,7 +63,6 @@ export function RoutineStepCard({ step, index, onToggle }: RoutineStepCardProps)
         size={24}
         color={colors.textSecondary}
       />
-
     </Card>
   );
 }
@@ -121,7 +116,7 @@ const styles = StyleSheet.create({
     fontWeight: '700'
   },
 
-  product: {
+  description: {
     color: colors.textSecondary,
     fontSize: 13
   },
