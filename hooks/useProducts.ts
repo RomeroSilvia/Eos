@@ -4,9 +4,13 @@ import type { Product, ProductCategory, ProductBrand } from '@/types/product';
 
 export function useProducts() {
   const [products, setProducts] = useState<Product[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    void getProducts().then(setProducts);
+    void getProducts().then((products) => {
+      setProducts(products);
+      setIsLoading(false);
+    });
   }, []);
 
   const createProduct = async (data: {
@@ -21,5 +25,5 @@ export function useProducts() {
     return newProduct;
   };
 
-  return { products, createProduct };
+  return { products, createProduct, isLoading };
 }

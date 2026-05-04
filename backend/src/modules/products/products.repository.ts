@@ -33,7 +33,7 @@ export const productsRepository = {
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) throw new Error(error.message);
     return created;
   },
 
@@ -46,7 +46,7 @@ export const productsRepository = {
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) throw new Error(error.message);
     return updated;
   },
 
@@ -57,7 +57,7 @@ export const productsRepository = {
       .eq('id', productId)
       .eq('user_id', userId);
 
-    if (error) throw error;
+    if (error) throw new Error(error.message);
     return true;
   }
 };

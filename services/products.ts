@@ -15,7 +15,7 @@ function mapToProduct(row: Record<string, unknown>): Product {
 
 export async function getProducts(): Promise<Product[]> {
   try {
-    const res = await fetch(`${BASE_URL}/api/products`);
+    const res = await fetch(`${BASE_URL}/products`);
     if (!res.ok) throw new Error('Error al obtener productos');
     const rows = await res.json() as Record<string, unknown>[];
     return rows.map(mapToProduct);
@@ -46,7 +46,7 @@ export async function createProduct(data: {
         name: `product.${ext}`,
       } as unknown as Blob);
     }
-    const res = await fetch(`${BASE_URL}/api/products`, {
+    const res = await fetch(`${BASE_URL}/products`, {
       method: 'POST',
       body: formData,
     });

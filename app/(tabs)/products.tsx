@@ -8,7 +8,17 @@ import { colors } from '@/constants/colors';
 import { useProducts } from '@/hooks/useProducts';
 
 export default function ProductsScreen() {
-  const { products } = useProducts();
+  const { products, isLoading } = useProducts();
+
+  if (isLoading) {
+    return (
+      <SafeAreaView style={styles.screen}>
+        <View style={styles.center}>
+          <Text style={styles.emptyText}>Cargando rutina...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   if (products.length === 0) {
     return (
@@ -167,5 +177,16 @@ const styles = StyleSheet.create({
   productMeta: {
     color: colors.textSecondary,
     fontSize: 13
+  },
+  emptyText: {
+    color: colors.textSecondary,
+    textAlign: 'center'
+  },
+  center: {
+    flex: 1,
+    padding: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12
   }
 });
