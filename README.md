@@ -36,6 +36,8 @@ npx expo install expo-notifications expo-secure-store react-native-gesture-handl
 npx expo install @expo/vector-icons
 npx expo-doctor
 npx expo start
+npx expo install react-native-svg ## para importar los iconos cvg del figma
+npm install react@19.1.4 ## si tira error de versionado y volver a instalar svg
 ```
 
 ## Comandos del proyecto

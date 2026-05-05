@@ -9,7 +9,7 @@ export function FloatingActionMenu() {
       <Pressable
         accessibilityLabel="Abrir acciones rapidas"
         accessibilityRole="button"
-        onPress={() => router.push('/routine')}
+        onPress={() => router.push('/routine/Create')}
         style={({ pressed }) => [styles.button, pressed && styles.pressed]}
       >
         <Ionicons color={colors.surface} name="add" size={34} />

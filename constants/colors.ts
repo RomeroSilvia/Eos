@@ -1,5 +1,5 @@
 export const colors = {
-  background: '#F7F5F0',
+  background: '#F8F9F9',
   surface: '#FFFFFF',
   surfaceSoft: '#EEF5EF',
   primary: '#6F8F72',
@@ -12,10 +12,14 @@ export const colors = {
   textPrimary: '#102A43',
   textSecondary: '#6B7280',
   textMuted: '#9CA3AF',
-  border: '#E5E7EB',
-  error: '#D9534F',
-  success: '#6F8F72',
-  pending: '#E8F0FE',
+  textSecondaryLight: '#D1D5DB',
+
+  border: '#E1E6E2',
+
+  error: '#BA2A06',
+  success: '#A9DFBF',
+  pending: '#E1E6E2',
+
   warning: '#F2C94C'
 } as const;
 
