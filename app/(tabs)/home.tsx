@@ -42,7 +42,7 @@ export default function HomeScreen() {
     <SafeAreaView style={styles.screen}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
-          <Text style={styles.greeting}>¡Hola, {summary.user.name}!🌱</Text>
+          <Text style={styles.greeting}>¡Hola, {summary.user.name}! 🌱</Text>
           <Text style={styles.subtitle}>Sentite bien con tu propia piel</Text>
         </View>
 
@@ -81,7 +81,7 @@ export default function HomeScreen() {
 
         <View style={styles.metricsRow}>
           {summary.metrics.map((metric) => (
-            <HomeMetricCard key={metric.id} label={metric.label} value={metric.value} />
+            <HomeMetricCard metricId={metric.id} key={metric.id} label={metric.label} value={metric.value} />
           ))}
         </View>
 
