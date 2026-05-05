@@ -9,5 +9,5 @@ const upload = multer({ storage: multer.memoryStorage() });
 productsRouter.get('/', getProducts);
 productsRouter.get('/:id', getProductById);
 productsRouter.post('/', upload.single('image'), createProduct);
-productsRouter.patch('/:id', updateProduct);
+productsRouter.patch('/:id', upload.single('image'), updateProduct);
 productsRouter.delete('/:id', deleteProduct);

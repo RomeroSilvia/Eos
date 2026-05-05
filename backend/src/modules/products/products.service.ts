@@ -61,8 +61,29 @@ export const productsService = {
     return product;
   },
  
-  update: async (productId: string, userId: string, body: ProductUpdate) => {
-    const product = await productsRepository.update(productId, userId, body);
+  update: async (
+    productId: string,
+    userId: string,
+    body: Record<string, unknown>,
+    file?: Express.Multer.File
+  ) => {
+    const image_url = file ? await productsService.uploadImage(file) : undefined;
+
+    const { name, brand, category, notes } = body as {
+      name?: string;
+      brand?: string;
+      category?: string;
+      notes?: string;
+    };
+
+    const payload: ProductUpdate = {};
+    if (name !== undefined) payload.name = name;
+    if (brand !== undefined) payload.brand = brand;
+    if (category !== undefined) payload.category = category;
+    if (notes !== undefined) payload.notes = notes;
+    if (image_url !== undefined) payload.image_url = image_url;
+
+    const product = await productsRepository.update(productId, userId, payload);
     if (!product) throw new ApiError(404, 'Producto no encontrado');
     return product;
   },

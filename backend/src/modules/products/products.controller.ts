@@ -24,7 +24,7 @@ export const createProduct = asyncHandler(async (req: Request, res: Response) =>
 });
 
 export const updateProduct = asyncHandler(async (req: Request, res: Response) => {
-  const product = await productsService.update(req.params.id, req.user.id, req.body);
+  const product = await productsService.update(req.params.id, req.user.id, req.body, req.file);
   res.json(product);
 });
 
