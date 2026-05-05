@@ -2,7 +2,9 @@ import { useCallback, useEffect, useState } from 'react';
 import { mockUserProfile } from '@/services/auth';
 import { getActiveRoutine } from '@/services/routines';
 import { getRoutineDayProgress } from '@/services/progress';
+import { scheduleRemindersByTime } from '@/services/notifications';
 import type { DailyHomeSummary } from '@/types/home';
+import type { Reminder } from '@/types/reminder';
 import type { RoutineStep } from '@/types/routine';
 
 const hydrationCategories = new Set(['hidratacion', 'proteccion', 'proteccion solar']);
@@ -10,6 +12,18 @@ const glowCategories = new Set(['tratamientos', 'limpieza', 'proteccion', 'prote
 
 export function useHome() {
   const [summary, setSummary] = useState<DailyHomeSummary | null>(null);
+
+  const toggleReminder = useCallback((reminderId: string) => {
+    setSummary((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        reminders: prev.reminders.map((r) =>
+          r.id === reminderId ? { ...r, enabled: !r.enabled } : r
+        )
+      };
+    });
+  }, []);
 
   const refreshSummary = useCallback(async () => {
     try {
@@ -24,6 +38,8 @@ export function useHome() {
       const hydrationMetric = computeMetricValue(hydrationSteps, completedStepIds);
       const glowMetric = computeMetricValue(glowSteps, completedStepIds);
 
+      const reminders = buildTestReminders();
+
       setSummary({
         user: mockUserProfile,
         activeRoutine,
@@ -33,13 +49,15 @@ export function useHome() {
           { id: 'hydration', label: 'Hidratacion', value: hydrationMetric, suffix: '%' },
           { id: 'glow', label: 'Luminosidad', value: glowMetric, suffix: '%' }
         ],
-        reminders: [
-          { id: 'sunscreen-reminder', title: 'Protector solar', time: '1:00 hs', enabled: true },
-          { id: 'night-routine-reminder', title: 'Rutina de noche', time: '12:00 hs', enabled: true }
-        ]
+        reminders
       });
+
+      // Programar notificaciones
+      await scheduleRemindersByTime(reminders);
     } catch (error) {
       console.error(error);
+      const reminders = buildTestReminders();
+
       setSummary({
         user: mockUserProfile,
         activeRoutine: null,
@@ -49,11 +67,11 @@ export function useHome() {
           { id: 'hydration', label: 'Hidratacion', value: 0, suffix: '%' },
           { id: 'glow', label: 'Luminosidad', value: 0, suffix: '%' }
         ],
-        reminders: [
-          { id: 'sunscreen-reminder', title: 'Protector solar', time: '1:00 hs', enabled: true },
-          { id: 'night-routine-reminder', title: 'Rutina de noche', time: '12:00 hs', enabled: true }
-        ]
+        reminders
       });
+
+      // Programar notificaciones aún en caso de error
+      await scheduleRemindersByTime(reminders);
     }
   }, []);
 
@@ -61,7 +79,7 @@ export function useHome() {
     void refreshSummary();
   }, [refreshSummary]);
 
-  return { summary, refreshSummary };
+  return { summary, refreshSummary, toggleReminder };
 }
 
 function getMetricStepsByCategory(steps: RoutineStep[], allowedCategories: Set<string>): RoutineStep[] {
@@ -87,4 +105,11 @@ function normalizeCategory(value: string | null): string {
     .replace(/[\u0300-\u036f]/g, '')
     .replace(/\s+/g, ' ')
     .trim();
+}
+
+function buildTestReminders(): Reminder[] {
+  return [
+    { id: 'sunscreen-reminder', title: 'Protector solar', time: '15:00 hs', enabled: true },
+    { id: 'night-routine-reminder', title: 'Rutina de noche', time: '22:00 hs', enabled: true }
+  ];
 }

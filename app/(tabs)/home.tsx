@@ -12,7 +12,7 @@ import { useHome } from '@/hooks/useHome';
 import { formatStepCount } from '@/utils/format';
 
 export default function HomeScreen() {
-  const { summary, refreshSummary } = useHome();
+  const { summary, refreshSummary, toggleReminder } = useHome();
 
   useFocusEffect(
     useCallback(() => {
@@ -86,7 +86,7 @@ export default function HomeScreen() {
         </View>
         <Card>
           {summary.reminders.map((reminder) => (
-            <HomeReminderItem key={reminder.id} reminder={reminder} />
+            <HomeReminderItem key={reminder.id} reminder={reminder} onToggle={toggleReminder} />
           ))}
         </Card>
       </ScrollView>
