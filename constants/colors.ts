@@ -2,6 +2,7 @@ export const colors = {
   background: '#F8F9F9',
   surface: '#FFFFFF',
   surfaceSoft: '#EEF5EF',
+  routineCircleSoft: '#DFEADF',
   primary: '#6F8F72',
   primaryDark: '#4F6F52',
   primaryLight: '#DDEADD',

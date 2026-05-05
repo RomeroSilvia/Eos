@@ -28,15 +28,10 @@ export default function HomeScreen() {
     ? Math.max(0, Math.min(1, summary.completedSteps / summary.totalSteps))
     : 0;
   const routineTimeOfDay = summary.activeRoutine?.time_of_day;
-  const isMorningRoutine = routineTimeOfDay === 'morning';
   const isNightRoutine = routineTimeOfDay === 'night';
 
-  const routineMomentLabel = isMorningRoutine ? 'Mañana' : isNightRoutine ? 'Noche' : 'Personalizada';
-  const routineMomentEmoji = isMorningRoutine ? '☀️' : isNightRoutine ? '🌙' : '✨';
-  const routineCardBackground = isMorningRoutine ? colors.surfaceSoft : isNightRoutine ? '#EAF0F6' : '#F3F0EA';
-  const routineCircleBackground = isMorningRoutine ? '#DFEADF' : isNightRoutine ? '#D8E3F0' : '#EDE5DA';
-  const routineProgressTrack = isMorningRoutine ? colors.border : isNightRoutine ? '#C4D4E7' : '#DCCFBE';
-  const routineProgressFill = isMorningRoutine ? colors.primary : isNightRoutine ? '#5B7693' : '#A7865D';
+  const routineMomentLabel = isNightRoutine ? 'Noche' : 'Mañana';
+  const routineMomentEmoji = isNightRoutine ? '🌙' : '☀️';
 
   return (
     <SafeAreaView style={styles.screen}>
@@ -50,7 +45,7 @@ export default function HomeScreen() {
           variant="soft"
           style={{
             ...styles.routineCard,
-            backgroundColor: routineCardBackground
+            backgroundColor: colors.surfaceSoft
           }}
         >
           <View style={styles.routineTopRow}>
@@ -61,7 +56,7 @@ export default function HomeScreen() {
               </Text>
             </View>
 
-            <View style={[styles.routineEmojiCircle, { backgroundColor: routineCircleBackground }]}>
+            <View style={[styles.routineEmojiCircle, { backgroundColor: colors.routineCircleSoft }]}>
               <Image
                 source={require('../../assets/images/home-image.png')}
                 style={styles.routineCircleImage}
@@ -71,8 +66,8 @@ export default function HomeScreen() {
           </View>
 
           <Text style={styles.description}>{formatStepCount(summary.completedSteps, summary.totalSteps)}</Text>
-          <View style={[styles.progressTrack, { backgroundColor: routineProgressTrack }]}>
-            <View style={[styles.progressFill, { width: `${progress * 100}%`, backgroundColor: routineProgressFill }]} />
+          <View style={[styles.progressTrack, { backgroundColor: colors.border }]}>
+            <View style={[styles.progressFill, { width: `${progress * 100}%`, backgroundColor: colors.primary }]} />
           </View>
           <Button variant="secondary" onPress={() => router.push('/routine')} style={styles.routineButton}>
             Ver rutina
