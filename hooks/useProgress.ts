@@ -1,17 +1,20 @@
 import { useEffect, useState } from 'react';
-import { getCalendarProgress, getStreakProgress, getWeeklyProgress } from '@/services/progress';
-import type { CalendarDayProgress, StreakProgress, WeeklyProgress } from '@/types/progress';
+import { getProgressSummary } from '@/services/progress';
+import type { ProgressSummary } from '@/types/progress';
 
 export function useProgress() {
-  const [weeklyProgress, setWeeklyProgress] = useState<WeeklyProgress | null>(null);
-  const [streakProgress, setStreakProgress] = useState<StreakProgress | null>(null);
-  const [calendarProgress, setCalendarProgress] = useState<CalendarDayProgress[]>([]);
+  const [summary, setSummary] = useState<ProgressSummary | null>(null);
 
   useEffect(() => {
-    void getWeeklyProgress().then(setWeeklyProgress);
-    void getStreakProgress().then(setStreakProgress);
-    void getCalendarProgress().then(setCalendarProgress);
+    void getProgressSummary().then(setSummary);
   }, []);
 
-  return { weeklyProgress, streakProgress, calendarProgress };
+  return {
+    summary,
+    weeklyProgress: summary?.weeklyProgress ?? null,
+    monthlyProgress: summary?.monthlyProgress ?? null,
+    streakProgress: summary?.streakProgress ?? null,
+    calendarProgress: summary?.calendarProgress ?? [],
+    isEmpty: !summary
+  };
 }
