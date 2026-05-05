@@ -29,9 +29,10 @@ export default function HomeScreen() {
     : 0;
   const routineTimeOfDay = summary.activeRoutine?.time_of_day;
   const isNightRoutine = routineTimeOfDay === 'night';
+  const isCustomRoutine = routineTimeOfDay === 'custom';
 
-  const routineMomentLabel = isNightRoutine ? 'Noche' : 'Mañana';
-  const routineMomentEmoji = isNightRoutine ? '🌙' : '☀️';
+  const routineMomentLabel = isNightRoutine ? 'Noche' : isCustomRoutine ? 'Personalizada' : 'Mañana';
+  const routineMomentEmoji = isNightRoutine ? '🌑' : isCustomRoutine ? '✨' : '☀️';
 
   return (
     <SafeAreaView style={styles.screen}>
