@@ -1,4 +1,5 @@
-import type { ProgressSummary } from '@/types/progress';
+import { apiRequest } from '@/services/api/client';
+import type { ProgressSummary, RoutineDayProgress } from '@/types/progress';
 
 export const mockProgressSummary: ProgressSummary = {
   weeklyProgress: {

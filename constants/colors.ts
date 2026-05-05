@@ -1,26 +1,23 @@
 export const colors = {
+  primary: '#C98F90',
+  primaryDark: '#9F5F61',
+  primaryLight: '#E7C8C9',
+  primarySuperLight: '#F7ECEC',
+  secondary: '#A9DFBF',
+  secondaryDark: '#4F9368',
+  secondaryLight: '#D7F0E1',
+  secondarySoft: '#EEF9F2',
   background: '#F8F9F9',
   surface: '#FFFFFF',
-  surfaceSoft: '#EEF5EF',
-  primary: '#6F8F72',
-  primaryDark: '#4F6F52',
-  primaryLight: '#DDEADD',
-  secondary: '#D98282',
-  secondaryDark: '#B25C5C',
-  secondaryLight: '#F3D6D6',
-  secondarySoft: '#f5e5e5',
-  textPrimary: '#102A43',
-  textSecondary: '#6B7280',
-  textMuted: '#9CA3AF',
-  textSecondaryLight: '#D1D5DB',
-
-  border: '#E1E6E2',
-
-  error: '#BA2A06',
-  success: '#A9DFBF',
-  pending: '#E1E6E2',
-
-  warning: '#F2C94C'
+  surfaceSoft: '#F1F5F4',
+  border: '#DCE5E2',
+  text: '#2C3E50',
+  textPrimary: '#20323F',
+  textSecondary: '#60717B',
+  textMuted: '#8A9AA3',
+  pending: '#E9C46A',
+  warning: '#F4A261',
+  error: '#D9534F',
 } as const;
 
 export type ColorName = keyof typeof colors;

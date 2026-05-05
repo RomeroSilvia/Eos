@@ -10,25 +10,20 @@ export type Database = {
       profiles: {
         Row: {
           id: string;
-          full_name: string;
-          email: string | null;
-          skin_type: string | null;
-          created_at: string;
-          updated_at: string;
+          full_name: string | null;
+          role: string;
+          skinType: string;
         };
         Insert: {
-          id?: string;
-          full_name: string;
-          email?: string | null;
-          skin_type?: string | null;
-          created_at?: string;
-          updated_at?: string;
+          id: string;
+          full_name?: string | null;
+          role?: string;
+          skinType?: string;
         };
         Update: {
-          full_name?: string;
-          email?: string | null;
-          skin_type?: string | null;
-          updated_at?: string;
+          full_name?: string | null;
+          role?: string;
+          skinType?: string;
         };
       };
 
