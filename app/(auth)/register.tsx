@@ -1,14 +1,39 @@
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
+import * as SecureStore from 'expo-secure-store';
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { apiConfig } from '@/services/api/client';
 
 const ROLE_OPTIONS = ['No, soy usuario', 'Si, soy dermatologo/a'] as const;
+const AUTH_TOKEN_KEY = 'eos.auth.token';
+const AUTH_REFRESH_TOKEN_KEY = 'eos.auth.refreshToken';
+const AUTH_USER_KEY = 'eos.auth.user';
 
 type RoleOption = (typeof ROLE_OPTIONS)[number];
 
 type FieldLabelProps = {
   children: string;
+};
+
+type RegisterResponse = {
+  status: 'success';
+  message: string;
+  data: {
+    session: {
+      access_token: string;
+      refresh_token: string;
+    };
+    user: {
+      id: string;
+      email: string;
+      username: string;
+      firstName: string;
+      lastName: string;
+      full_name: string;
+      role: string;
+    };
+  };
 };
 
 function FieldLabel({ children }: FieldLabelProps) {
@@ -19,16 +44,76 @@ function FieldLabel({ children }: FieldLabelProps) {
   );
 }
 
+async function setStoredItem(key: string, value: string): Promise<void> {
+  if (Platform.OS === 'web') {
+    localStorage.setItem(key, value);
+    return;
+  }
+
+  await SecureStore.setItemAsync(key, value);
+}
+
+function mapRole(option: RoleOption) {
+  return option === 'Si, soy dermatologo/a' ? 'specialist' : 'user';
+}
+
 export default function RegisterScreen() {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [username, setUsername] = useState('');
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [role, setRole] = useState<RoleOption>('No, soy usuario');
   const [isRoleMenuOpen, setIsRoleMenuOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   function handleRoleSelect(nextRole: RoleOption) {
     setRole(nextRole);
     setIsRoleMenuOpen(false);
+  }
+
+  async function handleSubmit() {
+    if (!email.trim() || !password || !username.trim() || !firstName.trim() || !lastName.trim()) {
+      Alert.alert('Error', 'Completa todos los campos obligatorios.');
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      const response = await fetch(`${apiConfig.baseUrl}/auth/register`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: email.trim(),
+          password,
+          username: username.trim(),
+          firstName: firstName.trim(),
+          lastName: lastName.trim(),
+          role: mapRole(role),
+        }),
+      });
+
+      const payload = (await response.json()) as RegisterResponse | { message?: string };
+
+      if (!response.ok || !('data' in payload)) {
+        throw new Error(payload.message ?? 'No pudimos completar el registro.');
+      }
+
+      await Promise.all([
+        setStoredItem(AUTH_TOKEN_KEY, payload.data.session.access_token),
+        setStoredItem(AUTH_REFRESH_TOKEN_KEY, payload.data.session.refresh_token),
+        setStoredItem(AUTH_USER_KEY, JSON.stringify(payload.data.user)),
+      ]);
+
+      router.push('/start-quiz');
+    } catch (error: any) {
+      Alert.alert('Error', error.message ?? 'No pudimos completar el registro.');
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   return (
@@ -46,6 +131,31 @@ export default function RegisterScreen() {
       </View>
 
       <View style={styles.form}>
+        <View style={styles.field}>
+          <FieldLabel>Email</FieldLabel>
+          <TextInput
+            autoCapitalize="none"
+            keyboardType="email-address"
+            onChangeText={setEmail}
+            placeholder="example@email.com"
+            placeholderTextColor="#A0AEC0"
+            style={styles.input}
+            value={email}
+          />
+        </View>
+
+        <View style={styles.field}>
+          <FieldLabel>Contrasena</FieldLabel>
+          <TextInput
+            onChangeText={setPassword}
+            placeholder="********"
+            placeholderTextColor="#A0AEC0"
+            secureTextEntry
+            style={styles.input}
+            value={password}
+          />
+        </View>
+
         <View style={styles.field}>
           <FieldLabel>Usuario</FieldLabel>
           <TextInput
@@ -101,8 +211,12 @@ export default function RegisterScreen() {
         </View>
       </View>
 
-      <Pressable onPress={() => router.push('/start-quiz')} style={styles.submitButton}>
-        <Text style={styles.submitButtonText}>Continuar</Text>
+      <Pressable
+        disabled={isSubmitting}
+        onPress={handleSubmit}
+        style={[styles.submitButton, isSubmitting && styles.disabledButton]}
+      >
+        <Text style={styles.submitButtonText}>{isSubmitting ? 'Registrando...' : 'Continuar'}</Text>
       </Pressable>
     </ScrollView>
   );
@@ -215,6 +329,9 @@ const styles = StyleSheet.create({
     marginBottom: 40,
     marginTop: 40,
     width: '100%',
+  },
+  disabledButton: {
+    opacity: 0.6,
   },
   submitButtonText: {
     color: '#FFFFFF',

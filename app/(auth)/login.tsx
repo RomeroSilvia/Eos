@@ -1,7 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
+import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import * as SecureStore from 'expo-secure-store';
-import { router } from 'expo-router';
-import { useState } from 'react';
+import { useRouter } from 'expo-router';
+import { useEffect, useState } from 'react';
 import {
   Alert,
   Image,
@@ -36,6 +37,17 @@ type LoginResponse = {
   };
 };
 
+type GoogleLoginResponse = {
+  status: 'success';
+  message: string;
+  data: {
+    access_token: string;
+    refresh_token?: string;
+    isNewUser: boolean;
+    user?: unknown;
+  };
+};
+
 async function setStoredItem(key: string, value: string): Promise<void> {
   if (Platform.OS === 'web') {
     localStorage.setItem(key, value);
@@ -46,10 +58,18 @@ async function setStoredItem(key: string, value: string): Promise<void> {
 }
 
 export default function LoginScreen() {
+  const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isGoogleSubmitting, setIsGoogleSubmitting] = useState(false);
+
+  useEffect(() => {
+    GoogleSignin.configure({
+      webClientId: 'TU_GOOGLE_WEB_CLIENT_ID_AQUI',
+    });
+  }, []);
 
   async function handleSubmit() {
     if (!email.trim() || !password) {
@@ -99,6 +119,53 @@ export default function LoginScreen() {
     }
   }
 
+  async function handleGoogleLogin() {
+    setIsGoogleSubmitting(true);
+
+    try {
+      await GoogleSignin.hasPlayServices();
+      const userInfo = await GoogleSignin.signIn();
+      const idToken = (userInfo as any).idToken ?? (userInfo as any).data?.idToken;
+
+      if (!idToken) {
+        throw new Error('No pudimos obtener el token de Google.');
+      }
+
+      const response = await fetch(`${apiConfig.baseUrl}/auth/google`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ idToken }),
+      });
+
+      const payload = (await response.json()) as GoogleLoginResponse | { message?: string };
+
+      if (!response.ok || !('data' in payload)) {
+        throw new Error(payload.message ?? 'No pudimos iniciar sesion con Google.');
+      }
+
+      await Promise.all([
+        setStoredItem(AUTH_TOKEN_KEY, payload.data.access_token),
+        payload.data.refresh_token
+          ? setStoredItem(AUTH_REFRESH_TOKEN_KEY, payload.data.refresh_token)
+          : Promise.resolve(),
+        payload.data.user ? setStoredItem(AUTH_USER_KEY, JSON.stringify(payload.data.user)) : Promise.resolve(),
+      ]);
+
+      if (payload.data.isNewUser) {
+        router.replace('/start-quiz');
+        return;
+      }
+
+      router.replace('/home');
+    } catch (error: any) {
+      Alert.alert('Error', error.message ?? 'No pudimos iniciar sesion con Google.');
+    } finally {
+      setIsGoogleSubmitting(false);
+    }
+  }
+
   return (
     <SafeAreaView style={styles.screen}>
       <View style={styles.container}>
@@ -109,9 +176,15 @@ export default function LoginScreen() {
 
         <Text style={styles.title}>Iniciar Sesion</Text>
 
-        <Pressable style={styles.socialButton}>
+        <Pressable
+          disabled={isGoogleSubmitting}
+          onPress={handleGoogleLogin}
+          style={[styles.socialButton, isGoogleSubmitting && styles.disabledButton]}
+        >
           <Ionicons color="#000000" name="logo-google" size={22} style={styles.socialIcon} />
-          <Text style={styles.socialText}>Continuar con Google</Text>
+          <Text style={styles.socialText}>
+            {isGoogleSubmitting ? 'Conectando...' : 'Continuar con Google'}
+          </Text>
         </Pressable>
 
         <Pressable style={styles.socialButton}>
@@ -157,10 +230,11 @@ export default function LoginScreen() {
           </Pressable>
         </View>
 
+        <Pressable onPress={() => router.push('/(auth)/forgot-password')} style={styles.forgotPasswordLink}>
+          <Text style={styles.forgotPassword}>¿Olvidaste tu contraseña?</Text>
+        </Pressable>
+
         <View style={styles.actionLinks}>
-          <Pressable>
-            <Text style={styles.forgotPassword}>¿Olvidaste tu contraseña?</Text>
-          </Pressable>
           <Pressable onPress={() => router.push('/(auth)/register')}>
             <Text style={styles.registerLink}>Registrarme</Text>
           </Pressable>
@@ -279,12 +353,16 @@ const styles = StyleSheet.create({
   actionLinks: {
     alignItems: 'flex-start',
     flexDirection: 'column',
-    marginTop: 10,
     width: '100%',
   },
+  forgotPasswordLink: {
+    alignSelf: 'flex-start',
+    marginBottom: 20,
+    marginTop: 10,
+  },
   forgotPassword: {
-    color: '#C98F90',
-    fontSize: 13,
+    color: '#9F5F61',
+    fontSize: 14,
   },
   registerLink: {
     color: '#C98F90',

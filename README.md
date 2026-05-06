@@ -38,6 +38,7 @@ npx expo-doctor
 npx expo start
 npx expo install react-native-svg ## para importar los iconos cvg del figma
 npm install react@19.1.4 ## si tira error de versionado y volver a instalar svg
+npx expo install @react-native-google-signin/google-signin ##Para poder iniciar sesion con google
 ```
 
 ## Comandos del proyecto

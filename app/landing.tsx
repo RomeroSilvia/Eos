@@ -18,6 +18,10 @@ function BenefitItem({ text }: BenefitItemProps) {
   );
 }
 
+function getLandingButtonStyle({ pressed }: { pressed: boolean }) {
+  return [styles.outlineButton, pressed && styles.pressedButton];
+}
+
 export default function LandingScreen() {
   const router = useRouter();
 
@@ -39,15 +43,15 @@ export default function LandingScreen() {
       </View>
 
       <View style={styles.buttonSection}>
-        <Pressable onPress={() => router.push('/register')} style={styles.outlineButton}>
+        <Pressable onPress={() => router.push('/register')} style={getLandingButtonStyle}>
           <Text style={styles.outlineButtonText}>Comenzar analisis de piel</Text>
         </Pressable>
 
-        <Pressable style={styles.specialistButton}>
-          <Text style={styles.specialistButtonText}>Soy especialista</Text>
+        <Pressable style={getLandingButtonStyle}>
+          <Text style={styles.outlineButtonText}>Soy especialista</Text>
         </Pressable>
 
-        <Pressable onPress={() => router.push('/login')} style={styles.outlineButton}>
+        <Pressable onPress={() => router.push('/login')} style={getLandingButtonStyle}>
           <Text style={styles.outlineButtonText}>Ya tengo cuenta</Text>
         </Pressable>
       </View>
@@ -119,22 +123,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     width: '100%',
   },
+  pressedButton: {
+    backgroundColor: '#E7C8C9',
+  },
   outlineButtonText: {
     color: '#0B132B',
     fontSize: 16,
     fontWeight: '500',
-  },
-  specialistButton: {
-    alignItems: 'center',
-    backgroundColor: '#C98F90',
-    borderRadius: 12,
-    height: 54,
-    justifyContent: 'center',
-    width: '100%',
-  },
-  specialistButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
   },
 });

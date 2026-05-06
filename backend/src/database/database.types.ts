@@ -10,20 +10,54 @@ export type Database = {
       profiles: {
         Row: {
           id: string;
-          full_name: string | null;
+          username: string | null;
+          first_name: string | null;
+          last_name: string | null;
           role: string;
-          skinType: string;
         };
         Insert: {
           id: string;
-          full_name?: string | null;
+          username?: string | null;
+          first_name?: string | null;
+          last_name?: string | null;
           role?: string;
-          skinType?: string;
         };
         Update: {
-          full_name?: string | null;
+          username?: string | null;
+          first_name?: string | null;
+          last_name?: string | null;
           role?: string;
-          skinType?: string;
+        };
+      };
+
+      skin_profiles: {
+        Row: {
+          id: string;
+          user_id: string;
+          age_range: string | null;
+          skin_type: string | null;
+          imperfections: string | null;
+          main_goal: string | null;
+          routine_steps: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          age_range?: string | null;
+          skin_type?: string | null;
+          imperfections?: string | null;
+          main_goal?: string | null;
+          routine_steps?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          age_range?: string | null;
+          skin_type?: string | null;
+          imperfections?: string | null;
+          main_goal?: string | null;
+          routine_steps?: string | null;
+          created_at?: string;
         };
       };
 
