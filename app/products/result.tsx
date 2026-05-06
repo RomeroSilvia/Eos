@@ -5,8 +5,9 @@ import { Button } from '@/components/Button';
 import { colors } from '@/constants/colors';
 
 export default function ProductResultScreen() {
-  const { status } = useLocalSearchParams<{ status: 'success' | 'error' }>();
+  const { status, mode } = useLocalSearchParams<{ status: 'success' | 'error'; mode?: 'create' | 'edit' }>();
   const isSuccess = status === 'success';
+  const isEdit = mode === 'edit';
 
   return (
     <SafeAreaView style={styles.screen}>
@@ -18,13 +19,19 @@ export default function ProductResultScreen() {
         </View>
 
         <Text style={styles.title}>
-          {isSuccess ? '¡Producto creado\ncon éxito!' : 'Error al crear el\nproducto'}
+          {isSuccess
+            ? isEdit ? '¡Producto editado\ncon éxito!' : '¡Producto creado\ncon éxito!'
+            : isEdit ? 'Error al editar el\nproducto' : 'Error al crear el\nproducto'}
         </Text>
 
         <Text style={styles.description}>
           {isSuccess
-            ? 'El nuevo producto ha sido añadido con éxito, ya podés asociarlo a tu rutina'
-            : 'Ocurrió un error al crear el producto. Intentalo de nuevo.'}
+            ? isEdit
+              ? 'Los cambios han sido guardados con éxito'
+              : 'El nuevo producto ha sido añadido con éxito, ya podés asociarlo a tu rutina'
+            : isEdit
+              ? 'Ocurrió un error al guardar los cambios. Intentalo de nuevo.'
+              : 'Ocurrió un error al crear el producto. Intentalo de nuevo.'}
         </Text>
       </View>
 

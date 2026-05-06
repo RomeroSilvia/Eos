@@ -1,8 +1,8 @@
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { Image, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from '@/components/Button';
 import { colors } from '@/constants/colors';
@@ -26,13 +26,34 @@ const BRANDS: { label: string; value: ProductBrand }[] = [
 ];
 
 export default function NewProductScreen() {
-  const { createProduct } = useProducts();
-  const [name, setName] = useState('');
-  const [description, setDescription] = useState('');
-  const [category, setCategory] = useState<ProductCategory>('other');
-  const [brand, setBrand] = useState<ProductBrand>('other');
+  const { createProduct, updateProduct } = useProducts();
+
+  const {
+    productId,
+    initialName,
+    initialBrand,
+    initialCategory,
+    initialDescription,
+    initialImageUrl,
+  } = useLocalSearchParams<{
+    productId?: string;
+    initialName?: string;
+    initialBrand?: string;
+    initialCategory?: string;
+    initialDescription?: string;
+    initialImageUrl?: string;
+  }>();
+
+  const isEditMode = !!productId;
+
+  const [name, setName] = useState(initialName ?? '');
+  const [description, setDescription] = useState(initialDescription ?? '');
+  const [category, setCategory] = useState<ProductCategory>((initialCategory as ProductCategory) ?? 'other');
+  const [brand, setBrand] = useState<ProductBrand>((initialBrand as ProductBrand) ?? 'other');
   const [imageUri, setImageUri] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  const displayImage = imageUri ?? initialImageUrl ?? null;
 
   const handlePickImage = async () => {
     try {
@@ -56,23 +77,32 @@ export default function NewProductScreen() {
     if (!name.trim()) return;
     setLoading(true);
     try {
-      await createProduct({
-        name: name.trim(),
-        description: description.trim() || undefined,
-        category,
-        brand,
-        imageUri: imageUri ?? undefined,
-      });
-      router.replace('/products/result?status=success');
+      if (isEditMode) {
+        await updateProduct(productId, {
+          name: name.trim(),
+          description: description.trim() || undefined,
+          category,
+          brand,
+          imageUri: imageUri ?? undefined,
+        });
+      } else {
+        await createProduct({
+          name: name.trim(),
+          description: description.trim() || undefined,
+          category,
+          brand,
+          imageUri: imageUri ?? undefined,
+        });
+      }
+      router.replace(`/products/result?status=success&mode=${isEditMode ? 'edit' : 'create'}`);
     } catch {
-      router.replace('/products/result?status=error');
+      router.replace(`/products/result?status=error&mode=${isEditMode ? 'edit' : 'create'}`);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-
       <SafeAreaView style={styles.screen}>
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -88,7 +118,7 @@ export default function NewProductScreen() {
             </View>
 
             <View style={styles.header}>
-              <Text style={styles.title}>Nuevo producto</Text>
+              <Text style={styles.title}>{isEditMode ? 'Editar Producto' : 'Nuevo producto'}</Text>
             </View>
 
             <Text style={styles.label}>Nombre del producto</Text>
@@ -142,8 +172,8 @@ export default function NewProductScreen() {
             </View>
 
             <Pressable onPress={handlePickImage} style={styles.photoBox}>
-              {imageUri ? (
-                <Image source={{ uri: imageUri }} style={styles.photoPreview} />
+              {displayImage ? (
+                <Image source={{ uri: displayImage }} style={styles.photoPreview} />
               ) : (
                 <>
                   <Text style={styles.photoPlaceholder}>🖼</Text>
@@ -161,7 +191,6 @@ export default function NewProductScreen() {
           </ScrollView>
         </KeyboardAvoidingView>
       </SafeAreaView>
-
   );
 }
 

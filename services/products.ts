@@ -74,3 +74,65 @@ export async function createProduct(data: {
     throw error instanceof Error ? error : new Error(`Error del servidor: ${String(error)}`);
   }
 }
+
+export async function updateProduct(id: string, data: {
+  name?: string;
+  description?: string;
+  category?: ProductCategory;
+  brand?: ProductBrand;
+  imageUri?: string;
+}): Promise<Product> {
+  try {
+    const formData = new FormData();
+    if (data.name !== undefined) formData.append('name', data.name);
+    if (data.category !== undefined) formData.append('category', data.category);
+    if (data.brand !== undefined) formData.append('brand', data.brand);
+    if (data.description !== undefined) formData.append('notes', data.description);
+
+    if (data.imageUri) {
+      const uri = data.imageUri;
+      const filename = uri.split('/').pop() ?? 'product.jpg';
+      const ext = filename.includes('.')
+        ? filename.split('.').pop()!.toLowerCase()
+        : 'jpg';
+
+      const mimeMap: Record<string, string> = {
+        jpg: 'image/jpeg',
+        jpeg: 'image/jpeg',
+        png: 'image/png',
+        webp: 'image/webp',
+        heic: 'image/heic',
+      };
+      const mimeType = mimeMap[ext] ?? 'image/jpeg';
+      const normalizedExt = ext === 'jpeg' ? 'jpg' : (mimeMap[ext] ? ext : 'jpg');
+
+      formData.append('image', {
+        uri,
+        type: mimeType,
+        name: `product.${normalizedExt}`,
+      } as unknown as Blob);
+    }
+
+    const res = await fetch(`${BASE_URL}/products/${id}`, {
+      method: 'PATCH',
+      body: formData,
+    });
+    if (!res.ok) throw new Error('Error al actualizar producto');
+    return mapToProduct(await res.json() as Record<string, unknown>);
+  } catch (error) {
+    console.error('[updateProduct]', error);
+    throw error instanceof Error ? error : new Error(`Error del servidor: ${String(error)}`);
+  }
+}
+
+export async function deleteProduct(id: string): Promise<void> {
+  try {
+    const res = await fetch(`${BASE_URL}/products/${id}`, {
+      method: 'DELETE',
+    });
+    if (!res.ok) throw new Error('Error al eliminar producto');
+  } catch (error) {
+    console.error('[deleteProduct]', error);
+    throw error instanceof Error ? error : new Error(`Error del servidor: ${String(error)}`);
+  }
+}

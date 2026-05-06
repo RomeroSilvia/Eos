@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
-import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Image, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
@@ -19,7 +19,7 @@ const CATEGORY_LABELS: Record<ProductCategory, string> = {
 
 export default function ProductDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { products } = useProducts();
+  const { products, removeProduct } = useProducts();
   const product = products.find((p) => p.id === id);
 
   if (!product) {
@@ -32,6 +32,41 @@ export default function ProductDetailScreen() {
       </SafeAreaView>
     );
   }
+
+  const handleEdit = () => {
+    router.push({
+      pathname: '/products/new',
+      params: {
+        productId: product.id,
+        initialName: product.name,
+        initialBrand: product.brand ?? '',
+        initialCategory: product.category,
+        initialDescription: product.description ?? '',
+        initialImageUrl: product.image_url ?? '',
+      },
+    });
+  };
+
+  const handleDelete = () => {
+    if (Platform.OS === 'web') {
+      if (window.confirm(`Se eliminara "${product.name}". Esta accion no se puede deshacer.`)) {
+        void removeProduct(id).then(() => router.back());
+      }
+      return;
+    }
+    Alert.alert(
+      'Eliminar producto',
+      `Se eliminara "${product.name}". Esta accion no se puede deshacer.`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Eliminar',
+          style: 'destructive',
+          onPress: () => void removeProduct(id).then(() => router.back()),
+        },
+      ]
+    );
+  };
 
   return (
     <SafeAreaView style={styles.screen}>
@@ -72,10 +107,10 @@ export default function ProductDetailScreen() {
       </ScrollView>
 
       <View style={styles.footer}>
-        <Button onPress={() => {}} style={styles.editButton} textStyle={{ color: colors.secondary }} variant="ghost">
+        <Button onPress={handleEdit} style={styles.editButton} textStyle={{ color: colors.secondary }} variant="ghost">
           Editar información
         </Button>
-        <Button onPress={() => {}} style={styles.deleteButton} variant="secondary">
+        <Button onPress={handleDelete} style={styles.deleteButton} variant="secondary">
           Eliminar producto
         </Button>
       </View>
