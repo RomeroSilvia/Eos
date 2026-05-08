@@ -307,3 +307,24 @@ function addDays(date: Date, days: number): Date {
 function toIsoDate(date: Date): string {
   return date.toISOString().slice(0, 10);
 }
+
+export async function getRoutineDayProgress(routineId: string): Promise<RoutineDayProgress> {
+  return apiRequest<RoutineDayProgress>({
+    path: `/progress/routines/${routineId}/today`,
+    method: 'GET'
+  });
+}
+
+export async function setRoutineStepCompletion(data: {
+  routineId: string;
+  stepId: string;
+  isCompleted: boolean;
+}): Promise<RoutineDayProgress> {
+  return apiRequest<RoutineDayProgress>({
+    path: `/progress/routines/${data.routineId}/today/steps/${data.stepId}`,
+    method: 'PATCH',
+    body: JSON.stringify({
+      is_completed: data.isCompleted
+    })
+  });
+}

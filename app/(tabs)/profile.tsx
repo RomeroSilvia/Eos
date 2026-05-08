@@ -5,7 +5,6 @@ import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
 import { colors } from '@/constants/colors';
 import { useProfile } from '@/hooks/useProfile';
-import { scheduleRoutineReminder } from '@/services/notifications';
 
 export default function ProfileScreen() {
   const { profile } = useProfile();
@@ -26,9 +25,7 @@ export default function ProfileScreen() {
         <Card style={styles.settings}>
           <Text style={styles.sectionTitle}>Recordatorios</Text>
           <Text style={styles.description}>Configura permisos y prueba un recordatorio local.</Text>
-          <Button onPress={() => void scheduleRoutineReminder('Eos', 'Es momento de cuidar tu piel.')}>
-            Probar notificacion
-          </Button>
+          
         </Card>
       </ScrollView>
     </SafeAreaView>
