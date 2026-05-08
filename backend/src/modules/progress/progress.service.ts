@@ -30,11 +30,24 @@ export async function getSummaryByUserId(userId: string): Promise<ProgressSummar
     progressRepository.findRoutineLogsByUserIdBetweenDates(userId, toIsoDate(monthStart), toIsoDate(monthEnd))
   ]);
 
+  const weeklyProgress = calculatePeriodProgress(weeklyLogs);
+  const monthlyProgress = calculatePeriodProgress(monthlyLogs);
+  const streakProgress = calculateStreakProgress(allLogs);
+  const calendarProgress = buildCalendarProgress(monthlyLogs, monthStart, monthEnd);
+  const completedDays = calendarProgress.filter((day) => day.status === 'completed').length;
+
   return {
-    weeklyProgress: calculatePeriodProgress(weeklyLogs),
-    monthlyProgress: calculatePeriodProgress(monthlyLogs),
-    streakProgress: calculateStreakProgress(allLogs, today),
-    calendarProgress: buildCalendarProgress(monthlyLogs, monthStart, monthEnd)
+    userId,
+    completedRoutines: monthlyProgress.completedRoutines,
+    totalRoutines: monthlyProgress.totalRoutines,
+    completedDays,
+    currentStreak: streakProgress.currentStreak,
+    bestStreak: streakProgress.longestStreak,
+    completionRate: monthlyProgress.percent,
+    weeklyProgress,
+    monthlyProgress,
+    streakProgress,
+    calendarProgress
   };
 }
 
@@ -79,24 +92,27 @@ function getCalendarDayStatus(logs: RoutineLog[]): CalendarDayStatus {
     return 'empty';
   }
 
-  const completedCount = logs.filter(isRoutineCompleted).length;
-
-  if (completedCount === logs.length) {
+  if (logs.some(isRoutineCompleted)) {
     return 'completed';
   }
 
-  if (completedCount > 0) {
+  if (logs.some(isRoutinePartiallyCompleted)) {
     return 'partial';
   }
 
   return 'pending';
 }
 
-function calculateStreakProgress(logs: RoutineLog[], today: Date): StreakProgress {
-  const completedDates = new Set(logs.filter(isRoutineCompleted).map((log) => log.log_date));
+function calculateStreakProgress(logs: RoutineLog[]): StreakProgress {
+  const completedDates = new Set(
+    Array.from(groupLogsByDate(logs).entries())
+      .filter(([, dayLogs]) => getCalendarDayStatus(dayLogs) === 'completed')
+      .map(([date]) => date)
+  );
   const sortedDates = Array.from(completedDates).sort();
   let longestStreak = 0;
   let currentRun = 0;
+  let lastRun = 0;
   let previousDate: Date | null = null;
 
   for (const date of sortedDates) {
@@ -109,23 +125,22 @@ function calculateStreakProgress(logs: RoutineLog[], today: Date): StreakProgres
     }
 
     longestStreak = Math.max(longestStreak, currentRun);
+    lastRun = currentRun;
     previousDate = currentDate;
   }
 
-  let currentStreak = 0;
-
-  for (let current = new Date(today); completedDates.has(toIsoDate(current)); current = addDays(current, -1)) {
-    currentStreak += 1;
-  }
-
   return {
-    currentStreak,
+    currentStreak: sortedDates.length === 0 ? 0 : lastRun,
     longestStreak
   };
 }
 
 function isRoutineCompleted(log: RoutineLog): boolean {
-  return log.completion_percentage >= 100 || log.completed_at !== null;
+  return log.completion_percentage >= 100;
+}
+
+function isRoutinePartiallyCompleted(log: RoutineLog): boolean {
+  return log.completion_percentage > 0;
 }
 
 function groupLogsByDate(logs: RoutineLog[]): Map<string, RoutineLog[]> {

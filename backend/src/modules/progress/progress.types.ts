@@ -22,6 +22,13 @@ export type CalendarDayProgress = {
 };
 
 export type ProgressSummary = {
+  userId?: string;
+  completedRoutines?: number;
+  totalRoutines?: number;
+  completedDays?: number;
+  currentStreak?: number;
+  bestStreak?: number;
+  completionRate?: number;
   weeklyProgress: PeriodProgress;
   monthlyProgress: PeriodProgress;
   streakProgress: StreakProgress;
