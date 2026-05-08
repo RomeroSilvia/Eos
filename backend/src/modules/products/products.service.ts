@@ -82,6 +82,7 @@ export const productsService = {
     if (category !== undefined) payload.category = category;
     if (notes !== undefined) payload.notes = notes;
     if (image_url !== undefined) payload.image_url = image_url;
+    payload.updated_at = new Date().toISOString();
 
     const product = await productsRepository.update(productId, userId, payload);
     if (!product) throw new ApiError(404, 'Producto no encontrado');

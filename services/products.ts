@@ -2,6 +2,18 @@ import type { Product, ProductCategory, ProductBrand } from '@/types/product';
 
 const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3000';
 
+async function uriToBlob(uri: string): Promise<Blob> {
+  const response = await fetch(uri);
+  return response.blob();
+}
+
+function getFilename(uri: string): string {
+  const base = uri.split('/').pop() ?? 'product.jpg';
+  const ext = base.includes('.') ? base.split('.').pop()!.toLowerCase() : 'jpg';
+  const normalizedExt = ext === 'jpeg' ? 'jpg' : (['jpg', 'png', 'webp', 'heic'].includes(ext) ? ext : 'jpg');
+  return `product.${normalizedExt}`;
+}
+
 function mapToProduct(row: Record<string, unknown>): Product {
   return {
     id: row.id as string,
@@ -40,27 +52,8 @@ export async function createProduct(data: {
     if (data.description) formData.append('notes', data.description);
 
     if (data.imageUri) {
-      const uri = data.imageUri;
-      const filename = uri.split('/').pop() ?? 'product.jpg';
-      const ext = filename.includes('.')
-        ? filename.split('.').pop()!.toLowerCase()
-        : 'jpg';
- 
-      const mimeMap: Record<string, string> = {
-        jpg: 'image/jpeg',
-        jpeg: 'image/jpeg',
-        png: 'image/png',
-        webp: 'image/webp',
-        heic: 'image/heic',
-      };
-      const mimeType = mimeMap[ext] ?? 'image/jpeg';
-      const normalizedExt = ext === 'jpeg' ? 'jpg' : (mimeMap[ext] ? ext : 'jpg');
- 
-      formData.append('image', {
-        uri,
-        type: mimeType,
-        name: `product.${normalizedExt}`,
-      } as unknown as Blob);
+      const blob = await uriToBlob(data.imageUri);
+      formData.append('image', blob, getFilename(data.imageUri));
     }
 
     const res = await fetch(`${BASE_URL}/products`, {
@@ -90,27 +83,8 @@ export async function updateProduct(id: string, data: {
     if (data.description !== undefined) formData.append('notes', data.description);
 
     if (data.imageUri) {
-      const uri = data.imageUri;
-      const filename = uri.split('/').pop() ?? 'product.jpg';
-      const ext = filename.includes('.')
-        ? filename.split('.').pop()!.toLowerCase()
-        : 'jpg';
-
-      const mimeMap: Record<string, string> = {
-        jpg: 'image/jpeg',
-        jpeg: 'image/jpeg',
-        png: 'image/png',
-        webp: 'image/webp',
-        heic: 'image/heic',
-      };
-      const mimeType = mimeMap[ext] ?? 'image/jpeg';
-      const normalizedExt = ext === 'jpeg' ? 'jpg' : (mimeMap[ext] ? ext : 'jpg');
-
-      formData.append('image', {
-        uri,
-        type: mimeType,
-        name: `product.${normalizedExt}`,
-      } as unknown as Blob);
+      const blob = await uriToBlob(data.imageUri);
+      formData.append('image', blob, getFilename(data.imageUri));
     }
 
     const res = await fetch(`${BASE_URL}/products/${id}`, {

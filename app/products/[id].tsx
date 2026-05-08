@@ -156,13 +156,13 @@ const styles = StyleSheet.create({
     overflow: 'hidden'
   },
   productImage: {
-    height: 200,
-    width: '100%'
+    width: '100%',
+    aspectRatio: 1,
   },
   imagePlaceholder: {
     alignItems: 'center',
     backgroundColor: colors.border,
-    height: 200,
+    aspectRatio: 1,
     justifyContent: 'center'
   },
   infoCard: {
