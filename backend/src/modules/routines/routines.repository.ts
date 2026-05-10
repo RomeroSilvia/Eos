@@ -1,3 +1,4 @@
+import { supabase } from '../../config/supabase';
 import type {
   ProductRow,
   RoutineInsert,
@@ -10,63 +11,139 @@ import type {
 } from '../../database/schema.types';
 
 export const routinesRepository = {
-  findAllByUserId: async (_userId: string): Promise<RoutineRow[]> => {
-    // TODO: Implement Supabase query to get routines by user id.
-    return [];
+  findAllByUserId: async (userId: string): Promise<RoutineRow[]> => {
+    const { data, error } = await supabase
+      .from('routines')
+      .select('*')
+      .eq('user_id', userId);
+
+    if (error) throw error;
+    return data ?? [];
   },
 
-  findById: async (_routineId: string, _userId: string): Promise<RoutineRow | null> => {
-    // TODO: Implement Supabase query to get routine by id and user id.
-    return null;
+  findById: async (routineId: string, userId: string): Promise<any> => {
+    const { data, error } = await supabase
+      .from('routines')
+      .select(`
+      *,
+      routine_steps (
+        id,
+        name,
+        description,
+        category,
+        step_order,
+        is_required,
+        created_at,
+        updated_at
+      )
+    `)
+      .eq('id', routineId)
+      .eq('user_id', userId)
+      .single();
+
+    if (error) return null;
+    return data;
   },
 
-  create: async (_data: RoutineInsert): Promise<RoutineRow | null> => {
-    // TODO: Implement Supabase query to create a routine.
-    return null;
+  create: async (data: RoutineInsert): Promise<RoutineRow | null> => {
+    const { data: created, error } = await supabase
+      .from('routines')
+      .insert([data as any])
+      .select();
+
+    if (error) throw error;
+
+    return created?.[0] ?? null;
   },
 
-  update: async (_routineId: string, _userId: string, _data: RoutineUpdate): Promise<RoutineRow | null> => {
-    // TODO: Implement Supabase query to update a routine by id and user id.
-    return null;
+  update: async (
+    routineId: string,
+    userId: string,
+    data: RoutineUpdate
+  ): Promise<RoutineRow | null> => {
+    const { data: updated, error } = await supabase
+      .from('routines')
+      .update(data)
+      .eq('id', routineId)
+      .eq('user_id', userId)
+      .select()
+      .single();
+
+    if (error) return null;
+    return updated;
   },
 
-  remove: async (_routineId: string, _userId: string): Promise<boolean> => {
-    // TODO: Implement Supabase query to delete a routine by id and user id.
-    return false;
+  remove: async (routineId: string, userId: string): Promise<boolean> => {
+    const { error } = await supabase
+      .from('routines')
+      .delete()
+      .eq('id', routineId)
+      .eq('user_id', userId);
+
+    return !error;
   },
 
-  findStepsByRoutineId: async (_routineId: string): Promise<RoutineStepRow[]> => {
-    // TODO: Implement Supabase query to get routine steps by routine id.
-    return [];
+  findStepsByRoutineId: async (routineId: string): Promise<RoutineStepRow[]> => {
+    const { data, error } = await supabase
+      .from('routine_steps')
+      .select('*')
+      .eq('routine_id', routineId)
+      .order('step_order', { ascending: true });
+
+    if (error) throw error;
+    return data ?? [];
   },
 
-  createStep: async (_data: RoutineStepInsert): Promise<RoutineStepRow | null> => {
-    // TODO: Implement Supabase query to create a routine step.
-    return null;
+  createStep: async (data: RoutineStepInsert): Promise<RoutineStepRow | null> => {
+    const { data: created, error } = await supabase
+      .from('routine_steps')
+      .insert([data as any])
+      .select()
+      .single();
+
+    if (error) throw error;
+    return created;
   },
 
-  updateStep: async (_stepId: string, _data: RoutineStepUpdate): Promise<RoutineStepRow | null> => {
-    // TODO: Implement Supabase query to update a routine step.
-    return null;
+  updateStep: async (
+    stepId: string,
+    data: RoutineStepUpdate
+  ): Promise<RoutineStepRow | null> => {
+    const { data: updated, error } = await supabase
+      .from('routine_steps')
+      .update(data)
+      .eq('id', stepId)
+      .select()
+      .single();
+
+    if (error) return null;
+    return updated;
   },
 
-  removeStep: async (_stepId: string): Promise<boolean> => {
-    // TODO: Implement Supabase query to delete a routine step.
-    return false;
+  removeStep: async (stepId: string): Promise<boolean> => {
+    const { error } = await supabase
+      .from('routine_steps')
+      .delete()
+      .eq('id', stepId);
+
+    return !error;
   },
 
   findProductsByStepId: async (_stepId: string): Promise<ProductRow[]> => {
-    // TODO: Implement Supabase query to get products attached to a routine step.
     return [];
   },
 
-  attachProductToStep: async (_stepId: string, _productId: string): Promise<RoutineStepProductRow | null> => {
-    // TODO: Implement Supabase query to attach a product to a routine step.
+  attachProductToStep: async (
+    _stepId: string,
+    _productId: string
+  ): Promise<RoutineStepProductRow | null> => {
     return null;
   },
 
-  detachProductFromStep: async (_stepId: string, _productId: string): Promise<boolean> => {
-    // TODO: Implement Supabase query to detach a product from a routine step.
+  detachProductFromStep: async (
+    _stepId: string,
+    _productId: string
+  ): Promise<boolean> => {
     return false;
   }
 };

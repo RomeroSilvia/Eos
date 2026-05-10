@@ -23,6 +23,14 @@ Responsabilidades:
 - `hooks/useRoutine.ts`
 - `types/routine.ts`
 - `services/routines.ts`
+- endpoints `backend/src/modules/routines/*`
+- integracion de check diario con `backend/src/modules/progress/*`
+
+Estado actual:
+
+- Rutinas y pasos usan API EOS/Supabase.
+- El listado de rutinas del usuario esta integrado en la tab Rutina.
+- El check de pasos queda persistido por dia para que Progreso pueda recuperarlo.
 
 ## Integrante 3 - Modulo Productos
 

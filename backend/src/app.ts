@@ -15,7 +15,7 @@ app.use(cors({ origin: env.corsOrigin }));
 app.use(express.json());
 
 app.get('/api/health', (_req, res) => {
-  res.json({
+  return res.json({
     app: 'eos-backend',
     status: 'ready',
     environment: env.nodeEnv
