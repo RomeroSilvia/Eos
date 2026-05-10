@@ -1,14 +1,22 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
+import { useCallback } from 'react';
 import { Image, ScrollView, StyleSheet, Text, View, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
 import { colors } from '@/constants/colors';
 import { useProducts } from '@/hooks/useProducts';
 
 export default function ProductsScreen() {
-  const { products, isLoading } = useProducts();
+  const { products, isLoading, refreshProducts } = useProducts();
+
+  useFocusEffect(
+    useCallback(() => {
+      void refreshProducts();
+    }, [refreshProducts])
+  );
 
   if (isLoading) {
     return (

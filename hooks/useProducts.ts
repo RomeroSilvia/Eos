@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   createProduct as createProductService,
   deleteProduct as deleteProductService,
@@ -11,12 +11,16 @@ export function useProducts() {
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    void getProducts().then((products) => {
-      setProducts(products);
-      setIsLoading(false);
-    });
+  const refreshProducts = useCallback(async () => {
+    setIsLoading(true);
+    const data = await getProducts();
+    setProducts(data);
+    setIsLoading(false);
   }, []);
+
+  useEffect(() => {
+    void refreshProducts();
+  }, [refreshProducts]);
 
   const createProduct = async (data: {
     name: string;
@@ -47,5 +51,5 @@ export function useProducts() {
     setProducts((prev) => prev.filter((p) => p.id !== id));
   };
 
-  return { products, createProduct, updateProduct, removeProduct, isLoading };
+  return { products, createProduct, updateProduct, removeProduct, isLoading, refreshProducts };
 }

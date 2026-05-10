@@ -19,8 +19,18 @@ const CATEGORY_LABELS: Record<ProductCategory, string> = {
 
 export default function ProductDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { products, removeProduct } = useProducts();
+  const { products, removeProduct, isLoading } = useProducts();
   const product = products.find((p) => p.id === id);
+
+  if (isLoading) {
+    return (
+      <SafeAreaView style={styles.screen}>
+        <View style={styles.notFound}>
+          <Text style={styles.notFoundText}>Cargando producto...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   if (!product) {
     return (
