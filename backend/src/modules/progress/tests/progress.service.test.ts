@@ -46,6 +46,16 @@ function pendingLog(date: string, id: string): RoutineLog {
   });
 }
 
+function progressLog(date: string, id: string, completionPercentage: number): RoutineLog {
+  return createRoutineLog({
+    id,
+    log_date: date,
+    routine_id: id,
+    completed_at: completionPercentage >= 100 ? `${date}T12:00:00.000Z` : null,
+    completion_percentage: completionPercentage
+  });
+}
+
 describe('progress.service getSummaryByUserId', () => {
   beforeEach(() => {
     jest.useFakeTimers();
@@ -126,8 +136,8 @@ describe('progress.service getSummaryByUserId', () => {
     });
   });
 
-  it('marks a calendar day as completed when all logs are completed', async () => {
-    const monthlyLogs = [completedLog('2026-05-01', 'completed-1'), completedLog('2026-05-01', 'completed-2')];
+  it('marks a calendar day as completed when at least one routine is completed', async () => {
+    const monthlyLogs = [completedLog('2026-05-01', 'completed-1'), pendingLog('2026-05-01', 'completed-2')];
 
     mockedProgressRepository.findRoutineLogsByUserId.mockResolvedValue(monthlyLogs);
     mockedProgressRepository.findRoutineLogsByUserIdBetweenDates.mockResolvedValueOnce([]).mockResolvedValueOnce(monthlyLogs);
@@ -137,8 +147,8 @@ describe('progress.service getSummaryByUserId', () => {
     expect(summary.calendarProgress.find((day) => day.date === '2026-05-01')?.status).toBe('completed');
   });
 
-  it('marks a calendar day as partial when some logs are completed', async () => {
-    const monthlyLogs = [completedLog('2026-05-02', 'partial-1'), pendingLog('2026-05-02', 'partial-2')];
+  it('marks a calendar day as partial when no routines are completed but some have progress', async () => {
+    const monthlyLogs = [progressLog('2026-05-02', 'partial-1', 25), pendingLog('2026-05-02', 'partial-2')];
 
     mockedProgressRepository.findRoutineLogsByUserId.mockResolvedValue(monthlyLogs);
     mockedProgressRepository.findRoutineLogsByUserIdBetweenDates.mockResolvedValueOnce([]).mockResolvedValueOnce(monthlyLogs);
@@ -146,6 +156,43 @@ describe('progress.service getSummaryByUserId', () => {
     const summary = await getSummaryByUserId('user-1');
 
     expect(summary.calendarProgress.find((day) => day.date === '2026-05-02')?.status).toBe('partial');
+  });
+
+  it('keeps routine completion rate by routine but counts completed days by at least one completed routine', async () => {
+    jest.setSystemTime(new Date('2026-05-05T12:00:00.000Z'));
+
+    const logs = [
+      progressLog('2026-05-04', 'may-04-1', 100),
+      progressLog('2026-05-04', 'may-04-2', 0),
+      progressLog('2026-05-04', 'may-04-3', 100),
+      progressLog('2026-05-04', 'may-04-4', 0),
+      progressLog('2026-05-04', 'may-04-5', 100),
+      progressLog('2026-05-05', 'may-05-1', 0),
+      progressLog('2026-05-05', 'may-05-2', 0),
+      progressLog('2026-05-05', 'may-05-3', 0),
+      progressLog('2026-05-05', 'may-05-4', 25),
+      progressLog('2026-05-05', 'may-05-5', 50),
+      progressLog('2026-05-05', 'may-05-6', 0)
+    ];
+
+    mockedProgressRepository.findRoutineLogsByUserId.mockResolvedValue(logs);
+    mockedProgressRepository.findRoutineLogsByUserIdBetweenDates.mockResolvedValueOnce(logs).mockResolvedValueOnce(logs);
+
+    const summary = await getSummaryByUserId('user-1');
+
+    expect(summary.completedRoutines).toBe(3);
+    expect(summary.totalRoutines).toBe(11);
+    expect(summary.completionRate).toBe(27);
+    expect(summary.completedDays).toBe(1);
+    expect(summary.bestStreak).toBe(1);
+    expect(summary.currentStreak).toBe(1);
+    expect(summary.monthlyProgress).toEqual({
+      totalRoutines: 11,
+      completedRoutines: 3,
+      percent: 27
+    });
+    expect(summary.calendarProgress.find((day) => day.date === '2026-05-04')?.status).toBe('completed');
+    expect(summary.calendarProgress.find((day) => day.date === '2026-05-05')?.status).toBe('partial');
   });
 
   it('marks a calendar day as pending when no logs are completed', async () => {
@@ -168,7 +215,7 @@ describe('progress.service getSummaryByUserId', () => {
     expect(summary.calendarProgress.find((day) => day.date === '2026-05-04')?.status).toBe('empty');
   });
 
-  it('calculates current streak up to today', async () => {
+  it('calculates current streak as the latest completed-day sequence in history', async () => {
     const allLogs = [
       completedLog('2026-05-02', 'current-1'),
       completedLog('2026-05-03', 'current-2'),
@@ -182,6 +229,71 @@ describe('progress.service getSummaryByUserId', () => {
     const summary = await getSummaryByUserId('user-1');
 
     expect(summary.streakProgress.currentStreak).toBe(3);
+  });
+
+  it('returns current streak 1 when Monday is completed and Tuesday is partial', async () => {
+    jest.setSystemTime(new Date('2026-05-05T12:00:00.000Z'));
+    const logs = [progressLog('2026-05-04', 'monday-completed', 100), progressLog('2026-05-05', 'tuesday-partial', 25)];
+
+    mockedProgressRepository.findRoutineLogsByUserId.mockResolvedValue(logs);
+    mockedProgressRepository.findRoutineLogsByUserIdBetweenDates.mockResolvedValueOnce(logs).mockResolvedValueOnce(logs);
+
+    const summary = await getSummaryByUserId('user-1');
+
+    expect(summary.streakProgress.currentStreak).toBe(1);
+    expect(summary.streakProgress.longestStreak).toBe(1);
+  });
+
+  it('returns current streak 2 when Monday and Tuesday are completed and Wednesday is partial', async () => {
+    jest.setSystemTime(new Date('2026-05-06T12:00:00.000Z'));
+    const logs = [
+      progressLog('2026-05-04', 'monday-completed', 100),
+      progressLog('2026-05-05', 'tuesday-completed', 100),
+      progressLog('2026-05-06', 'wednesday-partial', 50)
+    ];
+
+    mockedProgressRepository.findRoutineLogsByUserId.mockResolvedValue(logs);
+    mockedProgressRepository.findRoutineLogsByUserIdBetweenDates.mockResolvedValueOnce(logs).mockResolvedValueOnce(logs);
+
+    const summary = await getSummaryByUserId('user-1');
+
+    expect(summary.streakProgress.currentStreak).toBe(2);
+    expect(summary.streakProgress.longestStreak).toBe(2);
+  });
+
+  it('returns current streak 1 when the latest completed sequence is Wednesday only', async () => {
+    jest.setSystemTime(new Date('2026-05-06T12:00:00.000Z'));
+    const logs = [
+      progressLog('2026-05-04', 'monday-completed', 100),
+      progressLog('2026-05-05', 'tuesday-partial', 25),
+      progressLog('2026-05-06', 'wednesday-completed', 100)
+    ];
+
+    mockedProgressRepository.findRoutineLogsByUserId.mockResolvedValue(logs);
+    mockedProgressRepository.findRoutineLogsByUserIdBetweenDates.mockResolvedValueOnce(logs).mockResolvedValueOnce(logs);
+
+    const summary = await getSummaryByUserId('user-1');
+
+    expect(summary.streakProgress.currentStreak).toBe(1);
+    expect(summary.streakProgress.longestStreak).toBe(1);
+  });
+
+  it('returns latest streak 1 and best streak 2 when Thursday is completed after an earlier two-day streak', async () => {
+    jest.setSystemTime(new Date('2026-05-07T12:00:00.000Z'));
+    const logs = [
+      progressLog('2026-05-04', 'monday-completed', 100),
+      progressLog('2026-05-05', 'tuesday-completed', 100),
+      progressLog('2026-05-06', 'wednesday-partial', 25),
+      progressLog('2026-05-07', 'thursday-completed', 100)
+    ];
+
+    mockedProgressRepository.findRoutineLogsByUserId.mockResolvedValue(logs);
+    mockedProgressRepository.findRoutineLogsByUserIdBetweenDates.mockResolvedValueOnce(logs).mockResolvedValueOnce(logs);
+
+    const summary = await getSummaryByUserId('user-1');
+
+    expect(summary.streakProgress.currentStreak).toBe(1);
+    expect(summary.streakProgress.longestStreak).toBe(2);
   });
 
   it('calculates the longest historical streak', async () => {

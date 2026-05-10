@@ -10,7 +10,31 @@ import { colors } from "@/constants/colors";
 import { useProgress } from "@/hooks/useProgress";
 
 export default function ProgressScreen() {
-  const { summary } = useProgress();
+  const { error, isLoading, summary } = useProgress();
+
+  if (isLoading) {
+    return (
+      <SafeAreaView style={styles.screen}>
+        <View style={styles.emptyState}>
+          <Ionicons color={colors.primary} name="hourglass-outline" size={34} />
+          <Text style={styles.emptyTitle}>Cargando progreso</Text>
+          <Text style={styles.emptyText}>Estamos buscando tus ultimos registros.</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (error) {
+    return (
+      <SafeAreaView style={styles.screen}>
+        <View style={styles.emptyState}>
+          <Ionicons color={colors.error} name="alert-circle-outline" size={34} />
+          <Text style={styles.emptyTitle}>No pudimos cargar tu progreso</Text>
+          <Text style={styles.emptyText}>{error.message}</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   if (!summary) {
     return (
