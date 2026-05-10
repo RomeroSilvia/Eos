@@ -4,6 +4,7 @@ import type {
   CalendarDayStatus,
   ProgressHistoryItem,
   ProgressSummary,
+  RoutineDayProgress,
   StreakProgress,
   WeekProgressDay
 } from '@/types/progress';
@@ -50,6 +51,14 @@ type BackendRoutineLog = {
 };
 
 const defaultProgressUserId = process.env.EXPO_PUBLIC_PROGRESS_USER_ID ?? 'user-marta';
+
+const mockRoutineDayProgress: RoutineDayProgress = {
+  routine_id: 'routine-mock',
+  log_date: getTodayIsoDate(),
+  routine_log_id: null,
+  completed_step_ids: [],
+  completion_percentage: 0
+};
 
 export const mockProgressSummary: ProgressSummary = {
   weeklyProgress: {
@@ -309,6 +318,14 @@ function toIsoDate(date: Date): string {
 }
 
 export async function getRoutineDayProgress(routineId: string): Promise<RoutineDayProgress> {
+  if (apiConfig.useMocks) {
+    return {
+      ...mockRoutineDayProgress,
+      routine_id: routineId,
+      log_date: getTodayIsoDate()
+    };
+  }
+
   return apiRequest<RoutineDayProgress>({
     path: `/progress/routines/${routineId}/today`,
     method: 'GET'
@@ -320,6 +337,18 @@ export async function setRoutineStepCompletion(data: {
   stepId: string;
   isCompleted: boolean;
 }): Promise<RoutineDayProgress> {
+  if (apiConfig.useMocks) {
+    const completedStepIds = data.isCompleted ? [data.stepId] : [];
+
+    return {
+      ...mockRoutineDayProgress,
+      routine_id: data.routineId,
+      log_date: getTodayIsoDate(),
+      completed_step_ids: completedStepIds,
+      completion_percentage: completedStepIds.length > 0 ? 100 : 0
+    };
+  }
+
   return apiRequest<RoutineDayProgress>({
     path: `/progress/routines/${data.routineId}/today/steps/${data.stepId}`,
     method: 'PATCH',

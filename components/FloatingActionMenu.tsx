@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { router } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -27,7 +28,7 @@ export function FloatingActionMenu() {
 
   function handleAddRoutine() {
     closeMenu();
-    // TODO: Navigate to /routine/create when that route exists.
+    router.push('/routine/Create');
   }
 
   return (

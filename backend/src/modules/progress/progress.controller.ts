@@ -2,8 +2,10 @@ import type { RequestHandler } from 'express';
 import {
   getHistoryByDate as getProgressHistoryByDate,
   getProgressHealth,
+  getRoutineDayProgress as getProgressRoutineDayProgress,
   getSummaryByUserId as getProgressSummaryByUserId,
-  isIsoDate
+  isIsoDate,
+  setRoutineStepCompletion as setProgressRoutineStepCompletion
 } from './progress.service';
 function serializeError(error: unknown) {
   if (error instanceof Error) {
@@ -66,6 +68,58 @@ export const getHistoryByDate: RequestHandler = async (req, res) => {
   } catch (error) {
     res.status(500).json({
       message: 'Failed to get progress history',
+      error: error instanceof Error ? error.message : serializeError(error)
+    });
+  }
+};
+
+export const getRoutineDayProgress: RequestHandler = async (req, res) => {
+  const userId = req.user.id;
+  const routineId = typeof req.params.routineId === 'string' ? req.params.routineId : undefined;
+
+  if (!routineId) {
+    res.status(400).json({ message: 'routineId is required' });
+    return;
+  }
+
+  try {
+    const progress = await getProgressRoutineDayProgress(userId, routineId);
+    res.json(progress);
+  } catch (error) {
+    res.status(500).json({
+      message: 'Failed to get routine day progress',
+      error: error instanceof Error ? error.message : serializeError(error)
+    });
+  }
+};
+
+export const setRoutineStepCompletion: RequestHandler = async (req, res) => {
+  const userId = req.user.id;
+  const routineId = typeof req.params.routineId === 'string' ? req.params.routineId : undefined;
+  const stepId = typeof req.params.stepId === 'string' ? req.params.stepId : undefined;
+  const isCompleted = req.body?.is_completed;
+
+  if (!routineId) {
+    res.status(400).json({ message: 'routineId is required' });
+    return;
+  }
+
+  if (!stepId) {
+    res.status(400).json({ message: 'stepId is required' });
+    return;
+  }
+
+  if (typeof isCompleted !== 'boolean') {
+    res.status(400).json({ message: 'is_completed must be a boolean' });
+    return;
+  }
+
+  try {
+    const progress = await setProgressRoutineStepCompletion(userId, routineId, stepId, isCompleted);
+    res.json(progress);
+  } catch (error) {
+    res.status(500).json({
+      message: 'Failed to update routine step progress',
       error: error instanceof Error ? error.message : serializeError(error)
     });
   }

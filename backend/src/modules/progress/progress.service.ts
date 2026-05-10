@@ -5,6 +5,7 @@ import type {
   PeriodProgress,
   ProgressHistoryItem,
   ProgressSummary,
+  RoutineDayProgress,
   RoutineLog,
   StreakProgress
 } from './progress.types';
@@ -59,6 +60,90 @@ export async function getHistoryByDate(userId: string, date: string): Promise<Pr
   return progressRepository.findRoutineLogsByUserIdAndDate(userId, date);
 }
 
+export async function getRoutineDayProgress(
+  userId: string,
+  routineId: string,
+  date = toIsoDate(startOfUtcDay(new Date()))
+): Promise<RoutineDayProgress> {
+  if (!isIsoDate(date)) {
+    throw new Error('date must use YYYY-MM-DD format');
+  }
+
+  const routineLog = await progressRepository.findRoutineLogByRoutineIdAndDate(userId, routineId, date);
+
+  if (!routineLog) {
+    return {
+      routine_id: routineId,
+      log_date: date,
+      routine_log_id: null,
+      completed_step_ids: [],
+      completion_percentage: 0
+    };
+  }
+
+  return buildRoutineDayProgress(routineLog);
+}
+
+export async function setRoutineStepCompletion(
+  userId: string,
+  routineId: string,
+  stepId: string,
+  isCompleted: boolean,
+  date = toIsoDate(startOfUtcDay(new Date()))
+): Promise<RoutineDayProgress> {
+  if (!isIsoDate(date)) {
+    throw new Error('date must use YYYY-MM-DD format');
+  }
+
+  const now = new Date().toISOString();
+  const routineLog =
+    (await progressRepository.findRoutineLogByRoutineIdAndDate(userId, routineId, date)) ??
+    (await progressRepository.createRoutineLog({
+      user_id: userId,
+      routine_id: routineId,
+      log_date: date,
+      completed_at: null,
+      completion_percentage: 0
+    }));
+
+  const existingStepLog = await progressRepository.findStepLogByRoutineLogIdAndStepId(routineLog.id, stepId);
+  const stepLogUpdates = {
+    is_completed: isCompleted,
+    completed_at: isCompleted ? now : null,
+    updated_at: now
+  };
+
+  if (existingStepLog) {
+    await progressRepository.updateStepLog(existingStepLog.id, stepLogUpdates);
+  } else {
+    await progressRepository.createStepLog({
+      routine_log_id: routineLog.id,
+      step_id: stepId,
+      ...stepLogUpdates
+    });
+  }
+
+  const stepLogs = await progressRepository.findStepLogsByRoutineLogId(routineLog.id);
+  const totalSteps = await progressRepository.countRoutineSteps(routineId);
+  const completedStepIds = stepLogs.filter((log) => log.is_completed).map((log) => log.step_id);
+  const completionPercentage =
+    totalSteps === 0 ? 0 : Math.round((completedStepIds.length / totalSteps) * 100);
+
+  const updatedRoutineLog = await progressRepository.updateRoutineLog(routineLog.id, {
+    completion_percentage: completionPercentage,
+    completed_at: completionPercentage >= 100 ? now : null,
+    updated_at: now
+  });
+
+  return {
+    routine_id: updatedRoutineLog.routine_id,
+    log_date: updatedRoutineLog.log_date,
+    routine_log_id: updatedRoutineLog.id,
+    completed_step_ids: completedStepIds,
+    completion_percentage: updatedRoutineLog.completion_percentage
+  };
+}
+
 function calculatePeriodProgress(logs: RoutineLog[]): PeriodProgress {
   const totalRoutines = logs.length;
   const completedRoutines = logs.filter(isRoutineCompleted).length;
@@ -67,6 +152,18 @@ function calculatePeriodProgress(logs: RoutineLog[]): PeriodProgress {
     totalRoutines,
     completedRoutines,
     percent: totalRoutines === 0 ? 0 : Math.round((completedRoutines / totalRoutines) * 100)
+  };
+}
+
+async function buildRoutineDayProgress(routineLog: RoutineLog): Promise<RoutineDayProgress> {
+  const stepLogs = await progressRepository.findStepLogsByRoutineLogId(routineLog.id);
+
+  return {
+    routine_id: routineLog.routine_id,
+    log_date: routineLog.log_date,
+    routine_log_id: routineLog.id,
+    completed_step_ids: stepLogs.filter((log) => log.is_completed).map((log) => log.step_id),
+    completion_percentage: routineLog.completion_percentage
   };
 }
 

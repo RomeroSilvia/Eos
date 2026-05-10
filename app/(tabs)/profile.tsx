@@ -25,7 +25,7 @@ export default function ProfileScreen() {
         <Card style={styles.settings}>
           <Text style={styles.sectionTitle}>Recordatorios</Text>
           <Text style={styles.description}>Configura permisos y prueba un recordatorio local.</Text>
-          
+
         </Card>
       </ScrollView>
     </SafeAreaView>

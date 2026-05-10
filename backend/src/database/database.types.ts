@@ -30,6 +30,7 @@ export type Database = {
           skin_type?: string | null;
           updated_at?: string;
         };
+        Relationships: [];
       };
 
       routines: {
@@ -60,6 +61,7 @@ export type Database = {
           is_active?: boolean;
           updated_at?: string;
         };
+        Relationships: [];
       };
 
       routine_steps: {
@@ -93,6 +95,7 @@ export type Database = {
           is_required?: boolean;
           updated_at?: string;
         };
+        Relationships: [];
       };
 
       products: {
@@ -123,6 +126,7 @@ export type Database = {
           notes?: string | null;
           updated_at?: string;
         };
+        Relationships: [];
       };
 
       routine_step_products: {
@@ -139,6 +143,7 @@ export type Database = {
           created_at?: string;
         };
         Update: Record<string, never>; // join table: no se actualiza, solo insert/delete
+        Relationships: [];
       };
 
       routine_logs: {
@@ -167,6 +172,7 @@ export type Database = {
           completion_percentage?: number;
           updated_at?: string;
         };
+        Relationships: [];
       };
 
       routine_step_logs: {
@@ -193,6 +199,7 @@ export type Database = {
           completed_at?: string | null;
           updated_at?: string;
         };
+        Relationships: [];
       };
     };
     Views: Record<string, never>;

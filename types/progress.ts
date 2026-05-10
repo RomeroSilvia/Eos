@@ -53,3 +53,11 @@ export type ProgressSummary = {
   metrics: ProgressMetric[];
   historyPreview: ProgressHistoryItem[];
 };
+
+export type RoutineDayProgress = {
+  routine_id: string;
+  log_date: string;
+  routine_log_id: string | null;
+  completed_step_ids: string[];
+  completion_percentage: number;
+};
