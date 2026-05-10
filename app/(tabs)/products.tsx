@@ -48,7 +48,7 @@ export default function ProductsScreen() {
         </View>
 
         <View style={styles.footer}>
-          <Button onPress={() => router.push('/products/new')} style={styles.button}>
+          <Button onPress={() => router.push('/products/create')} style={styles.button}>
             Comenzar
           </Button>
         </View>

@@ -45,7 +45,7 @@ export default function ProductDetailScreen() {
 
   const handleEdit = () => {
     router.push({
-      pathname: '/products/new',
+      pathname: '/products/create',
       params: {
         productId: product.id,
         initialName: product.name,

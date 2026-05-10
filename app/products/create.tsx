@@ -20,7 +20,7 @@ const CATEGORIES: { label: string; value: ProductCategory }[] = [
 
 const BRANDS: { label: string; value: ProductBrand }[] = [
   { label: 'Cerave', value: 'Cerave' },
-  { label: 'L\'Oreal', value: 'L´Oreal' },
+  { label: "L'Oreal", value: "L'Oreal" },
   { label: 'The Ordinary', value: 'The Ordinary' },
   { label: 'Otra', value: 'other' }
 ];

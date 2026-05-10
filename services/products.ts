@@ -1,6 +1,5 @@
 import type { Product, ProductCategory, ProductBrand } from '@/types/product';
-
-const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3000';
+import { apiConfig, apiRequest } from '@/services/api/client';
 
 async function uriToBlob(uri: string): Promise<Blob> {
   const response = await fetch(uri);
@@ -27,9 +26,7 @@ function mapToProduct(row: Record<string, unknown>): Product {
 
 export async function getProducts(): Promise<Product[]> {
   try {
-    const res = await fetch(`${BASE_URL}/products`);
-    if (!res.ok) throw new Error('Error al obtener productos');
-    const rows = await res.json() as Record<string, unknown>[];
+    const rows = await apiRequest<Record<string, unknown>[]>({ path: '/products', method: 'GET' });
     return rows.map(mapToProduct);
   } catch (error) {
     console.error('[getProducts]', error);
@@ -56,7 +53,7 @@ export async function createProduct(data: {
       formData.append('image', blob, getFilename(data.imageUri));
     }
 
-    const res = await fetch(`${BASE_URL}/products`, {
+    const res = await fetch(`${apiConfig.baseUrl}/products`, {
       method: 'POST',
       body: formData,
     });
@@ -87,7 +84,7 @@ export async function updateProduct(id: string, data: {
       formData.append('image', blob, getFilename(data.imageUri));
     }
 
-    const res = await fetch(`${BASE_URL}/products/${id}`, {
+    const res = await fetch(`${apiConfig.baseUrl}/products/${id}`, {
       method: 'PATCH',
       body: formData,
     });
@@ -101,10 +98,7 @@ export async function updateProduct(id: string, data: {
 
 export async function deleteProduct(id: string): Promise<void> {
   try {
-    const res = await fetch(`${BASE_URL}/products/${id}`, {
-      method: 'DELETE',
-    });
-    if (!res.ok) throw new Error('Error al eliminar producto');
+    await apiRequest<void>({ path: `/products/${id}`, method: 'DELETE' });
   } catch (error) {
     console.error('[deleteProduct]', error);
     throw error instanceof Error ? error : new Error(`Error del servidor: ${String(error)}`);

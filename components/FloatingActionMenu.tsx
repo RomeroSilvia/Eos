@@ -23,7 +23,7 @@ export function FloatingActionMenu() {
 
   function handleAddProduct() {
     closeMenu();
-    router.push('/products/new');
+    router.push('/products/create');
   }
 
   function handleAddRoutine() {
