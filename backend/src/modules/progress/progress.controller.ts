@@ -1,75 +1,126 @@
 import type { RequestHandler } from 'express';
-import { getProgressHealth, progressService } from './progress.service';
+import {
+  getHistoryByDate as getProgressHistoryByDate,
+  getProgressHealth,
+  getRoutineDayProgress as getProgressRoutineDayProgress,
+  getSummaryByUserId as getProgressSummaryByUserId,
+  isIsoDate,
+  setRoutineStepCompletion as setProgressRoutineStepCompletion
+} from './progress.service';
+function serializeError(error: unknown) {
+  if (error instanceof Error) {
+    return error.message;
+  }
 
-type RoutineParams = { routineId: string };
-type StepParams = { routineId: string; stepId: string };
-type DateQuery = { date?: string };
-type SetStepCompletionBody = { is_completed?: boolean };
+  if (typeof error === 'object' && error !== null) {
+    return JSON.stringify(error);
+  }
+
+  return String(error);
+}
 
 export const progressHealth: RequestHandler = (_req, res) => {
   res.json(getProgressHealth());
 };
 
-export const getRoutineDayProgress: RequestHandler<RoutineParams, unknown, unknown, DateQuery> = async (req, res) => {
+
+export const getSummaryByUserId: RequestHandler = async (req, res) => {
+  const userId = typeof req.params.userId === 'string' ? req.params.userId : undefined;
+
+  if (!userId) {
+    res.status(400).json({ message: 'userId is required' });
+    return;
+  }
+
   try {
-    const userId = req.user.id;
-    const { routineId } = req.params;
-    const { date } = req.query;
-
-    if (!routineId) {
-      return res.status(400).json({ error: 'routineId is required' });
-    }
-
-    const progress = await progressService.getRoutineDayProgress(userId, routineId, date);
-
-    if (!progress) {
-      return res.status(404).json({ error: 'Routine not found' });
-    }
-
-    return res.json(progress);
+    const summary = await getProgressSummaryByUserId(userId);
+    res.json(summary);
   } catch (error) {
-    console.error(error);
-    return res.status(500).json({ error: 'Error fetching routine progress' });
+    res.status(500).json({
+      message: 'Failed to get progress summary',
+      error: error instanceof Error ? error.message : serializeError(error)
+    });
   }
 };
 
-export const setStepCompletion: RequestHandler<StepParams, unknown, SetStepCompletionBody, DateQuery> = async (
-  req,
-  res
-) => {
+export const getHistoryByDate: RequestHandler = async (req, res) => {
+  const userId = typeof req.params.userId === 'string' ? req.params.userId : undefined;
+  const date = typeof req.query.date === 'string' ? req.query.date : undefined;
+
+  if (!userId) {
+    res.status(400).json({ message: 'userId is required' });
+    return;
+  }
+
+  if (!date) {
+    res.status(400).json({ message: 'date query param is required' });
+    return;
+  }
+
+  if (!isIsoDate(date)) {
+    res.status(400).json({ message: 'date must use YYYY-MM-DD format' });
+    return;
+  }
+
   try {
-    const userId = req.user.id;
-    const { routineId, stepId } = req.params;
-    const { date } = req.query;
-    const { is_completed } = req.body;
-
-    if (!routineId) {
-      return res.status(400).json({ error: 'routineId is required' });
-    }
-
-    if (!stepId) {
-      return res.status(400).json({ error: 'stepId is required' });
-    }
-
-    if (typeof is_completed !== 'boolean') {
-      return res.status(400).json({ error: 'is_completed must be a boolean' });
-    }
-
-    const progress = await progressService.setStepCompletion({
-      userId,
-      routineId,
-      stepId,
-      isCompleted: is_completed,
-      date
-    });
-
-    if (!progress) {
-      return res.status(404).json({ error: 'Routine or step not found' });
-    }
-
-    return res.json(progress);
+    const history = await getProgressHistoryByDate(userId, date);
+    res.json(history);
   } catch (error) {
-    console.error(error);
-    return res.status(500).json({ error: 'Error updating step progress' });
+    res.status(500).json({
+      message: 'Failed to get progress history',
+      error: error instanceof Error ? error.message : serializeError(error)
+    });
+  }
+};
+
+export const getRoutineDayProgress: RequestHandler = async (req, res) => {
+  const userId = req.user.id;
+  const routineId = typeof req.params.routineId === 'string' ? req.params.routineId : undefined;
+
+  if (!routineId) {
+    res.status(400).json({ message: 'routineId is required' });
+    return;
+  }
+
+  try {
+    const progress = await getProgressRoutineDayProgress(userId, routineId);
+    res.json(progress);
+  } catch (error) {
+    res.status(500).json({
+      message: 'Failed to get routine day progress',
+      error: error instanceof Error ? error.message : serializeError(error)
+    });
+  }
+};
+
+export const setRoutineStepCompletion: RequestHandler = async (req, res) => {
+  const userId = req.user.id;
+  const routineId = typeof req.params.routineId === 'string' ? req.params.routineId : undefined;
+  const stepId = typeof req.params.stepId === 'string' ? req.params.stepId : undefined;
+  const isCompleted = req.body?.is_completed;
+
+  if (!routineId) {
+    res.status(400).json({ message: 'routineId is required' });
+    return;
+  }
+
+  if (!stepId) {
+    res.status(400).json({ message: 'stepId is required' });
+    return;
+  }
+
+  if (typeof isCompleted !== 'boolean') {
+    res.status(400).json({ message: 'is_completed must be a boolean' });
+    return;
+  }
+
+  try {
+    const progress = await setProgressRoutineStepCompletion(userId, routineId, stepId, isCompleted);
+    res.json(progress);
+  } catch (error) {
+    res.status(500).json({
+      message: 'Failed to update routine step progress',
+      error: error instanceof Error ? error.message : serializeError(error)
+    });
   }
 };

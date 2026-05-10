@@ -1,111 +1,186 @@
 import { supabase } from '../../config/supabase';
+import { TABLE_NAMES } from '../../database/tableNames';
 import type {
+  RoutineLog,
   RoutineLogInsert,
-  RoutineLogRow,
   RoutineLogUpdate,
-  RoutineStepLogRow
-} from '../../database/schema.types';
-
-export type ProgressSummaryPlaceholder = {
-  completionPercentage: number;
-  currentStreakDays: number;
-};
+  RoutineStepLog,
+  RoutineStepLogInsert,
+  RoutineStepLogUpdate
+} from './progress.types';
 
 export const progressRepository = {
-  findSummaryByUserId: async (_userId: string): Promise<ProgressSummaryPlaceholder | null> => {
-    // TODO: Implement module-level summary once progress screens leave mocks.
-    return null;
-  },
-
-  findHistoryByDate: async (userId: string, date: string): Promise<RoutineLogRow[]> => {
+  findRoutineLogsByUserId: async (userId: string): Promise<RoutineLog[]> => {
     const { data, error } = await supabase
-      .from('routine_logs')
+      .from(TABLE_NAMES.routineLogs)
       .select('*')
       .eq('user_id', userId)
-      .eq('log_date', date);
+      .order('log_date', { ascending: true })
+      .order('created_at', { ascending: true });
 
-    if (error) throw error;
+    if (error) {
+      throw error;
+    }
+
     return data ?? [];
   },
 
-  findRoutineLog: async (
+  findRoutineLogsByUserIdBetweenDates: async (
+    userId: string,
+    startDate: string,
+    endDate: string
+  ): Promise<RoutineLog[]> => {
+    const { data, error } = await supabase
+      .from(TABLE_NAMES.routineLogs)
+      .select('*')
+      .eq('user_id', userId)
+      .gte('log_date', startDate)
+      .lte('log_date', endDate)
+      .order('log_date', { ascending: true })
+      .order('created_at', { ascending: true });
+
+    if (error) {
+      throw error;
+    }
+
+    return data ?? [];
+  },
+
+  findRoutineLogsByUserIdAndDate: async (userId: string, date: string): Promise<RoutineLog[]> => {
+    const { data, error } = await supabase
+      .from(TABLE_NAMES.routineLogs)
+      .select('*')
+      .eq('user_id', userId)
+      .eq('log_date', date)
+      .order('created_at', { ascending: true });
+
+    if (error) {
+      throw error;
+    }
+
+    return data ?? [];
+  },
+
+  findRoutineLogByRoutineIdAndDate: async (
     userId: string,
     routineId: string,
     date: string
-  ): Promise<RoutineLogRow | null> => {
+  ): Promise<RoutineLog | null> => {
     const { data, error } = await supabase
-      .from('routine_logs')
+      .from(TABLE_NAMES.routineLogs)
       .select('*')
       .eq('user_id', userId)
       .eq('routine_id', routineId)
       .eq('log_date', date)
       .maybeSingle();
 
-    if (error) throw error;
+    if (error) {
+      throw error;
+    }
+
     return data ?? null;
   },
 
-  createRoutineLog: async (data: RoutineLogInsert): Promise<RoutineLogRow | null> => {
-    const { data: created, error } = await supabase
-      .from('routine_logs')
-      .insert([data])
-      .select()
-      .single();
-
-    if (error) throw error;
-    return created;
-  },
-
-  updateRoutineLog: async (
-    logId: string,
-    userId: string,
-    data: RoutineLogUpdate
-  ): Promise<RoutineLogRow | null> => {
-    const { data: updated, error } = await supabase
-      .from('routine_logs')
-      .update(data)
-      .eq('id', logId)
-      .eq('user_id', userId)
-      .select()
-      .single();
-
-    if (error) throw error;
-    return updated;
-  },
-
-  findStepLogsByRoutineLogId: async (routineLogId: string): Promise<RoutineStepLogRow[]> => {
+  createRoutineLog: async (log: RoutineLogInsert): Promise<RoutineLog> => {
     const { data, error } = await supabase
-      .from('routine_step_logs')
-      .select('*')
-      .eq('routine_log_id', routineLogId);
+      .from(TABLE_NAMES.routineLogs)
+      .insert(log)
+      .select()
+      .single();
 
-    if (error) throw error;
+    if (error) {
+      throw error;
+    }
+
+    return data;
+  },
+
+  updateRoutineLog: async (routineLogId: string, updates: RoutineLogUpdate): Promise<RoutineLog> => {
+    const { data, error } = await supabase
+      .from(TABLE_NAMES.routineLogs)
+      .update(updates)
+      .eq('id', routineLogId)
+      .select()
+      .single();
+
+    if (error) {
+      throw error;
+    }
+
+    return data;
+  },
+
+  findStepLogsByRoutineLogId: async (routineLogId: string): Promise<RoutineStepLog[]> => {
+    const { data, error } = await supabase
+      .from(TABLE_NAMES.routineStepLogs)
+      .select('*')
+      .eq('routine_log_id', routineLogId)
+      .order('created_at', { ascending: true });
+
+    if (error) {
+      throw error;
+    }
+
     return data ?? [];
   },
 
-  upsertStepLog: async (
+  findStepLogByRoutineLogIdAndStepId: async (
     routineLogId: string,
-    stepId: string,
-    isCompleted: boolean
-  ): Promise<RoutineStepLogRow> => {
-    const now = new Date().toISOString();
-
+    stepId: string
+  ): Promise<RoutineStepLog | null> => {
     const { data, error } = await supabase
-      .from('routine_step_logs')
-      .upsert(
-        {
-          routine_log_id: routineLogId,
-          step_id: stepId,
-          is_completed: isCompleted,
-          completed_at: isCompleted ? now : null,
-          updated_at: now
-        },
-        { onConflict: 'routine_log_id,step_id' }
-      )
+      .from(TABLE_NAMES.routineStepLogs)
+      .select('*')
+      .eq('routine_log_id', routineLogId)
+      .eq('step_id', stepId)
+      .maybeSingle();
+
+    if (error) {
+      throw error;
+    }
+
+    return data ?? null;
+  },
+
+  createStepLog: async (stepLog: RoutineStepLogInsert): Promise<RoutineStepLog> => {
+    const { data, error } = await supabase
+      .from(TABLE_NAMES.routineStepLogs)
+      .insert(stepLog)
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      throw error;
+    }
+
     return data;
+  },
+
+  updateStepLog: async (stepLogId: string, updates: RoutineStepLogUpdate): Promise<RoutineStepLog> => {
+    const { data, error } = await supabase
+      .from(TABLE_NAMES.routineStepLogs)
+      .update(updates)
+      .eq('id', stepLogId)
+      .select()
+      .single();
+
+    if (error) {
+      throw error;
+    }
+
+    return data;
+  },
+
+  countRoutineSteps: async (routineId: string): Promise<number> => {
+    const { count, error } = await supabase
+      .from(TABLE_NAMES.routineSteps)
+      .select('id', { count: 'exact', head: true })
+      .eq('routine_id', routineId);
+
+    if (error) {
+      throw error;
+    }
+
+    return count ?? 0;
   }
 };

@@ -1,13 +1,23 @@
-export type WeeklyProgress = {
+export type PeriodProgress = {
   percent: number;
   completedRoutines: number;
   totalRoutines: number;
   label: string;
 };
 
+export type WeeklyProgress = PeriodProgress;
+export type MonthlyProgress = PeriodProgress;
+
 export type StreakProgress = {
   currentDays: number;
   bestDays?: number;
+  subtitle: string;
+  weekProgress: WeekProgressDay[];
+};
+
+export type WeekProgressDay = {
+  day: 'L' | 'M' | 'J' | 'V' | 'S' | 'D';
+  completed: boolean;
 };
 
 export type CalendarDayStatus = 'completed' | 'partial' | 'pending' | 'empty';
@@ -18,30 +28,36 @@ export type CalendarDayProgress = {
   status: CalendarDayStatus;
 };
 
-export type RoutineStepLog = {
+export type ProgressMetric = {
   id: string;
-  routine_log_id: string;
-  step_id: string;
-  is_completed: boolean;
-  completed_at: string | null;
-  created_at: string;
-  updated_at: string;
+  label: string;
+  value: string;
+  detail: string;
 };
 
-export type RoutineLog = {
+export type ProgressHistoryItem = {
   id: string;
-  user_id: string;
-  routine_id: string;
-  log_date: string;
-  completed_at: string | null;
-  completion_percentage: number;
-  created_at: string;
-  updated_at: string;
+  date: string;
+  routineName: string;
+  completedSteps: number;
+  totalSteps: number;
+  status: CalendarDayStatus;
+};
+
+export type ProgressSummary = {
+  weeklyProgress: WeeklyProgress;
+  monthlyProgress: MonthlyProgress;
+  streakProgress: StreakProgress;
+  completedDays: number;
+  calendarProgress: CalendarDayProgress[];
+  metrics: ProgressMetric[];
+  historyPreview: ProgressHistoryItem[];
 };
 
 export type RoutineDayProgress = {
-  routine_log: RoutineLog;
-  step_logs: RoutineStepLog[];
+  routine_id: string;
+  log_date: string;
+  routine_log_id: string | null;
   completed_step_ids: string[];
   completion_percentage: number;
 };
