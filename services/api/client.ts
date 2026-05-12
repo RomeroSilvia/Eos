@@ -1,7 +1,32 @@
-const defaultApiUrl = 'http://localhost:3000/api';
+import Constants from 'expo-constants';
+import { Platform } from 'react-native';
+
+function getExpoHostUri(): string | undefined {
+  const expoConstants = Constants as typeof Constants & {
+    manifest?: { debuggerHost?: string };
+    manifest2?: { extra?: { expoClient?: { hostUri?: string } } };
+  };
+
+  return (
+    Constants.expoConfig?.hostUri ??
+    expoConstants.manifest?.debuggerHost ??
+    expoConstants.manifest2?.extra?.expoClient?.hostUri
+  );
+}
+
+function getDefaultApiUrl(): string {
+  if (Platform.OS === 'web') {
+    return 'http://localhost:3000/api';
+  }
+
+  const hostUri = getExpoHostUri();
+  const host = hostUri?.split(':')[0];
+
+  return host ? `http://${host}:3000/api` : 'http://localhost:3000/api';
+}
 
 export const apiConfig = {
-  baseUrl: process.env.EXPO_PUBLIC_API_URL ?? defaultApiUrl,
+  baseUrl: process.env.EXPO_PUBLIC_API_URL ?? getDefaultApiUrl(),
   useMocks: process.env.EXPO_PUBLIC_USE_MOCKS !== 'false'
 };
 
