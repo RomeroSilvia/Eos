@@ -23,7 +23,7 @@ export function FloatingActionMenu() {
 
   function handleAddProduct() {
     closeMenu();
-    // TODO: Navigate to /products/create when that route exists.
+    router.push('/products/create');
   }
 
   function handleAddRoutine() {
@@ -75,6 +75,14 @@ function ActionMenuItem({
 }
 
 const styles = StyleSheet.create({
+  wrapper: {
+    alignItems: 'center',
+    bottom: 60,
+    left: 0,
+    pointerEvents: 'box-none',
+    position: 'absolute',
+    right: 0
+  },
   overlay: {
     ...StyleSheet.absoluteFillObject,
     zIndex: 20

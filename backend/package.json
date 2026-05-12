@@ -11,10 +11,13 @@
     "test": "jest"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.39.7",
+    "@supabase/supabase-js": "^2.49.4",
+    "@types/multer": "^2.1.0",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
-    "express": "^4.21.2"
+    "express": "^4.21.2",
+    "multer": "^2.1.1",
+    "streamsearch": "^1.1.0"
   },
   "devDependencies": {
     "@types/cors": "^2.8.17",

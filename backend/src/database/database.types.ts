@@ -106,6 +106,7 @@ export type Database = {
           brand: string | null;
           category: string | null;
           notes: string | null;
+          image_url: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -116,6 +117,7 @@ export type Database = {
           brand?: string | null;
           category?: string | null;
           notes?: string | null;
+          image_url?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -124,6 +126,7 @@ export type Database = {
           brand?: string | null;
           category?: string | null;
           notes?: string | null;
+          image_url?: string | null;
           updated_at?: string;
         };
         Relationships: [];
@@ -204,6 +207,8 @@ export type Database = {
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;
+    Enums: Record<string, never>;
+    CompositeTypes: Record<string, never>;
   };
 };
 
