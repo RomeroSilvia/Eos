@@ -1,9 +1,11 @@
 import type { Product, ProductCategory, ProductBrand } from '@/types/product';
 import { apiConfig, apiRequest } from '@/services/api/client';
 
-async function uriToBlob(uri: string): Promise<Blob> {
-  const response = await fetch(uri);
-  return response.blob();
+function getMimeType(uri: string): string {
+  const ext = uri.split('.').pop()?.toLowerCase();
+  if (ext === 'png') return 'image/png';
+  if (ext === 'webp') return 'image/webp';
+  return 'image/jpeg';
 }
 
 function getFilename(uri: string): string {
@@ -11,6 +13,14 @@ function getFilename(uri: string): string {
   const ext = base.includes('.') ? base.split('.').pop()!.toLowerCase() : 'jpg';
   const normalizedExt = ext === 'jpeg' ? 'jpg' : (['jpg', 'png', 'webp', 'heic'].includes(ext) ? ext : 'jpg');
   return `product.${normalizedExt}`;
+}
+
+function appendImageToFormData(formData: FormData, uri: string): void {
+  formData.append('image', {
+    uri,
+    type: getMimeType(uri),
+    name: getFilename(uri),
+  } as unknown as Blob);
 }
 
 function mapToProduct(row: Record<string, unknown>): Product {
@@ -49,8 +59,7 @@ export async function createProduct(data: {
     if (data.description) formData.append('notes', data.description);
 
     if (data.imageUri) {
-      const blob = await uriToBlob(data.imageUri);
-      formData.append('image', blob, getFilename(data.imageUri));
+      appendImageToFormData(formData, data.imageUri);
     }
 
     const res = await fetch(`${apiConfig.baseUrl}/products`, {
@@ -80,8 +89,7 @@ export async function updateProduct(id: string, data: {
     if (data.description !== undefined) formData.append('notes', data.description);
 
     if (data.imageUri) {
-      const blob = await uriToBlob(data.imageUri);
-      formData.append('image', blob, getFilename(data.imageUri));
+      appendImageToFormData(formData, data.imageUri);
     }
 
     const res = await fetch(`${apiConfig.baseUrl}/products/${id}`, {
