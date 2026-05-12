@@ -1,22 +1,31 @@
 import { Ionicons } from '@expo/vector-icons';
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { colors } from '@/constants/colors';
 import type { Reminder } from '@/types/reminder';
 
 type HomeReminderItemProps = {
   reminder: Reminder;
+  onToggle?: (reminderId: string) => void;
 };
 
-export function HomeReminderItem({ reminder }: HomeReminderItemProps) {
+export function HomeReminderItem({ reminder, onToggle }: HomeReminderItemProps) {
   return (
     <View style={styles.item}>
       <View style={styles.icon}>
         <Ionicons color={colors.secondary} name="notifications-outline" size={20} />
       </View>
-      <View style={styles.content}>
-        <Text style={styles.title}>{reminder.title}</Text>
-        <Text style={styles.time}>{reminder.time}</Text>
-      </View>
+      <Text style={styles.title}>{reminder.title}</Text>
+      <Pressable
+        onPress={() => onToggle?.(reminder.id)}
+        style={[
+          styles.timeBadge,
+          { backgroundColor: reminder.enabled ? colors.primary : colors.border }
+        ]}
+      >
+        <Text style={[styles.timeText, { color: reminder.enabled ? colors.surface : colors.textSecondary }]}>
+          {reminder.time}
+        </Text>
+      </Pressable>
     </View>
   );
 }
@@ -36,17 +45,21 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     width: 40
   },
-  content: {
-    flex: 1
-  },
   title: {
     color: colors.textPrimary,
+    flex: 1,
     fontSize: 15,
     fontWeight: '700'
   },
-  time: {
+  timeBadge: {
+    backgroundColor: colors.border,
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 4
+  },
+  timeText: {
     color: colors.textSecondary,
     fontSize: 13,
-    marginTop: 2
+    fontWeight: '500'
   }
 });
