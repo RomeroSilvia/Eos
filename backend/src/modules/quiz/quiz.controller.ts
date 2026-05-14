@@ -54,6 +54,29 @@ export const saveQuizProfile: RequestHandler = async (req, res) => {
       });
     }
 
+    const quizProfile = {
+      ageRange,
+      skinType,
+      imperfections,
+      mainGoal,
+      routineSteps,
+    };
+
+    const { error: metadataError } = await supabase.auth.admin.updateUserById(authData.user.id, {
+      user_metadata: {
+        ...authData.user.user_metadata,
+        skin_profile: quizProfile,
+        skinType,
+      },
+    });
+
+    if (metadataError) {
+      return res.status(400).json({
+        status: 'error',
+        message: metadataError.message,
+      });
+    }
+
     const skinProfilesTable = supabase.from('skin_profiles') as any;
     const { data: skinProfile, error: insertError } = await skinProfilesTable
       .insert({
@@ -68,17 +91,27 @@ export const saveQuizProfile: RequestHandler = async (req, res) => {
       .single();
 
     if (insertError) {
-      return res.status(400).json({
-        status: 'error',
-        message: insertError.message,
-      });
+      const missingSkinProfilesTable =
+        insertError.code === 'PGRST205' ||
+        insertError.message.includes("Could not find the table 'public.skin_profiles'");
+
+      if (!missingSkinProfilesTable) {
+        return res.status(400).json({
+          status: 'error',
+          message: insertError.message,
+        });
+      }
     }
 
     return res.status(201).json({
       status: 'success',
       message: 'Skin profile created successfully',
       data: {
-        skinProfile,
+        skinProfile: skinProfile ?? {
+          user_id: authData.user.id,
+          ...quizProfile,
+          storage: 'user_metadata',
+        },
       },
     });
   } catch (error) {

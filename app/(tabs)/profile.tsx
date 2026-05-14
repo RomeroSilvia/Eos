@@ -28,7 +28,7 @@ export default function ProfileScreen() {
   async function handleLogout() {
     try {
       await signOut();
-      router.replace('/(auth)/login');
+      router.replace('/landing');
     } catch (error: any) {
       Alert.alert('Error', error.message);
     }
@@ -59,6 +59,11 @@ export default function ProfileScreen() {
               {profile.skinType} - {profile.role}
             </Text>
           </View>
+        </Card>
+        <Card style={styles.settings}>
+          <Text style={styles.sectionTitle}>Recordatorios</Text>
+          <Text style={styles.description}>Configura permisos y prueba un recordatorio local.</Text>
+
         </Card>
         <Button onPress={handleLogout} style={{ backgroundColor: colors.primary }}>
           Cerrar sesion
@@ -112,5 +117,18 @@ const styles = StyleSheet.create({
   meta: {
     color: colors.secondary,
     fontSize: 14,
+  },
+  settings: {
+    gap: 12,
+  },
+  sectionTitle: {
+    color: colors.textPrimary,
+    fontSize: 18,
+    fontWeight: '800',
+  },
+  description: {
+    color: colors.textSecondary,
+    fontSize: 14,
+    lineHeight: 20,
   },
 });

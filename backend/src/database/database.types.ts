@@ -10,23 +10,25 @@ export type Database = {
       profiles: {
         Row: {
           id: string;
-          username: string | null;
-          first_name: string | null;
-          last_name: string | null;
-          role: string;
+          full_name: string | null;
+          email: string | null;
+          skin_type: string | null;
+          created_at: string;
+          updated_at: string;
         };
         Insert: {
-          id: string;
-          username?: string | null;
-          first_name?: string | null;
-          last_name?: string | null;
-          role?: string;
+          id?: string;
+          full_name?: string | null;
+          email?: string | null;
+          skin_type?: string | null;
+          created_at?: string;
+          updated_at?: string;
         };
         Update: {
-          username?: string | null;
-          first_name?: string | null;
-          last_name?: string | null;
-          role?: string;
+          full_name?: string | null;
+          email?: string | null;
+          skin_type?: string | null;
+          updated_at?: string;
         };
       };
 
@@ -59,6 +61,7 @@ export type Database = {
           routine_steps?: string | null;
           created_at?: string;
         };
+        Relationships: [];
       };
 
       routines: {
@@ -89,6 +92,7 @@ export type Database = {
           is_active?: boolean;
           updated_at?: string;
         };
+        Relationships: [];
       };
 
       routine_steps: {
@@ -122,6 +126,7 @@ export type Database = {
           is_required?: boolean;
           updated_at?: string;
         };
+        Relationships: [];
       };
 
       products: {
@@ -132,6 +137,7 @@ export type Database = {
           brand: string | null;
           category: string | null;
           notes: string | null;
+          image_url: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -142,6 +148,7 @@ export type Database = {
           brand?: string | null;
           category?: string | null;
           notes?: string | null;
+          image_url?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -150,8 +157,10 @@ export type Database = {
           brand?: string | null;
           category?: string | null;
           notes?: string | null;
+          image_url?: string | null;
           updated_at?: string;
         };
+        Relationships: [];
       };
 
       routine_step_products: {
@@ -168,6 +177,7 @@ export type Database = {
           created_at?: string;
         };
         Update: Record<string, never>; // join table: no se actualiza, solo insert/delete
+        Relationships: [];
       };
 
       routine_logs: {
@@ -196,6 +206,7 @@ export type Database = {
           completion_percentage?: number;
           updated_at?: string;
         };
+        Relationships: [];
       };
 
       routine_step_logs: {
@@ -222,10 +233,13 @@ export type Database = {
           completed_at?: string | null;
           updated_at?: string;
         };
+        Relationships: [];
       };
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;
+    Enums: Record<string, never>;
+    CompositeTypes: Record<string, never>;
   };
 };
 

@@ -1,5 +1,6 @@
 import { asyncHandler } from '../../utils/asyncHandler';
 import { ApiError } from '../../utils/ApiError';
+import { env } from '../../config/env';
 import { supabase } from '../../config/supabase';
 import { authRepository } from './auth.repository';
 import { getAuthHealth, signIn, signUp } from './auth.service';
@@ -93,10 +94,9 @@ export const googleSignInController = asyncHandler(async (req, res) => {
 
       await authRepository.upsertProfile({
         id: data.user.id,
-        username: null,
-        first_name: metadata?.given_name ?? fallbackName.firstName,
-        last_name: metadata?.family_name ?? fallbackName.lastName,
-        role: 'usuario'
+        full_name: metadata?.full_name ?? metadata?.name ?? [fallbackName.firstName, fallbackName.lastName].filter(Boolean).join(' '),
+        email: data.user.email ?? null,
+        skin_type: 'not_defined'
       });
 
       isNewUser = true;
@@ -112,6 +112,64 @@ export const googleSignInController = asyncHandler(async (req, res) => {
         user: data.user,
         isNewUser
       }
+    });
+  } catch (error) {
+    const statusCode = error instanceof ApiError ? error.statusCode : 500;
+
+    res.status(statusCode).json({
+      status: 'error',
+      message: error instanceof Error ? error.message : 'Unexpected server error'
+    });
+  }
+});
+
+export const resetPasswordController = asyncHandler(async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      throw new ApiError(400, 'email is required');
+    }
+
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: env.passwordResetRedirectUrl
+    });
+
+    if (error) {
+      throw new ApiError(400, error.message);
+    }
+
+    res.status(200).json({
+      status: 'success',
+      message: 'Password reset email sent successfully'
+    });
+  } catch (error) {
+    const statusCode = error instanceof ApiError ? error.statusCode : 500;
+
+    res.status(statusCode).json({
+      status: 'error',
+      message: error instanceof Error ? error.message : 'Unexpected server error'
+    });
+  }
+});
+
+export const updatePasswordController = asyncHandler(async (req, res) => {
+  try {
+    const { newPassword } = req.body;
+
+    if (!newPassword) {
+      throw new ApiError(400, 'newPassword is required');
+    }
+
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+
+    if (error) {
+      throw new ApiError(400, error.message);
+    }
+
+    res.status(200).json({
+      status: 'success',
+      message: 'Password updated successfully'
     });
   } catch (error) {
     const statusCode = error instanceof ApiError ? error.statusCode : 500;

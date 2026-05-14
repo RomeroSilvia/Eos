@@ -73,7 +73,7 @@ const styles = StyleSheet.create({
   },
   logo: {
     alignSelf: 'center',
-    height: 80,
+    height: 145,
     width: '100%',
   },
   title: {

@@ -1,11 +1,19 @@
 import type { PropsWithChildren } from 'react';
-import { Pressable, StyleSheet, Text, type StyleProp, type ViewStyle } from 'react-native';
+import {
+  Pressable,
+  StyleSheet,
+  Text,
+  type StyleProp,
+  type TextStyle,
+  type ViewStyle,
+} from 'react-native';
 import { colors } from '@/constants/colors';
 
 type ButtonProps = PropsWithChildren<{
   onPress?: () => void;
   variant?: 'primary' | 'secondary' | 'ghost';
   style?: StyleProp<ViewStyle>;
+  textStyle?: StyleProp<TextStyle>;
   disabled?: boolean;
 }>;
 
@@ -15,6 +23,7 @@ export function Button({
   onPress,
   variant = 'primary',
   style,
+  textStyle,
 }: ButtonProps) {
   return (
     <Pressable
@@ -30,7 +39,7 @@ export function Button({
         style,
       ]}
     >
-      <Text style={[styles.label, variant === 'ghost' && styles.ghostLabel]}>{children}</Text>
+      <Text style={[styles.label, variant === 'ghost' && styles.ghostLabel, textStyle]}>{children}</Text>
     </Pressable>
   );
 }

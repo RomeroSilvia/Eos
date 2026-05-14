@@ -1,6 +1,16 @@
 import { Router } from 'express';
-import { productsHealth } from './products.controller';
+import multer from 'multer';
+import { createProduct, deleteProduct, getProductById, getProducts, updateProduct } from './products.controller';
+import { mockAuth } from '../../middlewares/mockAuth.middleware';
 
 export const productsRouter = Router();
 
-productsRouter.get('/health', productsHealth);
+const upload = multer({ storage: multer.memoryStorage() });
+
+productsRouter.use(mockAuth);
+
+productsRouter.get('/', getProducts);
+productsRouter.get('/:id', getProductById);
+productsRouter.post('/', upload.single('image'), createProduct);
+productsRouter.patch('/:id', upload.single('image'), updateProduct);
+productsRouter.delete('/:id', deleteProduct);

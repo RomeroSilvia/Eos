@@ -1,132 +1,165 @@
-import * as SecureStore from 'expo-secure-store';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Alert, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
-import type { DimensionValue } from 'react-native';
+import { Alert, Image, Pressable, StyleSheet, Text, View, type DimensionValue } from 'react-native';
 import { apiConfig } from '@/services/api/client';
+import { getAuthToken } from '@/services/auth';
 
-const AUTH_TOKEN_KEY = 'eos.auth.token';
+type QuizOption = {
+  label: string;
+  description?: string;
+};
 
-const questions = [
+type QuizQuestion = {
+  title: string;
+  options: QuizOption[];
+};
+
+const quizQuestions: QuizQuestion[] = [
   {
-    question: '¿Que edad tenes?',
-    options: ['-25', '25-30', '35-45', '+45'],
+    title: '¿Que edad tenes?',
+    options: [{ label: '-25' }, { label: '25-30' }, { label: '35-45' }, { label: '+45' }],
   },
   {
-    question: '¿Que tipo de piel tenes?',
-    options: ['Normal', 'Mixta', 'Seca', 'Grasa'],
-  },
-  {
-    question: '¿Que tipo de imperfecciones tenes?',
-    options: ['Manchas', 'Acné', 'Ojeras marcadas', 'Sin imperfecciones'],
-  },
-  {
-    question: '¿Cual es tu principal objetivo?',
+    title: '¿Que tipo de piel tenes?',
     options: [
-      'Controlar el brillo y granitos',
-      'Reducir lineas de expresión',
-      'Hidratar y dar luminosidad',
-      'Unificar el tono',
+      { label: 'Normal', description: 'Ni demasiado seca ni demasiado grasa' },
+      { label: 'Mixta', description: 'Combina piel grasa y piel seca' },
+      { label: 'Seca', description: 'Aspera y tirante' },
+      { label: 'Grasa', description: 'Sobreproduccion de cebo, brillo excesivo' },
     ],
   },
   {
-    question: '¿Cuantos pasos tiene tu rutina?',
-    options: ['Tres pasos', 'Cinco pasos', 'Mas de diez pasos', 'No tengo rutina'],
+    title: '¿Que tipo de imperfecciones tenes?',
+    options: [
+      { label: 'Manchas' },
+      { label: 'Acne' },
+      { label: 'Ojeras marcadas' },
+      { label: 'Sin imperfecciones' },
+    ],
+  },
+  {
+    title: '¿Cual es tu principal objetivo?',
+    options: [
+      { label: 'Controlar el brillo y granitos' },
+      { label: 'Reducir lineas de expresion' },
+      { label: 'Hidratar y dar luminosidad' },
+      { label: 'Unificar el tono' },
+    ],
+  },
+  {
+    title: '¿Cuantos pasos tiene tu rutina?',
+    options: [
+      { label: 'Tres pasos' },
+      { label: 'Cinco pasos' },
+      { label: 'Mas de diez pasos' },
+      { label: 'No tengo rutina' },
+    ],
   },
 ];
-
-type Answers = Record<string, string>;
-
-async function getStoredItem(key: string): Promise<string | null> {
-  if (Platform.OS === 'web') {
-    return localStorage.getItem(key);
-  }
-
-  return SecureStore.getItemAsync(key);
-}
 
 export default function QuizScreen() {
   const router = useRouter();
   const [currentStep, setCurrentStep] = useState(0);
-  const [answers, setAnswers] = useState<Answers>({});
+  const [answers, setAnswers] = useState<Record<number, string>>({});
+  const [isSaving, setIsSaving] = useState(false);
 
-  async function handleSaveQuiz() {
+  function handleSelect(label: string) {
+    if (isSaving) return;
+
+    const nextAnswers = { ...answers, [currentStep]: label };
+    setAnswers(nextAnswers);
+
+    setTimeout(() => {
+      if (currentStep === quizQuestions.length - 1) {
+        void saveQuizAnswers(nextAnswers);
+        return;
+      }
+
+      setCurrentStep((prev) => prev + 1);
+    }, 400);
+  }
+
+  async function saveQuizAnswers(finalAnswers: Record<number, string>) {
+    setIsSaving(true);
+
     try {
-      const token = await getStoredItem(AUTH_TOKEN_KEY);
+      const token = await getAuthToken();
 
       if (!token) {
-        throw new Error('No encontramos una sesion activa. Inicia sesion nuevamente.');
+        Alert.alert('Error', 'No encontramos tu sesion. Inicia sesion nuevamente.');
+        return;
       }
 
       const response = await fetch(`${apiConfig.baseUrl}/quiz/save`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          ageRange: answers.step0,
-          skinType: answers.step1,
-          imperfections: answers.step2,
-          mainGoal: answers.step3,
-          routineSteps: answers.step4,
+          ageRange: finalAnswers[0],
+          skinType: finalAnswers[1],
+          imperfections: finalAnswers[2],
+          mainGoal: finalAnswers[3],
+          routineSteps: finalAnswers[4],
         }),
       });
 
-      const payload = (await response.json().catch(() => ({}))) as { message?: string };
+      const payload = (await response.json()) as { message?: string };
 
       if (!response.ok) {
-        throw new Error(payload.message ?? 'No pudimos guardar tu perfil de piel.');
+        Alert.alert('Error del Servidor', payload.message ?? 'No pudimos guardar tus respuestas.');
+        return;
       }
 
-      router.replace('/home');
-    } catch (error: any) {
-      Alert.alert('Error', error.message ?? 'No pudimos guardar tu perfil de piel.');
+      router.replace('/quiz-results');
+    } catch (error) {
+      console.error(error);
+      Alert.alert('Error de Conexión', 'No se pudo conectar con el backend. Revisa tu consola.');
+    } finally {
+      setIsSaving(false);
     }
   }
 
   if (currentStep === 5) {
     return (
-      <View style={[styles.screen, styles.resultScreen]}>
-        <View>
-          <Text style={styles.resultText}>Pantalla de resultados (Pendiente)</Text>
-        </View>
-
-        <Pressable onPress={handleSaveQuiz} style={styles.finalButton}>
-          <Text style={styles.finalButtonText}>Ver mi perfil</Text>
-        </Pressable>
+      <View style={styles.screen}>
+        <Text style={styles.resultText}>Calculando resultados...</Text>
       </View>
     );
   }
 
-  const currentQuestion = questions[currentStep];
-  const progressWidth: DimensionValue = `${(currentStep / 5) * 100}%`;
-
-  function handleSelect(option: string) {
-    setAnswers((currentAnswers) => ({
-      ...currentAnswers,
-      [`step${currentStep}`]: option,
-    }));
-
-    setTimeout(() => {
-      setCurrentStep((prev) => prev + 1);
-    }, 400);
-  }
+  const question = quizQuestions[currentStep];
+  const progress = `${((currentStep + 1) / quizQuestions.length) * 100}%` as DimensionValue;
 
   return (
     <View style={styles.screen}>
       <View style={styles.progressTrack}>
-        <View style={[styles.progressFill, { width: progressWidth }]} />
+        <View style={[styles.progressFill, { width: progress }]} />
       </View>
 
-      <Text style={styles.questionTitle}>{currentQuestion.question}</Text>
+      <Text style={styles.title}>{question.title}</Text>
 
-      <View style={styles.optionsContainer}>
-        {currentQuestion.options.map((option) => (
-          <Pressable key={option} onPress={() => handleSelect(option)} style={styles.optionButton}>
-            <Text style={styles.optionText}>{option}</Text>
-          </Pressable>
-        ))}
+      <View>
+        {question.options.map((option) => {
+          const isSelected = answers[currentStep] === option.label;
+
+          return (
+            <Pressable
+              key={option.label}
+              disabled={isSaving}
+              onPress={() => handleSelect(option.label)}
+              style={[styles.option, isSelected ? styles.optionSelected : styles.optionDefault]}
+            >
+              <Image resizeMode="contain" source={require('@/assets/images/quiz-imagen.png')} style={styles.optionImage} />
+
+              <View style={styles.optionTextContainer}>
+                <Text style={styles.optionLabel}>{option.label}</Text>
+                {option.description ? <Text style={styles.optionDescription}>{option.description}</Text> : null}
+              </View>
+            </Pressable>
+          );
+        })}
       </View>
     </View>
   );
@@ -151,52 +184,50 @@ const styles = StyleSheet.create({
     borderRadius: 2,
     height: 4,
   },
-  questionTitle: {
+  title: {
     color: '#0B132B',
     fontSize: 30,
     fontWeight: 'bold',
-    lineHeight: 38,
     marginBottom: 30,
     marginTop: 40,
   },
-  optionsContainer: {
-    width: '100%',
-  },
-  optionButton: {
-    backgroundColor: '#FFFFFF',
-    borderColor: '#E2E8F0',
-    borderRadius: 12,
+  option: {
+    alignItems: 'center',
+    borderRadius: 16,
     borderWidth: 1,
-    marginBottom: 15,
-    padding: 15,
-    width: '100%',
+    flexDirection: 'row',
+    marginBottom: 16,
+    padding: 16,
   },
-  optionText: {
+  optionDefault: {
+    backgroundColor: 'transparent',
+    borderColor: '#0B132B',
+  },
+  optionSelected: {
+    backgroundColor: '#EADCDC',
+    borderColor: '#0B132B',
+  },
+  optionTextContainer: {
+    flex: 1,
+    marginLeft: 14,
+  },
+  optionImage: {
+    height: 32,
+    width: 32,
+  },
+  optionLabel: {
     color: '#0B132B',
-    fontSize: 16,
+    fontSize: 20,
+    fontWeight: 'bold',
   },
-  resultScreen: {
-    justifyContent: 'space-between',
-    paddingBottom: 40,
+  optionDescription: {
+    color: '#6C757D',
+    fontSize: 12,
+    marginTop: 4,
   },
   resultText: {
     color: '#0B132B',
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginTop: 40,
-    textAlign: 'center',
-  },
-  finalButton: {
-    alignItems: 'center',
-    backgroundColor: '#C98F90',
-    borderRadius: 12,
-    height: 54,
-    justifyContent: 'center',
-    width: '100%',
-  },
-  finalButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
+    fontSize: 20,
     fontWeight: 'bold',
   },
 });

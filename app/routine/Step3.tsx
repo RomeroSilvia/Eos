@@ -12,8 +12,6 @@ export default function Step3() {
   const { routineId } = useLocalSearchParams<{ routineId: string }>();
 
   const [type, setType] = useState<'mañana' | 'noche'>('mañana');
-  const [reminder, setReminder] = useState(false);
-
   return (
     <SafeAreaView style={styles.screen}>
       <View style={styles.container}>

@@ -5,10 +5,9 @@ import { authRepository } from './auth.repository';
 
 type AuthProfile = {
   id: string;
-  username: string | null;
-  first_name: string | null;
-  last_name: string | null;
-  role: string;
+  full_name: string | null;
+  email: string | null;
+  skin_type: string | null;
 };
 
 type AuthResponse = {
@@ -57,8 +56,8 @@ function assertSession(session: Session | null): asserts session is Session {
 function buildAuthResponse(user: User, session: Session | null, profile: AuthProfile): AuthResponse {
   assertSession(session);
 
-  const firstName = profile.first_name ?? '';
-  const lastName = profile.last_name ?? '';
+  const [firstName = '', ...lastNameParts] = (profile.full_name ?? '').split(' ');
+  const lastName = lastNameParts.join(' ');
 
   return {
     session,
@@ -68,11 +67,11 @@ function buildAuthResponse(user: User, session: Session | null, profile: AuthPro
     user: {
       id: user.id,
       email: user.email ?? '',
-      username: profile.username ?? '',
+      username: user.user_metadata?.username ?? '',
       firstName,
       lastName,
-      full_name: [firstName, lastName].filter(Boolean).join(' '),
-      role: profile.role
+      full_name: profile.full_name ?? '',
+      role: user.user_metadata?.role ?? 'user'
     }
   };
 }
@@ -81,35 +80,41 @@ export async function signUp(input: SignUpInput): Promise<AuthResponse> {
   const username = input.username.trim();
   const firstName = input.firstName.trim();
   const lastName = input.lastName.trim();
+  const fullName = [firstName, lastName].filter(Boolean).join(' ');
   const role = input.role.trim();
 
-  const { data, error } = await supabase.auth.signUp({
+  const { data: createdUser, error: createError } = await supabase.auth.admin.createUser({
     email: input.email.trim(),
     password: input.password,
-    options: {
-      data: {
-        username,
-        first_name: firstName,
-        last_name: lastName,
-        role
-      }
+    email_confirm: true,
+    user_metadata: {
+      username,
+      full_name: fullName,
+      role
     }
   });
 
-  if (error) throw new ApiError(400, error.message);
-  if (!data.user) throw new ApiError(500, 'User was not created');
+  if (createError) throw new ApiError(400, createError.message);
+  if (!createdUser.user) throw new ApiError(500, 'User was not created');
 
   const profile =
-    (await authRepository.findProfileById(data.user.id)) ??
+    (await authRepository.findProfileById(createdUser.user.id)) ??
     (await authRepository.upsertProfile({
-      id: data.user.id,
-      username,
-      first_name: firstName,
-      last_name: lastName,
-      role
+      id: createdUser.user.id,
+      full_name: fullName,
+      email: input.email.trim(),
+      skin_type: 'not_defined'
     }));
 
-  return buildAuthResponse(data.user, data.session, profile);
+  const { data: sessionData, error: signInError } = await supabase.auth.signInWithPassword({
+    email: input.email.trim(),
+    password: input.password
+  });
+
+  if (signInError) throw new ApiError(401, signInError.message);
+  if (!sessionData.user) throw new ApiError(401, 'User was created but could not be authenticated');
+
+  return buildAuthResponse(sessionData.user, sessionData.session, profile);
 }
 
 export async function signIn(input: SignInInput): Promise<AuthResponse> {
@@ -126,10 +131,9 @@ export async function signIn(input: SignInInput): Promise<AuthResponse> {
     (await authRepository.findProfileById(data.user.id)) ??
     (await authRepository.upsertProfile({
       id: data.user.id,
-      username: metadata?.username ?? null,
-      first_name: metadata?.first_name ?? null,
-      last_name: metadata?.last_name ?? null,
-      role: metadata?.role ?? 'user'
+      full_name: metadata?.full_name ?? '',
+      email: data.user.email ?? null,
+      skin_type: metadata?.skinType ?? 'not_defined'
     }));
 
   return buildAuthResponse(data.user, data.session, profile);

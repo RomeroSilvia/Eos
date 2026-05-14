@@ -1,8 +1,9 @@
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
 import * as SecureStore from 'expo-secure-store';
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Alert, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { apiConfig } from '@/services/api/client';
 
 const ROLE_OPTIONS = ['No, soy usuario', 'Si, soy dermatologo/a'] as const;
@@ -20,7 +21,9 @@ type RegisterResponse = {
   status: 'success';
   message: string;
   data: {
-    session: {
+    token?: string;
+    refreshToken?: string;
+    session?: {
       access_token: string;
       refresh_token: string;
     };
@@ -64,12 +67,38 @@ export default function RegisterScreen() {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [role, setRole] = useState<RoleOption>('No, soy usuario');
+  const [profileImageUri, setProfileImageUri] = useState<string | null>(null);
   const [isRoleMenuOpen, setIsRoleMenuOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   function handleRoleSelect(nextRole: RoleOption) {
     setRole(nextRole);
     setIsRoleMenuOpen(false);
+  }
+
+  async function handlePickProfileImage() {
+    try {
+      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+      if (!permission.granted) {
+        Alert.alert('Permiso requerido', 'Necesitamos acceso a tus fotos para cargar una imagen de perfil.');
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        allowsEditing: true,
+        aspect: [1, 1],
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        quality: 0.8,
+      });
+
+      if (!result.canceled) {
+        setProfileImageUri(result.assets[0].uri);
+      }
+    } catch (error) {
+      console.error(error);
+      Alert.alert('Error', 'No pudimos cargar la imagen.');
+    }
   }
 
   async function handleSubmit() {
@@ -98,51 +127,78 @@ export default function RegisterScreen() {
 
       const payload = (await response.json()) as RegisterResponse | { message?: string };
 
-      if (!response.ok || !('data' in payload)) {
-        throw new Error(payload.message ?? 'No pudimos completar el registro.');
+      if (!response.ok) {
+        Alert.alert('Error del Servidor', payload.message ?? 'No pudimos completar el registro.');
+        return;
+      }
+
+      if (!('data' in payload)) {
+        Alert.alert('Error del Servidor', payload.message ?? 'La respuesta del backend no tiene datos de sesion.');
+        return;
+      }
+
+      const accessToken = payload.data.token ?? payload.data.session?.access_token;
+      const refreshToken = payload.data.refreshToken ?? payload.data.session?.refresh_token;
+
+      if (!accessToken || !refreshToken) {
+        Alert.alert('Error del Servidor', 'La respuesta del backend no incluye tokens de sesion.');
+        return;
       }
 
       await Promise.all([
-        setStoredItem(AUTH_TOKEN_KEY, payload.data.session.access_token),
-        setStoredItem(AUTH_REFRESH_TOKEN_KEY, payload.data.session.refresh_token),
+        setStoredItem(AUTH_TOKEN_KEY, accessToken),
+        setStoredItem(AUTH_REFRESH_TOKEN_KEY, refreshToken),
         setStoredItem(AUTH_USER_KEY, JSON.stringify(payload.data.user)),
       ]);
 
-      router.push('/start-quiz');
-    } catch (error: any) {
-      Alert.alert('Error', error.message ?? 'No pudimos completar el registro.');
+      router.push('/start-diagnosis');
+    } catch (error) {
+      console.error(error);
+      Alert.alert('Error de Conexión', 'No se pudo conectar con el backend. Revisa tu consola.');
     } finally {
       setIsSubmitting(false);
     }
   }
 
   return (
-    <ScrollView
-      contentContainerStyle={styles.content}
-      keyboardShouldPersistTaps="handled"
-      showsVerticalScrollIndicator={false}
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={24}
       style={styles.screen}
     >
-      <View style={styles.avatarContainer}>
-        <Ionicons color="#6F8F78" name="person-outline" size={64} />
-        <Pressable style={styles.editButton}>
-          <MaterialIcons color="#495057" name="edit" size={18} />
-        </Pressable>
-      </View>
-
-      <View style={styles.form}>
-        <View style={styles.field}>
-          <FieldLabel>Email</FieldLabel>
-          <TextInput
-            autoCapitalize="none"
-            keyboardType="email-address"
-            onChangeText={setEmail}
-            placeholder="example@email.com"
-            placeholderTextColor="#A0AEC0"
-            style={styles.input}
-            value={email}
-          />
+      <ScrollView
+        alwaysBounceVertical
+        contentContainerStyle={styles.content}
+        keyboardDismissMode="on-drag"
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator
+      >
+        <View style={styles.avatarContainer}>
+          <View style={styles.avatarCircle}>
+            {profileImageUri ? (
+              <Image source={{ uri: profileImageUri }} style={styles.avatarImage} />
+            ) : (
+              <Ionicons color="#6F8F78" name="person-outline" size={64} />
+            )}
+          </View>
+          <Pressable onPress={handlePickProfileImage} style={styles.editButton}>
+            <MaterialIcons color="#495057" name="edit" size={18} />
+          </Pressable>
         </View>
+
+        <View style={styles.form}>
+          <View style={styles.field}>
+            <FieldLabel>Email</FieldLabel>
+            <TextInput
+              autoCapitalize="none"
+              keyboardType="email-address"
+              onChangeText={setEmail}
+              placeholder="example@email.com"
+              placeholderTextColor="#A0AEC0"
+              style={styles.input}
+              value={email}
+            />
+          </View>
 
         <View style={styles.field}>
           <FieldLabel>Contrasena</FieldLabel>
@@ -211,14 +267,15 @@ export default function RegisterScreen() {
         </View>
       </View>
 
-      <Pressable
-        disabled={isSubmitting}
-        onPress={handleSubmit}
-        style={[styles.submitButton, isSubmitting && styles.disabledButton]}
-      >
-        <Text style={styles.submitButtonText}>{isSubmitting ? 'Registrando...' : 'Continuar'}</Text>
-      </Pressable>
-    </ScrollView>
+        <Pressable
+          disabled={isSubmitting}
+          onPress={handleSubmit}
+          style={[styles.submitButton, isSubmitting && styles.disabledButton]}
+        >
+          <Text style={styles.submitButtonText}>{isSubmitting ? 'Registrando...' : 'Continuar'}</Text>
+        </Pressable>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -229,31 +286,42 @@ const styles = StyleSheet.create({
   },
   content: {
     alignItems: 'center',
-    paddingBottom: 40,
+    flexGrow: 1,
+    paddingBottom: 160,
     paddingHorizontal: 24,
   },
   avatarContainer: {
-    alignItems: 'center',
     alignSelf: 'center',
+    height: 132,
+    marginTop: 40,
+    position: 'relative',
+    width: 132,
+  },
+  avatarCircle: {
+    alignItems: 'center',
     backgroundColor: '#EBF4EC',
     borderColor: '#C3E0C5',
     borderRadius: 60,
     borderWidth: 2,
     height: 120,
     justifyContent: 'center',
-    marginTop: 40,
+    overflow: 'hidden',
     width: 120,
+  },
+  avatarImage: {
+    height: '100%',
+    width: '100%',
   },
   editButton: {
     alignItems: 'center',
     backgroundColor: '#FFFFFF',
     borderRadius: 18,
-    bottom: 0,
+    bottom: 6,
     elevation: 4,
     height: 36,
     justifyContent: 'center',
     position: 'absolute',
-    right: 0,
+    right: 6,
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.16,

@@ -93,8 +93,14 @@ export default function LoginScreen() {
 
       const payload = (await response.json()) as LoginResponse | { message?: string };
 
-      if (!response.ok || !('data' in payload)) {
-        throw new Error(payload.message ?? 'No pudimos iniciar sesion.');
+      if (!response.ok) {
+        Alert.alert('Error del Servidor', payload.message ?? 'No pudimos iniciar sesion.');
+        return;
+      }
+
+      if (!('data' in payload)) {
+        Alert.alert('Error del Servidor', payload.message ?? 'La respuesta del backend no tiene datos de sesion.');
+        return;
       }
 
       const profile = {
@@ -112,8 +118,9 @@ export default function LoginScreen() {
       ]);
 
       router.replace('/(tabs)/home');
-    } catch (error: any) {
-      Alert.alert('Error', error.message);
+    } catch (error) {
+      console.error(error);
+      Alert.alert('Error de Conexión', 'No se pudo conectar con el backend. Revisa tu consola.');
     } finally {
       setIsSubmitting(false);
     }
@@ -170,7 +177,8 @@ export default function LoginScreen() {
     <SafeAreaView style={styles.screen}>
       <View style={styles.container}>
         <Image
-          source={{ uri: 'https://placehold.co/100x100/F0F0F0/1A202C.png?text=EOS' }}
+          resizeMode="contain"
+          source={require('@/assets/images/logo.png')}
           style={styles.logo}
         />
 
@@ -268,9 +276,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   logo: {
-    height: 100,
+    height: 145,
     marginBottom: 18,
-    width: 100,
+    width: '100%',
   },
   title: {
     color: '#1A202C',
@@ -362,7 +370,7 @@ const styles = StyleSheet.create({
   },
   forgotPassword: {
     color: '#9F5F61',
-    fontSize: 14,
+    fontSize: 16,
   },
   registerLink: {
     color: '#C98F90',

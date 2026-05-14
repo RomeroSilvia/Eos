@@ -1,5 +1,7 @@
 import { router } from 'expo-router';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
+import { useCallback } from 'react';
+import { Image, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
@@ -10,29 +12,63 @@ import { useHome } from '@/hooks/useHome';
 import { formatStepCount } from '@/utils/format';
 
 export default function HomeScreen() {
-  const { summary } = useHome();
+  const { summary, refreshSummary, toggleReminder } = useHome();
+
+  useFocusEffect(
+    useCallback(() => {
+      void refreshSummary();
+    }, [refreshSummary])
+  );
 
   if (!summary) {
     return <SafeAreaView style={styles.screen} />;
   }
 
-  const progress = summary.totalSteps > 0 ? summary.completedSteps / summary.totalSteps : 0;
-  const routineTitle = summary.activeRoutine?.name ?? 'Sin rutina activa';
+  const progress = summary.totalSteps > 0
+    ? Math.max(0, Math.min(1, summary.completedSteps / summary.totalSteps))
+    : 0;
+  const routineTimeOfDay = summary.activeRoutine?.time_of_day;
+  const isNightRoutine = routineTimeOfDay === 'night';
+  const isCustomRoutine = routineTimeOfDay === 'custom';
+
+  const routineMomentLabel = isNightRoutine ? 'Noche' : isCustomRoutine ? 'Personalizada' : 'Mañana';
+  const routineMomentEmoji = isNightRoutine ? '🌑' : isCustomRoutine ? '✨' : '☀️';
 
   return (
     <SafeAreaView style={styles.screen}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
-          <Text style={styles.greeting}>¡Hola, {summary.user.name}!🌱</Text>
+          <Text style={styles.greeting}>¡Hola, {summary.user.name}! 🌱</Text>
           <Text style={styles.subtitle}>Sentite bien con tu propia piel</Text>
         </View>
 
-        <Card variant="soft" style={styles.routineCard}>
-          <Text style={styles.sectionLabel}>Tu rutina hoy</Text>
-          <Text style={styles.routineTitle}>{routineTitle}</Text>
+        <Card
+          variant="soft"
+          style={{
+            ...styles.routineCard,
+            backgroundColor: colors.surfaceSoft
+          }}
+        >
+          <View style={styles.routineTopRow}>
+            <View style={styles.routineTopTextBlock}>
+              <Text style={styles.sectionLabel}>Tu rutina hoy</Text>
+              <Text style={styles.routineTitle}>
+                {routineMomentLabel} {routineMomentEmoji}
+              </Text>
+            </View>
+
+            <View style={[styles.routineEmojiCircle, { backgroundColor: colors.routineCircleSoft }]}>
+              <Image
+                source={require('../../assets/images/home-image.png')}
+                style={styles.routineCircleImage}
+                resizeMode="contain"
+              />
+            </View>
+          </View>
+
           <Text style={styles.description}>{formatStepCount(summary.completedSteps, summary.totalSteps)}</Text>
-          <View style={styles.progressTrack}>
-            <View style={[styles.progressFill, { width: `${progress * 100}%` }]} />
+          <View style={[styles.progressTrack, { backgroundColor: colors.border }]}>
+            <View style={[styles.progressFill, { width: `${progress * 100}%`, backgroundColor: colors.primary }]} />
           </View>
           <Button variant="secondary" onPress={() => router.push('/routine')} style={styles.routineButton}>
             Ver rutina
@@ -41,7 +77,7 @@ export default function HomeScreen() {
 
         <View style={styles.metricsRow}>
           {summary.metrics.map((metric) => (
-            <HomeMetricCard key={metric.id} label={metric.label} value={metric.value} />
+            <HomeMetricCard metricId={metric.id} key={metric.id} label={metric.label} value={metric.value} />
           ))}
         </View>
 
@@ -50,7 +86,7 @@ export default function HomeScreen() {
         </View>
         <Card>
           {summary.reminders.map((reminder) => (
-            <HomeReminderItem key={reminder.id} reminder={reminder} />
+            <HomeReminderItem key={reminder.id} reminder={reminder} onToggle={toggleReminder} />
           ))}
         </Card>
       </ScrollView>
@@ -82,17 +118,40 @@ const styles = StyleSheet.create({
     fontSize: 16
   },
   routineCard: {
+    gap: 12,
+    padding: 14
+  },
+  routineTopRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     gap: 12
+  },
+  routineTopTextBlock: {
+    flex: 1,
+    gap: 3,
+    minWidth: 0
   },
   sectionLabel: {
     color: colors.textSecondary,
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: '700'
   },
   routineTitle: {
     color: colors.textPrimary,
-    fontSize: 24,
+    fontSize: 28,
     fontWeight: '900'
+  },
+  routineEmojiCircle: {
+    alignItems: 'center',
+    borderRadius: 54,
+    height: 108,
+    justifyContent: 'center',
+    width: 108
+  },
+  routineCircleImage: {
+    height: 90,
+    width: 90
   },
   description: {
     color: colors.textSecondary,
@@ -105,13 +164,13 @@ const styles = StyleSheet.create({
     overflow: 'hidden'
   },
   progressFill: {
-    backgroundColor: colors.primary,
     borderRadius: 999,
     height: '100%'
   },
   routineButton: {
-    alignSelf: 'flex-start',
-    marginTop: 4
+    alignSelf: 'stretch',
+    marginTop: 4,
+    minHeight: 52
   },
   metricsRow: {
     flexDirection: 'row',

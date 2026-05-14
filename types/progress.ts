@@ -56,9 +56,8 @@ export type ProgressSummary = {
 
 export type RoutineDayProgress = {
   routine_id: string;
-  date: string;
+  log_date: string;
+  routine_log_id: string | null;
   completed_step_ids: string[];
-  total_steps: number;
-  completed_steps: number;
-  percent: number;
+  completion_percentage: number;
 };
