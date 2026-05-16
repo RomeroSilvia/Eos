@@ -46,14 +46,14 @@ export const routinesRepository = {
   },
 
   create: async (data: RoutineInsert): Promise<RoutineRow | null> => {
-    const { data: created, error } = await supabase
-      .from('routines')
-      .insert([data as any])
+    const routinesTable = supabase.from('routines') as any;
+    const { data: created, error } = await routinesTable
+      .insert(data)
       .select();
 
     if (error) throw error;
 
-    return created?.[0] ?? null;
+    return (created?.[0] as RoutineRow | undefined) ?? null;
   },
 
   update: async (
@@ -61,8 +61,8 @@ export const routinesRepository = {
     userId: string,
     data: RoutineUpdate
   ): Promise<RoutineRow | null> => {
-    const { data: updated, error } = await supabase
-      .from('routines')
+    const routinesTable = supabase.from('routines') as any;
+    const { data: updated, error } = await routinesTable
       .update(data)
       .eq('id', routineId)
       .eq('user_id', userId)
@@ -70,7 +70,7 @@ export const routinesRepository = {
       .single();
 
     if (error) return null;
-    return updated;
+    return updated as RoutineRow;
   },
 
   remove: async (routineId: string, userId: string): Promise<boolean> => {
@@ -95,29 +95,29 @@ export const routinesRepository = {
   },
 
   createStep: async (data: RoutineStepInsert): Promise<RoutineStepRow | null> => {
-    const { data: created, error } = await supabase
-      .from('routine_steps')
-      .insert([data as any])
+    const routineStepsTable = supabase.from('routine_steps') as any;
+    const { data: created, error } = await routineStepsTable
+      .insert(data)
       .select()
       .single();
 
     if (error) throw error;
-    return created;
+    return created as RoutineStepRow;
   },
 
   updateStep: async (
     stepId: string,
     data: RoutineStepUpdate
   ): Promise<RoutineStepRow | null> => {
-    const { data: updated, error } = await supabase
-      .from('routine_steps')
+    const routineStepsTable = supabase.from('routine_steps') as any;
+    const { data: updated, error } = await routineStepsTable
       .update(data)
       .eq('id', stepId)
       .select()
       .single();
 
     if (error) return null;
-    return updated;
+    return updated as RoutineStepRow;
   },
 
   removeStep: async (stepId: string): Promise<boolean> => {

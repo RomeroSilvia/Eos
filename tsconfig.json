@@ -16,6 +16,7 @@
   ],
   "exclude": [
     "backend",
+    "eos",
     "node_modules"
   ]
 }

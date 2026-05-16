@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
+import { router, type Href } from 'expo-router';
 import { useCallback } from 'react';
 import { Image, ScrollView, StyleSheet, Text, View, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -48,7 +48,7 @@ export default function ProductsScreen() {
         </View>
 
         <View style={styles.footer}>
-          <Button onPress={() => router.push('/products/create')} style={styles.button}>
+          <Button onPress={() => router.push('/products/create' as Href)} style={styles.button}>
             Comenzar
           </Button>
         </View>
@@ -66,7 +66,7 @@ export default function ProductsScreen() {
         {products.map((product) => (
           <Pressable
             key={product.id}
-            onPress={() => router.push({ pathname: '/products/[id]', params: { id: product.id } })}
+            onPress={() => router.push(`/products/${product.id}` as Href)}
             style={({ pressed }) => [{ opacity: pressed ? 0.75 : 1 }]}
           >
             <Card style={styles.product}>

@@ -1,13 +1,48 @@
 import { Ionicons } from '@expo/vector-icons';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { router } from 'expo-router';
+import { useEffect, useState } from 'react';
+import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
 import { colors } from '@/constants/colors';
-import { useProfile } from '@/hooks/useProfile';
+import { getUserProfile, signOut } from '@/services/auth';
+import type { UserProfile } from '@/types/user';
 
 export default function ProfileScreen() {
-  const { profile } = useProfile();
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+
+  useEffect(() => {
+    async function fetchProfile() {
+      try {
+        const userProfile = await getUserProfile();
+        setProfile(userProfile);
+      } catch (error: any) {
+        Alert.alert('Error', error.message);
+      }
+    }
+
+    fetchProfile();
+  }, []);
+
+  async function handleLogout() {
+    try {
+      await signOut();
+      router.replace('/landing');
+    } catch (error: any) {
+      Alert.alert('Error', error.message);
+    }
+  }
+
+  if (!profile) {
+    return (
+      <SafeAreaView style={styles.screen}>
+        <View style={styles.content}>
+          <Text style={styles.loading}>Cargando...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.screen}>
@@ -15,11 +50,14 @@ export default function ProfileScreen() {
         <Text style={styles.title}>Perfil</Text>
         <Card style={styles.profileCard}>
           <View style={styles.avatar}>
-            <Ionicons color={colors.primaryDark} name="person" size={30} />
+            <Ionicons color={colors.primary} name="person" size={30} />
           </View>
           <View>
-            <Text style={styles.name}>{profile?.name ?? 'Marta'}</Text>
-            <Text style={styles.meta}>Piel mixta · Usuario</Text>
+            <Text style={styles.name}>{profile.name}</Text>
+            <Text style={styles.email}>{profile.email}</Text>
+            <Text style={styles.meta}>
+              {profile.skinType} - {profile.role}
+            </Text>
           </View>
         </Card>
         <Card style={styles.settings}>
@@ -27,6 +65,9 @@ export default function ProfileScreen() {
           <Text style={styles.description}>Configura permisos y prueba un recordatorio local.</Text>
 
         </Card>
+        <Button onPress={handleLogout} style={{ backgroundColor: colors.primary }}>
+          Cerrar sesion
+        </Button>
       </ScrollView>
     </SafeAreaView>
   );
@@ -35,53 +76,59 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   screen: {
     backgroundColor: colors.background,
-    flex: 1
+    flex: 1,
   },
   content: {
     gap: 16,
     padding: 20,
-    paddingBottom: 116
+    paddingBottom: 116,
+  },
+  loading: {
+    color: colors.text,
   },
   title: {
-    color: colors.textPrimary,
+    color: colors.text,
     fontSize: 30,
     fontWeight: '900',
-    paddingTop: 8
+    paddingTop: 8,
   },
   profileCard: {
     alignItems: 'center',
     flexDirection: 'row',
-    gap: 14
+    gap: 16,
   },
   avatar: {
     alignItems: 'center',
-    backgroundColor: colors.primaryLight,
-    borderRadius: 28,
-    height: 56,
+    backgroundColor: colors.secondary,
+    borderRadius: 30,
+    height: 60,
     justifyContent: 'center',
-    width: 56
+    width: 60,
   },
   name: {
-    color: colors.textPrimary,
+    color: colors.text,
     fontSize: 20,
-    fontWeight: '900'
+    fontWeight: 'bold',
+  },
+  email: {
+    color: colors.text,
+    fontSize: 16,
   },
   meta: {
-    color: colors.textSecondary,
+    color: colors.secondary,
     fontSize: 14,
-    marginTop: 3
   },
   settings: {
-    gap: 12
+    gap: 12,
   },
   sectionTitle: {
     color: colors.textPrimary,
     fontSize: 18,
-    fontWeight: '800'
+    fontWeight: '800',
   },
   description: {
     color: colors.textSecondary,
     fontSize: 14,
-    lineHeight: 20
-  }
+    lineHeight: 20,
+  },
 });

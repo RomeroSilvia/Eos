@@ -1,8 +1,7 @@
-import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
-import { router, useLocalSearchParams } from 'expo-router';
+import { router, type Href, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from '@/components/Button';
 import { colors } from '@/constants/colors';
@@ -50,27 +49,13 @@ export default function NewProductScreen() {
   const [description, setDescription] = useState(initialDescription ?? '');
   const [category, setCategory] = useState<ProductCategory>((initialCategory as ProductCategory) ?? 'other');
   const [brand, setBrand] = useState<ProductBrand>((initialBrand as ProductBrand) ?? 'other');
-  const [imageUri, setImageUri] = useState<string | null>(null);
+  const [imageUri] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   const displayImage = imageUri ?? initialImageUrl ?? null;
 
   const handlePickImage = async () => {
-    try {
-      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (!permission.granted) return;
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        aspect: [1, 1],
-        quality: 0.8,
-      });
-      if (!result.canceled) {
-        setImageUri(result.assets[0].uri);
-      }
-    } catch (error) {
-      console.error('[handlePickImage]', error);
-    }
+    Alert.alert('Foto del producto', 'La seleccion de imagenes se habilitara cuando expo-image-picker este instalado.');
   };
 
   const handleSave = async () => {
@@ -94,9 +79,9 @@ export default function NewProductScreen() {
           imageUri: imageUri ?? undefined,
         });
       }
-      router.replace(`/products/result?status=success&mode=${isEditMode ? 'edit' : 'create'}`);
+      router.replace(`/products/result?status=success&mode=${isEditMode ? 'edit' : 'create'}` as Href);
     } catch {
-      router.replace(`/products/result?status=error&mode=${isEditMode ? 'edit' : 'create'}`);
+      router.replace(`/products/result?status=error&mode=${isEditMode ? 'edit' : 'create'}` as Href);
     } finally {
       setLoading(false);
     }

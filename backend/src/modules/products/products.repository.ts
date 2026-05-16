@@ -27,19 +27,19 @@ export const productsRepository = {
   },
 
   create: async (data: ProductInsert): Promise<ProductRow | null> => {
-    const { data: created, error } = await supabase
-      .from(TABLE_NAMES.products)
+    const productsTable = supabase.from(TABLE_NAMES.products) as any;
+    const { data: created, error } = await productsTable
       .insert(data)
       .select()
       .single();
 
     if (error) throw new Error(error.message);
-    return created;
+    return created as ProductRow;
   },
 
   update: async (productId: string, userId: string, data: ProductUpdate): Promise<ProductRow | null> => {
-    const { data: updated, error } = await supabase
-      .from(TABLE_NAMES.products)
+    const productsTable = supabase.from(TABLE_NAMES.products) as any;
+    const { data: updated, error } = await productsTable
       .update(data)
       .eq('id', productId)
       .eq('user_id', userId)
@@ -47,7 +47,7 @@ export const productsRepository = {
       .single();
 
     if (error) throw new Error(error.message);
-    return updated;
+    return updated as ProductRow;
   },
 
   remove: async (productId: string, userId: string): Promise<boolean> => {
