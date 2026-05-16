@@ -1,28 +1,18 @@
-import { supabase } from '../../config/supabase';
-import type { ProfileInsert, ProfileRow } from '../../database/schema.types';
+import type { ProfileInsert, ProfileRow, ProfileUpdate } from '../../database/schema.types';
 
 export const authRepository = {
-  findProfileById: async (userId: string): Promise<ProfileRow | null> => {
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', userId)
-      .maybeSingle();
-
-    if (error) throw error;
-
-    return data;
+  findProfileById: async (_userId: string): Promise<ProfileRow | null> => {
+    // TODO: Implement Supabase query to get profile by user id.
+    return null;
   },
 
-  upsertProfile: async (data: ProfileInsert): Promise<ProfileRow> => {
-    const profilesTable = supabase.from('profiles') as any;
-    const { data: profile, error } = await profilesTable
-      .upsert(data, { onConflict: 'id' })
-      .select('*')
-      .single();
+  createProfile: async (_data: ProfileInsert): Promise<ProfileRow | null> => {
+    // TODO: Implement Supabase query to create a profile after auth signup.
+    return null;
+  },
 
-    if (error) throw error;
-
-    return profile as ProfileRow;
+  updateLastLogin: async (_userId: string): Promise<ProfileUpdate | null> => {
+    // TODO: Implement last login tracking when the profile schema includes this field.
+    return null;
   }
 };

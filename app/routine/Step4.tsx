@@ -8,6 +8,13 @@ import { useCallback, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import { getStepsByRoutine } from '@/services/routines';
 
+type Step = {
+  id: string;
+  name: string;
+  description: string | null;
+  category: string | null;
+};
+
 type SectionItem = {
   id: string;
   nombre: string;

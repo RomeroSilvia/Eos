@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { router, type Href } from 'expo-router';
+import { router } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -23,7 +23,7 @@ export function FloatingActionMenu() {
 
   function handleAddProduct() {
     closeMenu();
-    router.push('/products/create' as Href);
+    router.push('/products/create');
   }
 
   function handleAddRoutine() {
