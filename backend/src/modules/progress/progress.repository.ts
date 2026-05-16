@@ -82,8 +82,8 @@ export const progressRepository = {
   },
 
   createRoutineLog: async (log: RoutineLogInsert): Promise<RoutineLog> => {
-    const routineLogsTable = supabase.from(TABLE_NAMES.routineLogs) as any;
-    const { data, error } = await routineLogsTable
+    const { data, error } = await supabase
+      .from(TABLE_NAMES.routineLogs)
       .insert(log)
       .select()
       .single();
@@ -92,12 +92,12 @@ export const progressRepository = {
       throw error;
     }
 
-    return data as RoutineLog;
+    return data;
   },
 
   updateRoutineLog: async (routineLogId: string, updates: RoutineLogUpdate): Promise<RoutineLog> => {
-    const routineLogsTable = supabase.from(TABLE_NAMES.routineLogs) as any;
-    const { data, error } = await routineLogsTable
+    const { data, error } = await supabase
+      .from(TABLE_NAMES.routineLogs)
       .update(updates)
       .eq('id', routineLogId)
       .select()
@@ -107,7 +107,7 @@ export const progressRepository = {
       throw error;
     }
 
-    return data as RoutineLog;
+    return data;
   },
 
   findStepLogsByRoutineLogId: async (routineLogId: string): Promise<RoutineStepLog[]> => {
@@ -143,8 +143,8 @@ export const progressRepository = {
   },
 
   createStepLog: async (stepLog: RoutineStepLogInsert): Promise<RoutineStepLog> => {
-    const routineStepLogsTable = supabase.from(TABLE_NAMES.routineStepLogs) as any;
-    const { data, error } = await routineStepLogsTable
+    const { data, error } = await supabase
+      .from(TABLE_NAMES.routineStepLogs)
       .insert(stepLog)
       .select()
       .single();
@@ -153,12 +153,12 @@ export const progressRepository = {
       throw error;
     }
 
-    return data as RoutineStepLog;
+    return data;
   },
 
   updateStepLog: async (stepLogId: string, updates: RoutineStepLogUpdate): Promise<RoutineStepLog> => {
-    const routineStepLogsTable = supabase.from(TABLE_NAMES.routineStepLogs) as any;
-    const { data, error } = await routineStepLogsTable
+    const { data, error } = await supabase
+      .from(TABLE_NAMES.routineStepLogs)
       .update(updates)
       .eq('id', stepLogId)
       .select()
@@ -168,7 +168,7 @@ export const progressRepository = {
       throw error;
     }
 
-    return data as RoutineStepLog;
+    return data;
   },
 
   countRoutineSteps: async (routineId: string): Promise<number> => {

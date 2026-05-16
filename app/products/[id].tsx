@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { router, type Href, useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { Alert, Image, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from '@/components/Button';
@@ -44,16 +44,17 @@ export default function ProductDetailScreen() {
   }
 
   const handleEdit = () => {
-    const params = new URLSearchParams({
-      productId: product.id,
-      initialName: product.name,
-      initialBrand: product.brand ?? '',
-      initialCategory: product.category,
-      initialDescription: product.description ?? '',
-      initialImageUrl: product.image_url ?? '',
+    router.push({
+      pathname: '/products/create',
+      params: {
+        productId: product.id,
+        initialName: product.name,
+        initialBrand: product.brand ?? '',
+        initialCategory: product.category,
+        initialDescription: product.description ?? '',
+        initialImageUrl: product.image_url ?? '',
+      },
     });
-
-    router.push(`/products/create?${params.toString()}` as Href);
   };
 
   const handleDelete = () => {

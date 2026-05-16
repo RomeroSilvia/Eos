@@ -46,14 +46,14 @@ export const routinesRepository = {
   },
 
   create: async (data: RoutineInsert): Promise<RoutineRow | null> => {
-    const routinesTable = supabase.from('routines') as any;
-    const { data: created, error } = await routinesTable
-      .insert(data)
+    const { data: created, error } = await supabase
+      .from('routines')
+      .insert([data as any])
       .select();
 
     if (error) throw error;
 
-    return (created?.[0] as RoutineRow | undefined) ?? null;
+    return created?.[0] ?? null;
   },
 
   update: async (
@@ -61,8 +61,8 @@ export const routinesRepository = {
     userId: string,
     data: RoutineUpdate
   ): Promise<RoutineRow | null> => {
-    const routinesTable = supabase.from('routines') as any;
-    const { data: updated, error } = await routinesTable
+    const { data: updated, error } = await supabase
+      .from('routines')
       .update(data)
       .eq('id', routineId)
       .eq('user_id', userId)
@@ -70,7 +70,7 @@ export const routinesRepository = {
       .single();
 
     if (error) return null;
-    return updated as RoutineRow;
+    return updated;
   },
 
   remove: async (routineId: string, userId: string): Promise<boolean> => {
@@ -95,29 +95,29 @@ export const routinesRepository = {
   },
 
   createStep: async (data: RoutineStepInsert): Promise<RoutineStepRow | null> => {
-    const routineStepsTable = supabase.from('routine_steps') as any;
-    const { data: created, error } = await routineStepsTable
-      .insert(data)
+    const { data: created, error } = await supabase
+      .from('routine_steps')
+      .insert([data as any])
       .select()
       .single();
 
     if (error) throw error;
-    return created as RoutineStepRow;
+    return created;
   },
 
   updateStep: async (
     stepId: string,
     data: RoutineStepUpdate
   ): Promise<RoutineStepRow | null> => {
-    const routineStepsTable = supabase.from('routine_steps') as any;
-    const { data: updated, error } = await routineStepsTable
+    const { data: updated, error } = await supabase
+      .from('routine_steps')
       .update(data)
       .eq('id', stepId)
       .select()
       .single();
 
     if (error) return null;
-    return updated as RoutineStepRow;
+    return updated;
   },
 
   removeStep: async (stepId: string): Promise<boolean> => {

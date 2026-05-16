@@ -7,11 +7,11 @@ import { colors } from '@/constants/colors';
 import { getRoutineById, updateRoutine } from '@/services/routines';
 import type { RoutineTimeOfDay } from '@/types/routine';
 
-const routineTypes: {
+const routineTypes: Array<{
   value: RoutineTimeOfDay;
   label: string;
   icon: keyof typeof MaterialCommunityIcons.glyphMap;
-}[] = [
+}> = [
   { value: 'morning', label: 'Matutina', icon: 'weather-sunset-up' },
   { value: 'night', label: 'Nocturna', icon: 'weather-night' },
   { value: 'custom', label: 'Personalizada', icon: 'calendar-star' }

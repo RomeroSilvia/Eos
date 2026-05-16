@@ -10,7 +10,7 @@ export type Database = {
       profiles: {
         Row: {
           id: string;
-          full_name: string | null;
+          full_name: string;
           email: string | null;
           skin_type: string | null;
           created_at: string;
@@ -18,48 +18,17 @@ export type Database = {
         };
         Insert: {
           id?: string;
-          full_name?: string | null;
+          full_name: string;
           email?: string | null;
           skin_type?: string | null;
           created_at?: string;
           updated_at?: string;
         };
         Update: {
-          full_name?: string | null;
+          full_name?: string;
           email?: string | null;
           skin_type?: string | null;
           updated_at?: string;
-        };
-      };
-
-      skin_profiles: {
-        Row: {
-          id: string;
-          user_id: string;
-          age_range: string | null;
-          skin_type: string | null;
-          imperfections: string | null;
-          main_goal: string | null;
-          routine_steps: string | null;
-          created_at: string;
-        };
-        Insert: {
-          id?: string;
-          user_id: string;
-          age_range?: string | null;
-          skin_type?: string | null;
-          imperfections?: string | null;
-          main_goal?: string | null;
-          routine_steps?: string | null;
-          created_at?: string;
-        };
-        Update: {
-          age_range?: string | null;
-          skin_type?: string | null;
-          imperfections?: string | null;
-          main_goal?: string | null;
-          routine_steps?: string | null;
-          created_at?: string;
         };
         Relationships: [];
       };

@@ -10,11 +10,11 @@ import type { Routine, RoutineStep, RoutineTimeOfDay } from '@/types/routine';
 
 type SectionKey = 'limpieza' | 'tratamientos' | 'hidratacion' | 'proteccion' | 'complementario';
 
-const sections: {
+const sections: Array<{
   key: SectionKey;
   title: string;
   icon: keyof typeof MaterialCommunityIcons.glyphMap;
-}[] = [
+}> = [
   { key: 'limpieza', title: 'Limpieza', icon: 'spray-bottle' },
   { key: 'tratamientos', title: 'Tratamientos', icon: 'eyedropper' },
   { key: 'hidratacion', title: 'Hidratacion', icon: 'water-outline' },
