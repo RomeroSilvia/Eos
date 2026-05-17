@@ -35,6 +35,7 @@ export default function NewProductScreen() {
     initialCategory,
     initialDescription,
     initialImageUrl,
+    returnTo,
   } = useLocalSearchParams<{
     productId?: string;
     initialName?: string;
@@ -42,6 +43,7 @@ export default function NewProductScreen() {
     initialCategory?: string;
     initialDescription?: string;
     initialImageUrl?: string;
+    returnTo?: string;
   }>();
 
   const isEditMode = !!productId;
@@ -94,9 +96,11 @@ export default function NewProductScreen() {
           imageUri: imageUri ?? undefined,
         });
       }
-      router.replace(`/products/result?status=success&mode=${isEditMode ? 'edit' : 'create'}`);
+      const returnParam = returnTo ? `&returnTo=${returnTo}` : '';
+      router.replace(`/products/result?status=success&mode=${isEditMode ? 'edit' : 'create'}${returnParam}`);
     } catch {
-      router.replace(`/products/result?status=error&mode=${isEditMode ? 'edit' : 'create'}`);
+      const returnParam = returnTo ? `&returnTo=${returnTo}` : '';
+      router.replace(`/products/result?status=error&mode=${isEditMode ? 'edit' : 'create'}${returnParam}`);
     } finally {
       setLoading(false);
     }
