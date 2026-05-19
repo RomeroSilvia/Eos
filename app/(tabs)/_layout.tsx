@@ -1,8 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
 import { View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FloatingActionMenu } from '@/components/FloatingActionMenu';
 import { colors } from '@/constants/colors';
+
+export const TAB_BAR_CONTENT_HEIGHT = 56;
 
 type TabIconName = keyof typeof Ionicons.glyphMap;
 
@@ -15,6 +18,9 @@ function tabIcon(name: TabIconName, focusedName: TabIconName) {
 }
 
 export default function TabsLayout() {
+  const insets = useSafeAreaInsets();
+  const tabBarHeight = TAB_BAR_CONTENT_HEIGHT + insets.bottom;
+
   return (
     <View style={{ flex: 1 }}>
       <Tabs
@@ -30,8 +36,8 @@ export default function TabsLayout() {
           tabBarStyle: {
             backgroundColor: colors.surface,
             borderTopColor: colors.border,
-            height: 76,
-            paddingBottom: 10,
+            height: tabBarHeight,
+            paddingBottom: insets.bottom + 6,
             paddingTop: 8
           }
         }}
@@ -48,7 +54,7 @@ export default function TabsLayout() {
         />
         <Tabs.Screen name="profile" options={{ title: 'Perfil', tabBarIcon: tabIcon('person-outline', 'person') }} />
       </Tabs>
-      <FloatingActionMenu />
+      <FloatingActionMenu tabBarHeight={tabBarHeight} />
     </View>
   );
 }

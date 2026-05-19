@@ -2,19 +2,20 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '@/constants/colors';
 
-const tabBarHeight = 76;
 const fabSize = 60;
 const fabRight = 24;
 const fabGapAboveTabBar = 16;
 const menuGap = 12;
 
-export function FloatingActionMenu() {
-  const insets = useSafeAreaInsets();
+type Props = {
+  tabBarHeight: number;
+};
+
+export function FloatingActionMenu({ tabBarHeight }: Props) {
   const [isOpen, setIsOpen] = useState(false);
-  const fabBottom = insets.bottom + tabBarHeight + fabGapAboveTabBar;
+  const fabBottom = tabBarHeight + fabGapAboveTabBar;
   const menuBottom = fabBottom + fabSize + menuGap;
 
   function closeMenu() {
