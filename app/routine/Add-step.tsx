@@ -5,7 +5,7 @@ import { colors } from '@/constants/colors';
 import { useFocusEffect } from '@react-navigation/native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { createStep, getStepsByRoutine, updateStep } from '@/services/routines';
+import { createStep, getStepProducts, getStepsByRoutine, setStepProducts, updateStep } from '@/services/routines';
 import { useProducts } from '@/hooks/useProducts';
 import { ProductCard } from '@/components/ProductCard';
 import { ProductSelector } from '@/components/ProductSelector';
@@ -37,13 +37,17 @@ export default function AddStep() {
 
     const loadStep = async () => {
       try {
-        const steps = await getStepsByRoutine(routineId);
-        const currentStep = steps.find((step) => step.id === stepId);
+        const [steps, existingProducts] = await Promise.all([
+          getStepsByRoutine(routineId),
+          getStepProducts(stepId)
+        ]);
 
+        const currentStep = steps.find((step) => step.id === stepId);
         if (!currentStep) return;
 
         setName(currentStep.name);
         setDescription(currentStep.description ?? '');
+        setSelectedProducts(existingProducts);
       } catch (e) {
         console.error(e);
       }
@@ -56,13 +60,15 @@ export default function AddStep() {
     try {
       if (!routineId || !name.trim()) return;
 
+      const productIds = selectedProducts.map((p) => p.id);
+
       if (isEditing) {
         await updateStep(stepId, {
           name: name.trim(),
           description: description || null,
           category: section
         });
-
+        await setStepProducts(stepId, productIds);
         router.back();
         return;
       }
@@ -72,7 +78,7 @@ export default function AddStep() {
       const nextOrder =
         Math.max(0, ...sectionSteps.map((step) => step.step_order ?? 0)) + 1;
 
-      await createStep({
+      const newStep = await createStep({
         routine_id: routineId,
         name: name.trim(),
         description: description || null,
@@ -80,6 +86,7 @@ export default function AddStep() {
         step_order: nextOrder
       });
 
+      await setStepProducts(newStep.id, productIds);
       router.back();
     } catch (e) {
       console.error(e);

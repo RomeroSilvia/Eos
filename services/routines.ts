@@ -1,4 +1,5 @@
 import type { Routine, RoutineStep } from '@/types/routine';
+import type { Product } from '@/types/product';
 import { apiRequest } from '@/services/api/client';
 
 export async function getRoutines(): Promise<Routine[]> {
@@ -107,5 +108,20 @@ export async function getRoutineById(routineId: string): Promise<Routine> {
   return apiRequest<Routine>({
     path: `/routines/${routineId}`,
     method: 'GET'
+  });
+}
+
+export async function getStepProducts(stepId: string): Promise<Product[]> {
+  return apiRequest<Product[]>({
+    path: `/routines/steps/${stepId}/products`,
+    method: 'GET'
+  });
+}
+
+export async function setStepProducts(stepId: string, productIds: string[]): Promise<void> {
+  await apiRequest<void>({
+    path: `/routines/steps/${stepId}/products`,
+    method: 'PUT',
+    body: JSON.stringify({ product_ids: productIds })
   });
 }

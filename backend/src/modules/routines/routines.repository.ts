@@ -25,24 +25,63 @@ export const routinesRepository = {
     const { data, error } = await supabase
       .from('routines')
       .select(`
-      *,
-      routine_steps (
-        id,
-        name,
-        description,
-        category,
-        step_order,
-        is_required,
-        created_at,
-        updated_at
-      )
-    `)
+        *,
+        routine_steps (
+          id,
+          name,
+          description,
+          category,
+          step_order,
+          is_required,
+          created_at,
+          updated_at
+        )
+      `)
       .eq('id', routineId)
       .eq('user_id', userId)
       .single();
 
     if (error) return null;
-    return data;
+    if (!data) return null;
+
+    const steps: RoutineStepRow[] = (data as any).routine_steps ?? [];
+    if (steps.length === 0) return data;
+
+    const stepIds = steps.map((s) => s.id);
+
+    const { data: links } = await supabase
+      .from('routine_step_products')
+      .select('step_id, product_id')
+      .in('step_id', stepIds);
+
+    if (!links || links.length === 0) return data;
+
+    const productIds = [...new Set(links.map((l) => l.product_id))];
+    const { data: products } = await supabase
+      .from('products')
+      .select('*')
+      .in('id', productIds);
+
+    const productMap = new Map((products ?? []).map((p) => [p.id, p]));
+    const stepProductMap = new Map<string, ProductRow[]>();
+
+    for (const link of links) {
+      const product = productMap.get(link.product_id);
+      if (product) {
+        if (!stepProductMap.has(link.step_id)) stepProductMap.set(link.step_id, []);
+        stepProductMap.get(link.step_id)!.push(product);
+      }
+    }
+
+    const routineBase = data as RoutineRow & { routine_steps: RoutineStepRow[] };
+
+    return {
+      ...routineBase,
+      routine_steps: steps.map((step) => ({
+        ...step,
+        products: stepProductMap.get(step.id) ?? []
+      }))
+    };
   },
 
   create: async (data: RoutineInsert): Promise<RoutineRow | null> => {
@@ -129,21 +168,71 @@ export const routinesRepository = {
     return !error;
   },
 
-  findProductsByStepId: async (_stepId: string): Promise<ProductRow[]> => {
-    return [];
+  findProductsByStepId: async (stepId: string): Promise<ProductRow[]> => {
+    const { data: links, error: linksError } = await supabase
+      .from('routine_step_products')
+      .select('product_id')
+      .eq('step_id', stepId);
+
+    if (linksError) throw linksError;
+    if (!links || links.length === 0) return [];
+
+    const productIds = links.map((l) => l.product_id);
+
+    const { data: products, error: productsError } = await supabase
+      .from('products')
+      .select('*')
+      .in('id', productIds);
+
+    if (productsError) throw productsError;
+    return products ?? [];
+  },
+
+  setStepProducts: async (stepId: string, productIds: string[]): Promise<void> => {
+    const { error: deleteError } = await supabase
+      .from('routine_step_products')
+      .delete()
+      .eq('step_id', stepId);
+
+    if (deleteError) throw deleteError;
+    if (productIds.length === 0) return;
+
+    const inserts = productIds.map((productId) => ({ step_id: stepId, product_id: productId }));
+
+    const { error: insertError } = await supabase
+      .from('routine_step_products')
+      .insert(inserts as any);
+
+    if (insertError) throw insertError;
   },
 
   attachProductToStep: async (
-    _stepId: string,
-    _productId: string
+    stepId: string,
+    productId: string
   ): Promise<RoutineStepProductRow | null> => {
-    return null;
+    const { data, error } = await supabase
+      .from('routine_step_products')
+      .upsert(
+        { step_id: stepId, product_id: productId },
+        { onConflict: 'step_id,product_id' }
+      )
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
   },
 
   detachProductFromStep: async (
-    _stepId: string,
-    _productId: string
+    stepId: string,
+    productId: string
   ): Promise<boolean> => {
-    return false;
+    const { error } = await supabase
+      .from('routine_step_products')
+      .delete()
+      .eq('step_id', stepId)
+      .eq('product_id', productId);
+
+    return !error;
   }
 };

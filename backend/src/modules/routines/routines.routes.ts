@@ -10,6 +10,10 @@ import {
   createStep,
   updateStep,
   deleteStep,
+  getStepProducts,
+  setStepProducts,
+  attachProduct,
+  detachProduct,
   routinesHealth
 } from './routines.controller';
 
@@ -29,3 +33,8 @@ routinesRouter.get('/:id/steps', getStepsByRoutine);
 routinesRouter.post('/:id/steps', createStep);
 routinesRouter.patch('/steps/:stepId', updateStep);
 routinesRouter.delete('/steps/:stepId', deleteStep);
+
+routinesRouter.get('/steps/:stepId/products', getStepProducts);
+routinesRouter.put('/steps/:stepId/products', setStepProducts);
+routinesRouter.post('/steps/:stepId/products', attachProduct);
+routinesRouter.delete('/steps/:stepId/products/:productId', detachProduct);

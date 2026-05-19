@@ -19,3 +19,5 @@ backend/backend-dev*.log
 
 expo-env.d.ts
 # @end expo-cli
+
+CLAUDE.md

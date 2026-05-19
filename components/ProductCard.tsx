@@ -29,7 +29,7 @@ export function ProductCard({ product, onRemove }: Props) {
         hitSlop={8}
         style={({ pressed }) => [styles.removeBtn, { opacity: pressed ? 0.6 : 1 }]}
       >
-        <Ionicons name="close-circle" size={20} color={colors.textMuted} />
+        <Ionicons name="trash-outline" size={20} color={colors.error} />
       </Pressable>
     </View>
   );

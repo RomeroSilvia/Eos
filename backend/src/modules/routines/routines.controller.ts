@@ -232,3 +232,62 @@ export const deleteStep: RequestHandler<StepParams> = async (req, res) => {
 export const routinesHealth: RequestHandler = (_req, res) => {
   return res.json(routinesService.getHealth());
 };
+
+/* PRODUCTOS DE UN PASO */
+
+export const getStepProducts: RequestHandler<StepParams> = async (req, res) => {
+  try {
+    const { stepId } = req.params;
+    const products = await routinesService.getProductsByStep(stepId);
+    return res.json(products);
+  } catch {
+    return res.status(500).json({ error: 'Error fetching step products' });
+  }
+};
+
+export const setStepProducts: RequestHandler<StepParams, unknown, { product_ids: string[] }> = async (req, res) => {
+  try {
+    const { stepId } = req.params;
+    const { product_ids } = req.body;
+
+    if (!Array.isArray(product_ids)) {
+      return res.status(400).json({ error: 'product_ids must be an array' });
+    }
+
+    await routinesService.setStepProducts(stepId, product_ids);
+    return res.status(204).send();
+  } catch {
+    return res.status(500).json({ error: 'Error setting step products' });
+  }
+};
+
+export const attachProduct: RequestHandler<StepParams, unknown, { product_id: string }> = async (req, res) => {
+  try {
+    const { stepId } = req.params;
+    const { product_id } = req.body;
+
+    if (!product_id || typeof product_id !== 'string') {
+      return res.status(400).json({ error: 'product_id is required' });
+    }
+
+    const result = await routinesService.attachProductToStep(stepId, product_id);
+    return res.status(201).json(result);
+  } catch {
+    return res.status(500).json({ error: 'Error attaching product to step' });
+  }
+};
+
+export const detachProduct: RequestHandler<StepParams & { productId: string }> = async (req, res) => {
+  try {
+    const { stepId, productId } = req.params;
+    const success = await routinesService.detachProductFromStep(stepId, productId);
+
+    if (!success) {
+      return res.status(404).json({ error: 'Association not found' });
+    }
+
+    return res.status(204).send();
+  } catch {
+    return res.status(500).json({ error: 'Error detaching product from step' });
+  }
+};
