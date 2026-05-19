@@ -12,10 +12,15 @@ export function useProducts() {
   const [isLoading, setIsLoading] = useState(true);
 
   const refreshProducts = useCallback(async () => {
-    setIsLoading(true);
-    const data = await getProducts();
-    setProducts(data);
-    setIsLoading(false);
+    try {
+      setIsLoading(true);
+      const data = await getProducts();
+      setProducts(data);
+    } catch (err) {
+      console.error('No pudimos cargar los productos.', err);
+    } finally {
+      setIsLoading(false);
+    }
   }, []);
 
   useEffect(() => {
