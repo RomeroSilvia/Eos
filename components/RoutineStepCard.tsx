@@ -62,6 +62,16 @@ export function RoutineStepCard({
           <Text style={styles.description}>{step.description}</Text>
         )}
 
+        {!!step.products && step.products.length > 0 && (
+          <View style={styles.products}>
+            {step.products.map((p) => (
+              <Text key={p.id} style={styles.productName} numberOfLines={1}>
+                · {p.name}
+              </Text>
+            ))}
+          </View>
+        )}
+
         <Text style={completed ? styles.badgeDone : styles.badgePending}>
           {completed ? 'Completado' : 'Pendiente'}
         </Text>
@@ -142,6 +152,15 @@ const styles = StyleSheet.create({
   description: {
     color: colors.textSecondary,
     fontSize: 13
+  },
+
+  products: {
+    gap: 2
+  },
+
+  productName: {
+    color: colors.textSecondary,
+    fontSize: 12
   },
 
   actions: {

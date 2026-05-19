@@ -19,12 +19,13 @@ export type RoutineStepLogRow     = Tables<'routine_step_logs'>;
 
 // ─── Insert types (escritura) ─────────────────────────────────────────────────
 
-export type ProfileInsert        = TablesInsert<'profiles'>;
-export type RoutineInsert        = TablesInsert<'routines'>;
-export type RoutineStepInsert    = TablesInsert<'routine_steps'>;
-export type ProductInsert        = TablesInsert<'products'>;
-export type RoutineLogInsert     = TablesInsert<'routine_logs'>;
-export type RoutineStepLogInsert = TablesInsert<'routine_step_logs'>;
+export type ProfileInsert           = TablesInsert<'profiles'>;
+export type RoutineInsert           = TablesInsert<'routines'>;
+export type RoutineStepInsert       = TablesInsert<'routine_steps'>;
+export type ProductInsert           = TablesInsert<'products'>;
+export type RoutineStepProductInsert = TablesInsert<'routine_step_products'>;
+export type RoutineLogInsert        = TablesInsert<'routine_logs'>;
+export type RoutineStepLogInsert    = TablesInsert<'routine_step_logs'>;
 
 // ─── Update types (actualización parcial) ─────────────────────────────────────
 

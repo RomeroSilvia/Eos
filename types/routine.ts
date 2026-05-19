@@ -1,3 +1,5 @@
+import type { Product } from './product';
+
 export type RoutineTimeOfDay = 'morning' | 'night' | 'custom';
 
 export type Routine = {
@@ -22,6 +24,7 @@ export type RoutineStep = {
   is_required: boolean;
   created_at: string;
   updated_at: string;
+  products?: Product[];
 };
 
 export type StepStatus = 'pending' | 'completed';

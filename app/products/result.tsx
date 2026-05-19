@@ -5,9 +5,10 @@ import { Button } from '@/components/Button';
 import { colors } from '@/constants/colors';
 
 export default function ProductResultScreen() {
-  const { status, mode } = useLocalSearchParams<{ status: 'success' | 'error'; mode?: 'create' | 'edit' }>();
+  const { status, mode, returnTo } = useLocalSearchParams<{ status: 'success' | 'error'; mode?: 'create' | 'edit'; returnTo?: string }>();
   const isSuccess = status === 'success';
   const isEdit = mode === 'edit';
+  const fromAddStep = returnTo === 'add-step';
 
   return (
     <SafeAreaView style={styles.screen}>
@@ -37,10 +38,10 @@ export default function ProductResultScreen() {
 
       <View style={styles.footer}>
         <Button
-          onPress={() => router.replace('/(tabs)/products')}
+          onPress={() => fromAddStep ? router.back() : router.replace('/(tabs)/products')}
           style={{ ...styles.button, ...(isSuccess ? styles.buttonSuccess : styles.buttonError) }}
         >
-          Ver mis productos
+          {fromAddStep ? 'Volver al paso' : 'Ver mis productos'}
         </Button>
       </View>
     </SafeAreaView>

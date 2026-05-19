@@ -58,6 +58,22 @@ export const routinesService = {
 
   deleteStep: (stepId: string) => {
     return routinesRepository.removeStep(stepId);
+  },
+
+  getProductsByStep: (stepId: string) => {
+    return routinesRepository.findProductsByStepId(stepId);
+  },
+
+  setStepProducts: (stepId: string, productIds: string[]) => {
+    return routinesRepository.setStepProducts(stepId, productIds);
+  },
+
+  attachProductToStep: (stepId: string, productId: string) => {
+    return routinesRepository.attachProductToStep(stepId, productId);
+  },
+
+  detachProductFromStep: (stepId: string, productId: string) => {
+    return routinesRepository.detachProductFromStep(stepId, productId);
   }
 };
 
