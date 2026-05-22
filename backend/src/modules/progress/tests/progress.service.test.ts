@@ -1,6 +1,13 @@
 import { progressRepository } from '../progress.repository';
-import { getDayDetailByDate, getSummaryByUserId } from '../progress.service';
-import type { RoutineForProgress, RoutineLog, RoutineStepForProgress, RoutineStepLog } from '../progress.types';
+import { getDayDetailByDate, getFullHistoryByUserId, getStatsByUserId, getSummaryByUserId } from '../progress.service';
+import type {
+  ProductForProgress,
+  RoutineForProgress,
+  RoutineLog,
+  RoutineStepForProgress,
+  RoutineStepLog,
+  RoutineStepProductForProgress
+} from '../progress.types';
 
 jest.mock('../progress.repository', () => ({
   progressRepository: {
@@ -10,6 +17,8 @@ jest.mock('../progress.repository', () => ({
     findRoutineLogsByUserIdAndDate: jest.fn(),
     findRoutinesByIds: jest.fn(),
     findRoutineStepsByRoutineIds: jest.fn(),
+    findProductsByUserId: jest.fn(),
+    findRoutineStepProductsByStepIds: jest.fn(),
     findStepLogsByRoutineLogId: jest.fn(),
     findStepLogsByRoutineLogIds: jest.fn()
   }
@@ -87,6 +96,22 @@ function stepLog(routineLogId: string, stepId: string, isCompleted: boolean): Ro
     completed_at: isCompleted ? '2026-05-04T12:00:00.000Z' : null,
     created_at: '2026-05-04T10:00:00.000Z',
     updated_at: '2026-05-04T10:00:00.000Z'
+  };
+}
+
+function product(id: string, name = id, category: string | null = 'cleanser'): ProductForProgress {
+  return {
+    id,
+    name,
+    category,
+    created_at: '2026-05-01T00:00:00.000Z'
+  };
+}
+
+function routineStepProduct(stepId: string, productId: string): RoutineStepProductForProgress {
+  return {
+    step_id: stepId,
+    product_id: productId
   };
 }
 
@@ -673,6 +698,412 @@ describe('progress.service getDayDetailByDate', () => {
       completedRoutines: 0,
       totalRoutines: 0,
       routines: []
+    });
+  });
+});
+
+describe('progress.service getFullHistoryByUserId', () => {
+  beforeEach(() => {
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date('2026-05-06T12:00:00.000Z'));
+    mockedProgressRepository.findActiveRoutinesByUserId.mockReset();
+    mockedProgressRepository.findRoutineLogsByUserId.mockReset();
+    mockedProgressRepository.findRoutinesByIds.mockReset();
+    mockedProgressRepository.findRoutineStepsByRoutineIds.mockReset();
+    mockedProgressRepository.findStepLogsByRoutineLogIds.mockReset();
+    mockedProgressRepository.findRoutinesByIds.mockResolvedValue([]);
+    mockedProgressRepository.findRoutineStepsByRoutineIds.mockResolvedValue([]);
+    mockedProgressRepository.findStepLogsByRoutineLogIds.mockResolvedValue([]);
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
+  it('returns history days sorted from newest to oldest with real routine names', async () => {
+    const routines = [
+      { ...activeRoutine('morning', '2026-05-01T00:00:00.000Z'), name: 'Rutina de mañana', time_of_day: 'morning' },
+      { ...activeRoutine('night', '2026-05-01T00:00:00.000Z'), name: 'Rutina de noche', time_of_day: 'night' }
+    ];
+    const may4Morning = createRoutineLog({
+      id: 'may-4-morning',
+      routine_id: 'morning',
+      log_date: '2026-05-04',
+      completed_at: '2026-05-04T12:00:00.000Z',
+      completion_percentage: 100
+    });
+    const may4Night = createRoutineLog({
+      id: 'may-4-night',
+      routine_id: 'night',
+      log_date: '2026-05-04',
+      completed_at: '2026-05-04T12:00:00.000Z',
+      completion_percentage: 100
+    });
+    const may5Morning = createRoutineLog({
+      id: 'may-5-morning',
+      routine_id: 'morning',
+      log_date: '2026-05-05',
+      completed_at: '2026-05-05T12:00:00.000Z',
+      completion_percentage: 100
+    });
+    const logs = [may4Morning, may4Night, may5Morning];
+    const steps = [
+      routineStep('morning', 'cleanser', 'Limpieza'),
+      routineStep('morning', 'moisturizer', 'Hidratante'),
+      routineStep('night', 'night-cleanser', 'Limpieza')
+    ];
+
+    mockedProgressRepository.findActiveRoutinesByUserId.mockResolvedValue(routines);
+    mockedProgressRepository.findRoutineLogsByUserId.mockResolvedValue(logs);
+    mockedProgressRepository.findRoutineStepsByRoutineIds.mockResolvedValue(steps);
+    mockedProgressRepository.findStepLogsByRoutineLogIds.mockResolvedValue([
+      stepLog(may4Morning.id, 'cleanser', true),
+      stepLog(may4Morning.id, 'moisturizer', true),
+      stepLog(may4Night.id, 'night-cleanser', true),
+      stepLog(may5Morning.id, 'cleanser', true),
+      stepLog(may5Morning.id, 'moisturizer', true)
+    ]);
+
+    const history = await getFullHistoryByUserId('user-1');
+
+    expect(history.map((day) => day.date)).toEqual(['2026-05-05', '2026-05-04']);
+    expect(history[0]).toMatchObject({
+      status: 'partial',
+      completionPercentage: 50,
+      completedRoutines: 1,
+      totalExpectedRoutines: 2
+    });
+    expect(history[0].routines.map((routine) => routine.routineName)).toEqual(['Rutina de mañana', 'Rutina de noche']);
+    expect(JSON.stringify(history)).not.toContain('Rutina morning');
+    expect(JSON.stringify(history)).not.toContain('Rutina night');
+  });
+
+  it('uses a friendly fallback when a logged routine name is missing', async () => {
+    const log = completedLog('2026-05-04', 'deleted-routine');
+
+    mockedProgressRepository.findActiveRoutinesByUserId.mockResolvedValue([]);
+    mockedProgressRepository.findRoutineLogsByUserId.mockResolvedValue([log]);
+    mockedProgressRepository.findRoutinesByIds.mockResolvedValue([]);
+    mockedProgressRepository.findRoutineStepsByRoutineIds.mockResolvedValue([]);
+    mockedProgressRepository.findStepLogsByRoutineLogIds.mockResolvedValue([]);
+
+    const history = await getFullHistoryByUserId('user-1');
+
+    expect(history[0].routines[0].routineName).toBe('Rutina sin nombre');
+    expect(history[0].routines[0].routineName).not.toContain('deleted-routine');
+  });
+});
+
+describe('progress.service getStatsByUserId', () => {
+  beforeEach(() => {
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date('2026-05-06T12:00:00.000Z'));
+    mockedProgressRepository.findActiveRoutinesByUserId.mockReset();
+    mockedProgressRepository.findRoutineLogsByUserId.mockReset();
+    mockedProgressRepository.findRoutineLogsByUserIdBetweenDates.mockReset();
+    mockedProgressRepository.findRoutineStepsByRoutineIds.mockReset();
+    mockedProgressRepository.findProductsByUserId.mockReset();
+    mockedProgressRepository.findRoutineStepProductsByStepIds.mockReset();
+    mockedProgressRepository.findStepLogsByRoutineLogIds.mockReset();
+    mockedProgressRepository.findRoutineStepsByRoutineIds.mockResolvedValue([]);
+    mockedProgressRepository.findProductsByUserId.mockResolvedValue([]);
+    mockedProgressRepository.findRoutineStepProductsByStepIds.mockResolvedValue([]);
+    mockedProgressRepository.findStepLogsByRoutineLogIds.mockResolvedValue([]);
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
+  it('calculates weekly and monthly routine stats from expected routines', async () => {
+    const routines = [
+      { ...activeRoutine('morning', '2026-05-01T00:00:00.000Z'), name: 'Rutina de mañana', time_of_day: 'morning' },
+      { ...activeRoutine('night', '2026-05-01T00:00:00.000Z'), name: 'Rutina de noche', time_of_day: 'night' }
+    ];
+    const logs = [
+      completedLog('2026-05-04', 'morning'),
+      completedLog('2026-05-04', 'night'),
+      completedLog('2026-05-05', 'morning')
+    ];
+
+    mockedProgressRepository.findActiveRoutinesByUserId.mockResolvedValue(routines);
+    mockedProgressRepository.findRoutineLogsByUserId.mockResolvedValue(logs);
+    mockedProgressRepository.findRoutineLogsByUserIdBetweenDates.mockResolvedValueOnce(logs).mockResolvedValueOnce(logs);
+
+    const stats = await getStatsByUserId('user-1');
+
+    expect(stats.weekly).toMatchObject({
+      completionPercentage: 21,
+      completedRoutines: 3,
+      totalExpectedRoutines: 14
+    });
+    expect(stats.monthly).toMatchObject({
+      completionPercentage: 25,
+      completedRoutines: 3,
+      totalExpectedRoutines: 12,
+      completeDays: 1,
+      partialDays: 1
+    });
+    expect(stats.weekDays).toHaveLength(7);
+    expect(stats.weekDays[0]).toMatchObject({
+      dayLabel: 'Lunes',
+      status: 'complete',
+      completedRoutines: 2,
+      totalExpectedRoutines: 2,
+      completionPercentage: 100
+    });
+  });
+
+  it('sorts routine ranking by completion percentage', async () => {
+    const routines = [
+      { ...activeRoutine('morning', '2026-05-01T00:00:00.000Z'), name: 'Rutina de mañana', time_of_day: 'morning' },
+      { ...activeRoutine('night', '2026-05-01T00:00:00.000Z'), name: 'Rutina de noche', time_of_day: 'night' }
+    ];
+    const logs = [
+      completedLog('2026-05-04', 'morning'),
+      completedLog('2026-05-05', 'morning'),
+      completedLog('2026-05-04', 'night')
+    ];
+
+    mockedProgressRepository.findActiveRoutinesByUserId.mockResolvedValue(routines);
+    mockedProgressRepository.findRoutineLogsByUserId.mockResolvedValue(logs);
+    mockedProgressRepository.findRoutineLogsByUserIdBetweenDates.mockResolvedValueOnce(logs).mockResolvedValueOnce(logs);
+
+    const stats = await getStatsByUserId('user-1');
+
+    expect(stats.routinesRanking.map((routine) => routine.routineId)).toEqual(['morning', 'night']);
+    expect(stats.routinesRanking[0]).toMatchObject({
+      routineName: 'Rutina de mañana',
+      completedCount: 2,
+      expectedCount: 6,
+      completionPercentage: 33
+    });
+  });
+
+  it('does not count routine steps as expected weekly routines', async () => {
+    const routines = [{ ...activeRoutine('morning', '2026-05-01T00:00:00.000Z'), name: 'Rutina de mañana' }];
+    const logs = [completedLog('2026-05-04', 'morning')];
+
+    mockedProgressRepository.findActiveRoutinesByUserId.mockResolvedValue(routines);
+    mockedProgressRepository.findRoutineLogsByUserId.mockResolvedValue(logs);
+    mockedProgressRepository.findRoutineLogsByUserIdBetweenDates.mockResolvedValueOnce(logs).mockResolvedValueOnce(logs);
+    mockedProgressRepository.findRoutineStepsByRoutineIds.mockResolvedValue([
+      routineStep('morning', 'step-1'),
+      routineStep('morning', 'step-2'),
+      routineStep('morning', 'step-3'),
+      routineStep('morning', 'step-4'),
+      routineStep('morning', 'step-5')
+    ]);
+
+    const stats = await getStatsByUserId('user-1');
+
+    expect(stats.weekly.totalExpectedRoutines).toBe(7);
+    expect(stats.weekly.completedRoutines).toBe(1);
+  });
+
+  it('does not count completed routines outside the current week in weekly stats', async () => {
+    const routines = [{ ...activeRoutine('morning', '2026-04-01T00:00:00.000Z'), name: 'Rutina de mañana' }];
+    const allLogs = [completedLog('2026-04-28', 'morning'), completedLog('2026-05-04', 'morning')];
+    const weeklyLogs = [completedLog('2026-05-04', 'morning')];
+
+    mockedProgressRepository.findActiveRoutinesByUserId.mockResolvedValue(routines);
+    mockedProgressRepository.findRoutineLogsByUserId.mockResolvedValue(allLogs);
+    mockedProgressRepository.findRoutineLogsByUserIdBetweenDates.mockResolvedValueOnce(weeklyLogs).mockResolvedValueOnce(allLogs);
+
+    const stats = await getStatsByUserId('user-1');
+
+    expect(stats.weekly.completedRoutines).toBe(1);
+    expect(stats.weekly.totalExpectedRoutines).toBe(7);
+  });
+
+  it('counts product uses only from completed steps linked to user products', async () => {
+    const routines = [{ ...activeRoutine('morning', '2026-05-01T00:00:00.000Z'), name: 'Rutina de mañana' }];
+    const logs = [completedLog('2026-05-04', 'morning')];
+    const steps = [routineStep('morning', 'cleanser'), routineStep('morning', 'serum')];
+
+    mockedProgressRepository.findActiveRoutinesByUserId.mockResolvedValue(routines);
+    mockedProgressRepository.findRoutineLogsByUserId.mockResolvedValue(logs);
+    mockedProgressRepository.findRoutineLogsByUserIdBetweenDates.mockResolvedValueOnce(logs).mockResolvedValueOnce(logs);
+    mockedProgressRepository.findRoutineStepsByRoutineIds.mockResolvedValue(steps);
+    mockedProgressRepository.findProductsByUserId.mockResolvedValue([
+      product('product-cleanser', 'Limpiador facial', 'cleanser')
+    ]);
+    mockedProgressRepository.findRoutineStepProductsByStepIds.mockResolvedValue([
+      routineStepProduct('cleanser', 'product-cleanser'),
+      routineStepProduct('serum', 'foreign-product')
+    ]);
+    mockedProgressRepository.findStepLogsByRoutineLogIds.mockResolvedValue([
+      stepLog(logs[0].id, 'cleanser', true),
+      stepLog(logs[0].id, 'serum', false)
+    ]);
+
+    const stats = await getStatsByUserId('user-1');
+
+    expect(stats.products.weekly).toMatchObject({
+      totalProductUses: 1,
+      distinctProductsUsed: 1,
+      mostUsedProduct: {
+        productId: 'product-cleanser',
+        name: 'Limpiador facial',
+        uses: 1
+      }
+    });
+    expect(stats.products.productRanking).toEqual([
+      {
+        productId: 'product-cleanser',
+        name: 'Limpiador facial',
+        category: 'cleanser',
+        weeklyUses: 1,
+        monthlyUses: 1,
+        totalUses: 1,
+        usagePercentage: 100
+      }
+    ]);
+  });
+
+  it('sorts product ranking and groups product uses by category and routine', async () => {
+    const routines = [
+      { ...activeRoutine('morning', '2026-05-01T00:00:00.000Z'), name: 'Rutina de mañana' },
+      { ...activeRoutine('night', '2026-05-01T00:00:00.000Z'), name: 'Rutina de noche' }
+    ];
+    const logs = [
+      completedLog('2026-05-04', 'morning'),
+      completedLog('2026-05-05', 'morning'),
+      completedLog('2026-05-05', 'night')
+    ];
+    const steps = [
+      routineStep('morning', 'morning-cleanser'),
+      routineStep('morning', 'sunscreen'),
+      routineStep('night', 'night-cleanser')
+    ];
+
+    mockedProgressRepository.findActiveRoutinesByUserId.mockResolvedValue(routines);
+    mockedProgressRepository.findRoutineLogsByUserId.mockResolvedValue(logs);
+    mockedProgressRepository.findRoutineLogsByUserIdBetweenDates.mockResolvedValueOnce(logs).mockResolvedValueOnce(logs);
+    mockedProgressRepository.findRoutineStepsByRoutineIds.mockResolvedValue(steps);
+    mockedProgressRepository.findProductsByUserId.mockResolvedValue([
+      product('cleanser', 'Limpiador facial', 'cleanser'),
+      product('sunscreen', 'Protector solar', 'sunscreen')
+    ]);
+    mockedProgressRepository.findRoutineStepProductsByStepIds.mockResolvedValue([
+      routineStepProduct('morning-cleanser', 'cleanser'),
+      routineStepProduct('night-cleanser', 'cleanser'),
+      routineStepProduct('sunscreen', 'sunscreen')
+    ]);
+    mockedProgressRepository.findStepLogsByRoutineLogIds.mockResolvedValue([
+      stepLog(logs[0].id, 'morning-cleanser', true),
+      stepLog(logs[0].id, 'sunscreen', true),
+      stepLog(logs[1].id, 'morning-cleanser', true),
+      stepLog(logs[2].id, 'night-cleanser', true)
+    ]);
+
+    const stats = await getStatsByUserId('user-1');
+
+    expect(stats.products.productRanking.map((item) => item.productId)).toEqual(['cleanser', 'sunscreen']);
+    expect(stats.products.productRanking[0]).toMatchObject({
+      monthlyUses: 3,
+      usagePercentage: 75
+    });
+    expect(stats.products.categoryStats).toEqual([
+      { category: 'cleanser', uses: 3, percentage: 75 },
+      { category: 'sunscreen', uses: 1, percentage: 25 }
+    ]);
+    expect(stats.products.routineProductUsage).toEqual([
+      {
+        routineId: 'morning',
+        routineName: 'Rutina de mañana',
+        products: [
+          { productId: 'cleanser', name: 'Limpiador facial', category: 'cleanser', uses: 2 },
+          { productId: 'sunscreen', name: 'Protector solar', category: 'sunscreen', uses: 1 }
+        ]
+      },
+      {
+        routineId: 'night',
+        routineName: 'Rutina de noche',
+        products: [{ productId: 'cleanser', name: 'Limpiador facial', category: 'cleanser', uses: 1 }]
+      }
+    ]);
+  });
+
+  it('lists products without recent use and includes the latest use date when available', async () => {
+    const routines = [{ ...activeRoutine('morning', '2026-04-01T00:00:00.000Z'), name: 'Rutina de mañana' }];
+    const logs = [
+      createRoutineLog({
+        id: 'old-morning-log',
+        routine_id: 'morning',
+        log_date: '2026-04-01',
+        completed_at: '2026-04-01T12:00:00.000Z',
+        completion_percentage: 100
+      }),
+      createRoutineLog({
+        id: 'recent-morning-log',
+        routine_id: 'morning',
+        log_date: '2026-05-04',
+        completed_at: '2026-05-04T12:00:00.000Z',
+        completion_percentage: 100
+      })
+    ];
+    const steps = [routineStep('morning', 'old-mask'), routineStep('morning', 'cleanser')];
+
+    mockedProgressRepository.findActiveRoutinesByUserId.mockResolvedValue(routines);
+    mockedProgressRepository.findRoutineLogsByUserId.mockResolvedValue(logs);
+    mockedProgressRepository.findRoutineLogsByUserIdBetweenDates.mockResolvedValueOnce([logs[1]]).mockResolvedValueOnce([logs[1]]);
+    mockedProgressRepository.findRoutineStepsByRoutineIds.mockResolvedValue(steps);
+    mockedProgressRepository.findProductsByUserId.mockResolvedValue([
+      product('mask', 'Mascarilla hidratante', 'mask'),
+      product('cleanser', 'Limpiador facial', 'cleanser'),
+      product('never-used', 'Aceite facial', 'other')
+    ]);
+    mockedProgressRepository.findRoutineStepProductsByStepIds.mockResolvedValue([
+      routineStepProduct('old-mask', 'mask'),
+      routineStepProduct('cleanser', 'cleanser')
+    ]);
+    mockedProgressRepository.findStepLogsByRoutineLogIds.mockResolvedValue([
+      stepLog(logs[0].id, 'old-mask', true),
+      stepLog(logs[1].id, 'cleanser', true)
+    ]);
+
+    const stats = await getStatsByUserId('user-1');
+
+    expect(stats.products.unusedProducts).toEqual([
+      {
+        productId: 'never-used',
+        name: 'Aceite facial',
+        category: 'other'
+      },
+      {
+        productId: 'mask',
+        name: 'Mascarilla hidratante',
+        category: 'mask',
+        lastUsedAt: '2026-04-01'
+      }
+    ]);
+  });
+
+  it('returns empty stats when the user has no active routines', async () => {
+    mockedProgressRepository.findActiveRoutinesByUserId.mockResolvedValue([]);
+    mockedProgressRepository.findRoutineLogsByUserId.mockResolvedValue([]);
+    mockedProgressRepository.findRoutineLogsByUserIdBetweenDates.mockResolvedValueOnce([]).mockResolvedValueOnce([]);
+
+    const stats = await getStatsByUserId('user-1');
+
+    expect(stats.weekly.totalExpectedRoutines).toBe(0);
+    expect(stats.monthly.totalExpectedRoutines).toBe(0);
+    expect(stats.weekDays.every((day) => day.status === 'no_routine')).toBe(true);
+    expect(stats.routinesRanking).toEqual([]);
+    expect(stats.products).toEqual({
+      weekly: {
+        totalProductUses: 0,
+        distinctProductsUsed: 0
+      },
+      monthly: {
+        totalProductUses: 0,
+        distinctProductsUsed: 0
+      },
+      productRanking: [],
+      categoryStats: [],
+      routineProductUsage: [],
+      unusedProducts: []
     });
   });
 });

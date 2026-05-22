@@ -1,11 +1,13 @@
 import type { Request, Response } from 'express';
-import { getHistoryByDate, getSummaryByUserId } from '../progress.controller';
+import { getFullHistoryByUserId, getHistoryByDate, getSummaryByUserId } from '../progress.controller';
 import * as progressService from '../progress.service';
 import type { ProgressSummary, RoutineLog } from '../progress.types';
 
 jest.mock('../progress.service', () => ({
   getProgressHealth: jest.fn(() => ({ module: 'progress', status: 'ready' })),
   getSummaryByUserId: jest.fn(),
+  getStatsByUserId: jest.fn(),
+  getFullHistoryByUserId: jest.fn(),
   getHistoryByDate: jest.fn(),
   getDayDetailByDate: jest.fn(),
   isIsoDate: jest.fn((date: string) => /^\d{4}-\d{2}-\d{2}$/.test(date))
@@ -127,6 +129,35 @@ describe('progress.controller', () => {
     await getHistoryByDate(req, res as Response, jest.fn());
 
     expect(mockedProgressService.getHistoryByDate).toHaveBeenCalledWith('user-1', '2026-05-04');
+    expect(res.json).toHaveBeenCalledWith(history);
+  });
+
+  it('getFullHistoryByUserId responds 200 when service returns history days', async () => {
+    const history = [
+      {
+        date: '2026-05-04',
+        status: 'complete',
+        completionPercentage: 100,
+        completedRoutines: 1,
+        totalExpectedRoutines: 1,
+        routines: [
+          {
+            routineId: 'routine-1',
+            routineName: 'Rutina de mañana',
+            status: 'complete',
+            completedSteps: 2,
+            totalSteps: 2
+          }
+        ]
+      }
+    ] as Awaited<ReturnType<typeof progressService.getFullHistoryByUserId>>;
+    mockedProgressService.getFullHistoryByUserId.mockResolvedValue(history);
+    const req = { params: { userId: 'user-1' } } as unknown as Request;
+    const res = createMockResponse();
+
+    await getFullHistoryByUserId(req, res as Response, jest.fn());
+
+    expect(mockedProgressService.getFullHistoryByUserId).toHaveBeenCalledWith('user-1');
     expect(res.json).toHaveBeenCalledWith(history);
   });
 });
