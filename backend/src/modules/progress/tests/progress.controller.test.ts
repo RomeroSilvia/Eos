@@ -7,6 +7,7 @@ jest.mock('../progress.service', () => ({
   getProgressHealth: jest.fn(() => ({ module: 'progress', status: 'ready' })),
   getSummaryByUserId: jest.fn(),
   getHistoryByDate: jest.fn(),
+  getDayDetailByDate: jest.fn(),
   isIsoDate: jest.fn((date: string) => /^\d{4}-\d{2}-\d{2}$/.test(date))
 }));
 
@@ -40,7 +41,13 @@ function createSummary(): ProgressSummary {
     calendarProgress: [
       {
         date: '2026-05-01',
-        status: 'completed'
+        status: 'completed',
+        dayStatus: 'complete',
+        completedRoutines: 1,
+        totalRoutines: 1,
+        completionPercentage: 100,
+        isToday: false,
+        isDayFinished: true
       }
     ]
   };
