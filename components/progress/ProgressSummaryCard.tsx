@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { ProgressBar } from '@/components/progress/ProgressBar';
 import { colors } from '@/constants/colors';
 import type { PeriodProgress, ProgressCTA } from '@/types/progress';
 
@@ -24,9 +25,7 @@ export function ProgressSummaryCard({ progress, cta, onPressCTA }: ProgressSumma
 
       <Text style={styles.description}>{progress.label}</Text>
 
-      <View style={styles.progressTrack}>
-        <View style={[styles.progressFill, { width: `${progress.percent}%` }]} />
-      </View>
+      <ProgressBar percentage={progress.percent} />
 
       <Pressable
         accessibilityRole="button"
@@ -82,17 +81,6 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     fontSize: 15,
     lineHeight: 21
-  },
-  progressTrack: {
-    backgroundColor: colors.border,
-    borderRadius: 999,
-    height: 10,
-    overflow: 'hidden'
-  },
-  progressFill: {
-    backgroundColor: colors.primary,
-    borderRadius: 999,
-    height: '100%'
   },
   ctaButton: {
     alignItems: 'center',

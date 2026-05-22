@@ -3,14 +3,16 @@ import type {
   CalendarDayProgress,
   CalendarDayStatus,
   DayProgressStatus,
-  ProgressCTA,
+  ProgressHistoryDay,
   ProgressHistoryItem,
   ProgressSummary,
   RoutineDayDetail,
   RoutineDayProgress,
+  RoutineStats,
   StreakProgress,
   WeekProgressDay
 } from '@/types/progress';
+import { getProgressCTA } from '@/utils/progress';
 
 type BackendPeriodProgress = {
   percent: number;
@@ -176,7 +178,7 @@ export async function getProgressSummary(userId = defaultProgressUserId): Promis
   const today = getTodayIsoDate();
   const [summary, history] = await Promise.all([
     apiRequest<BackendProgressSummary>({ path: `/progress/summary/${userId}` }),
-    getProgressHistoryByDate(userId, today)
+    getProgressHistory(userId)
   ]);
 
   return mapBackendSummaryToProgressSummary(summary, history);
@@ -192,6 +194,33 @@ export async function getProgressHistoryByDate(userId: string, date: string): Pr
   });
 
   return logs.map(mapRoutineLogToHistoryItem);
+}
+
+export async function getProgressHistory(userId = defaultProgressUserId): Promise<ProgressHistoryDay[]> {
+  if (apiConfig.useMocks) {
+    return mockProgressSummary.historyPreview.map((item) => ({
+      date: item.date === 'Hoy' ? getTodayIsoDate() : '2026-05-20',
+      status: item.status === 'completed' ? 'complete' : item.status === 'empty' ? 'incomplete' : item.status,
+      completionPercentage: item.status === 'completed' ? 100 : item.status === 'partial' ? 50 : 0,
+      completedRoutines: item.status === 'completed' ? 1 : 0,
+      totalExpectedRoutines: 1,
+      routines: [
+        {
+          routineId: item.id,
+          routineName: item.routineName,
+          status: item.status === 'completed' ? 'complete' : item.status === 'partial' ? 'partial' : 'pending',
+          completedSteps: item.completedSteps,
+          totalSteps: item.totalSteps
+        }
+      ]
+    }));
+  }
+
+  const history = await apiRequest<ProgressHistoryDay[]>({
+    path: `/progress/history/${userId}/all`
+  });
+
+  return [...history].sort((a, b) => b.date.localeCompare(a.date));
 }
 
 export async function getProgressDayDetail(date: string, userId = defaultProgressUserId): Promise<RoutineDayDetail> {
@@ -238,6 +267,122 @@ export async function getProgressDayDetail(date: string, userId = defaultProgres
   });
 }
 
+export async function getProgressStats(userId = defaultProgressUserId): Promise<RoutineStats> {
+  if (apiConfig.useMocks) {
+    return {
+      weekly: {
+        completionPercentage: mockProgressSummary.weeklyProgress.percent,
+        completedRoutines: mockProgressSummary.weeklyProgress.completedRoutines,
+        totalExpectedRoutines: mockProgressSummary.weeklyProgress.totalRoutines,
+        currentStreak: mockProgressSummary.streakProgress.currentDays,
+        bestStreak: mockProgressSummary.streakProgress.bestDays ?? 0
+      },
+      monthly: {
+        completionPercentage: mockProgressSummary.monthlyProgress.percent,
+        completedRoutines: mockProgressSummary.monthlyProgress.completedRoutines,
+        totalExpectedRoutines: mockProgressSummary.monthlyProgress.totalRoutines,
+        completeDays: mockProgressSummary.calendarProgress.filter((day) => day.status === 'completed').length,
+        partialDays: mockProgressSummary.calendarProgress.filter((day) => day.status === 'partial').length,
+        incompleteDays: mockProgressSummary.calendarProgress.filter((day) => day.status === 'pending').length,
+        noRoutineDays: mockProgressSummary.calendarProgress.filter((day) => day.status === 'empty').length
+      },
+      weekDays: mockProgressSummary.calendarProgress.slice(0, 7).map((day) => ({
+        date: day.date,
+        dayLabel: ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'][day.day % 7],
+        status: day.status === 'completed' ? 'complete' : day.status === 'empty' ? 'no_routine' : day.status,
+        completedRoutines: day.completedRoutines,
+        totalExpectedRoutines: day.totalRoutines,
+        completionPercentage: day.completionPercentage
+      })),
+      routinesRanking: [
+        {
+          routineId: 'mock-morning',
+          routineName: 'Rutina de mañana',
+          timeOfDay: 'morning',
+          completedCount: 6,
+          expectedCount: 7,
+          completionPercentage: 86
+        },
+        {
+          routineId: 'mock-night',
+          routineName: 'Rutina de noche',
+          timeOfDay: 'night',
+          completedCount: 4,
+          expectedCount: 7,
+          completionPercentage: 57
+        }
+      ],
+      products: {
+        weekly: {
+          totalProductUses: 11,
+          distinctProductsUsed: 4,
+          mostUsedProduct: {
+            productId: 'mock-sunscreen',
+            name: 'Protector solar',
+            category: 'sunscreen',
+            uses: 5
+          }
+        },
+        monthly: {
+          totalProductUses: 34,
+          distinctProductsUsed: 6
+        },
+        productRanking: [
+          {
+            productId: 'mock-sunscreen',
+            name: 'Protector solar',
+            category: 'sunscreen',
+            weeklyUses: 5,
+            monthlyUses: 14,
+            totalUses: 14,
+            usagePercentage: 41
+          },
+          {
+            productId: 'mock-cleanser',
+            name: 'Limpiador facial',
+            category: 'cleanser',
+            weeklyUses: 4,
+            monthlyUses: 12,
+            totalUses: 12,
+            usagePercentage: 35
+          }
+        ],
+        categoryStats: [
+          { category: 'sunscreen', uses: 14, percentage: 41 },
+          { category: 'cleanser', uses: 12, percentage: 35 }
+        ],
+        routineProductUsage: [
+          {
+            routineId: 'mock-morning',
+            routineName: 'Rutina de mañana',
+            products: [
+              { productId: 'mock-sunscreen', name: 'Protector solar', category: 'sunscreen', uses: 14 },
+              { productId: 'mock-cleanser', name: 'Limpiador facial', category: 'cleanser', uses: 6 }
+            ]
+          },
+          {
+            routineId: 'mock-night',
+            routineName: 'Rutina de noche',
+            products: [{ productId: 'mock-cleanser', name: 'Limpiador facial', category: 'cleanser', uses: 6 }]
+          }
+        ],
+        unusedProducts: [
+          {
+            productId: 'mock-mask',
+            name: 'Mascarilla hidratante',
+            category: 'mask',
+            lastUsedAt: '2026-04-18'
+          }
+        ]
+      }
+    };
+  }
+
+  return apiRequest<RoutineStats>({
+    path: `/progress/stats/${userId}`
+  });
+}
+
 export async function getWeeklyProgress() {
   return (await getProgressSummary()).weeklyProgress;
 }
@@ -252,7 +397,7 @@ export async function getCalendarProgress() {
 
 function mapBackendSummaryToProgressSummary(
   backendSummary: BackendProgressSummary,
-  historyPreview: ProgressHistoryItem[]
+  history: ProgressHistoryDay[]
 ): ProgressSummary {
   const weeklyProgress = backendSummary.weeklyProgress ?? {
     percent: backendSummary.completionRate ?? 0,
@@ -301,64 +446,7 @@ function mapBackendSummaryToProgressSummary(
         detail: 'dias'
       }
     ],
-    historyPreview
-  };
-}
-
-export function getProgressCTA(params: {
-  overallProgressPercentage: number;
-  todayStatus: DayProgressStatus;
-  completedTodayRoutines: number;
-  totalTodayRoutines: number;
-  hasPreviousProgress: boolean;
-  streak: number;
-  previousDayStatus?: DayProgressStatus;
-}): ProgressCTA {
-  const todayHasNoProgress = params.completedTodayRoutines === 0;
-  const todayIsComplete =
-    params.todayStatus === 'complete' ||
-    (params.totalTodayRoutines > 0 && params.completedTodayRoutines === params.totalTodayRoutines);
-  const yesterdayInterrupted =
-    params.previousDayStatus === 'partial' ||
-    params.previousDayStatus === 'incomplete' ||
-    params.previousDayStatus === 'pending';
-
-  if (todayIsComplete) {
-    return {
-      label: 'Ver progreso',
-      description: 'Buen trabajo, día completo',
-      target: 'progressHistory'
-    };
-  }
-
-  if (params.overallProgressPercentage === 0 && !params.hasPreviousProgress) {
-    return {
-      label: 'Empezá a cuidarte',
-      description: 'Completá tu primera rutina',
-      target: 'todayRoutine'
-    };
-  }
-
-  if (params.todayStatus === 'partial' || params.completedTodayRoutines > 0) {
-    return {
-      label: 'Terminá tu rutina de hoy',
-      description: 'Ya empezaste, falta poco',
-      target: 'todayRoutine'
-    };
-  }
-
-  if (params.hasPreviousProgress && todayHasNoProgress && yesterdayInterrupted && params.streak === 0) {
-    return {
-      label: 'Volvé a empezar hoy',
-      description: 'Cada rutina suma',
-      target: 'todayRoutine'
-    };
-  }
-
-  return {
-    label: 'Seguí cuidándote',
-    description: 'Completá tu rutina de hoy',
-    target: 'todayRoutine'
+    historyPreview: mapHistoryDaysToPreviewItems(history)
   };
 }
 
@@ -462,11 +550,36 @@ function mapRoutineLogToHistoryItem(log: BackendRoutineLog): ProgressHistoryItem
   return {
     id: log.id,
     date: log.log_date,
-    routineName: `Rutina ${log.routine_id.slice(0, 8)}`,
+    routineName: 'Rutina sin nombre',
     completedSteps: Math.round(log.completion_percentage),
     totalSteps: 100,
     status
   };
+}
+
+function mapHistoryDaysToPreviewItems(history: ProgressHistoryDay[]): ProgressHistoryItem[] {
+  return history.flatMap((day) =>
+    day.routines.map((routine) => ({
+      id: `${day.date}-${routine.routineId}`,
+      date: day.date,
+      routineName: routine.routineName || 'Rutina sin nombre',
+      completedSteps: routine.completedSteps,
+      totalSteps: routine.totalSteps,
+      status: mapDayRoutineStatusToCalendarStatus(routine.status)
+    }))
+  ).slice(0, 3);
+}
+
+function mapDayRoutineStatusToCalendarStatus(status: ProgressHistoryDay['routines'][number]['status']): CalendarDayStatus {
+  if (status === 'complete') {
+    return 'completed';
+  }
+
+  if (status === 'partial') {
+    return 'partial';
+  }
+
+  return 'pending';
 }
 
 function getStatusFromCompletion(completionPercentage: number): CalendarDayStatus {

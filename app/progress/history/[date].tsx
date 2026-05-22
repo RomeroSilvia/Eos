@@ -3,9 +3,17 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { ProgressStateCard } from '@/components/progress/ProgressStateCard';
 import { colors } from '@/constants/colors';
 import { getProgressDayDetail } from '@/services/progress';
 import type { RoutineDayDetail } from '@/types/progress';
+import {
+  formatDateTitle,
+  getDayDetailStatusLabel,
+  getDaySummaryText,
+  getRoutineStatusLabel,
+  getRoutineTimeLabel
+} from '@/utils/progress';
 
 export default function ProgressDayDetailScreen() {
   const router = useRouter();
@@ -66,11 +74,11 @@ export default function ProgressDayDetailScreen() {
         </View>
 
         {isLoading ? (
-          <StateMessage icon="hourglass-outline" title="Cargando detalle" text="Estamos buscando tus rutinas de ese día." />
+          <ProgressStateCard icon="hourglass-outline" title="Cargando detalle" text="Estamos buscando tus rutinas de ese día." />
         ) : error ? (
-          <StateMessage icon="alert-circle-outline" title="No pudimos cargar el detalle" text={error.message} />
+          <ProgressStateCard icon="alert-circle-outline" title="No pudimos cargar el detalle" text={error.message} />
         ) : !detail || detail.totalRoutines === 0 ? (
-          <StateMessage
+          <ProgressStateCard
             icon="calendar-outline"
             title="No hay progreso registrado"
             text="Todavía no registraste rutinas para esta fecha."
@@ -79,7 +87,7 @@ export default function ProgressDayDetailScreen() {
           <>
             <View style={styles.summaryCard}>
               <View style={styles.summaryHeader}>
-                <Text style={styles.statusLabel}>{getDayStatusLabel(detail.status)}</Text>
+                <Text style={styles.statusLabel}>{getDayDetailStatusLabel(detail.status)}</Text>
                 <Text style={styles.percent}>{detail.completionPercentage}%</Text>
               </View>
               <Text style={styles.summaryText}>{getDaySummaryText(detail)}</Text>
@@ -91,7 +99,7 @@ export default function ProgressDayDetailScreen() {
                   <View style={styles.routineHeader}>
                     <View style={styles.routineTitleBlock}>
                       <Text style={styles.routineName}>{routine.name}</Text>
-                      <Text style={styles.routineMeta}>{getRoutineTimeLabel(routine.timeOfDay)}</Text>
+                      <Text style={styles.routineMeta}>{getRoutineTimeLabel(routine.timeOfDay, { includePrefix: true })}</Text>
                     </View>
                     <View style={[styles.statusBadge, getRoutineStatusStyle(routine.status)]}>
                       <Text style={styles.statusBadgeText}>{getRoutineStatusLabel(routine.status)}</Text>
@@ -133,60 +141,10 @@ export default function ProgressDayDetailScreen() {
   );
 }
 
-function StateMessage({ icon, title, text }: { icon: keyof typeof Ionicons.glyphMap; title: string; text: string }) {
-  return (
-    <View style={styles.stateCard}>
-      <Ionicons color={colors.primary} name={icon} size={32} />
-      <Text style={styles.stateTitle}>{title}</Text>
-      <Text style={styles.stateText}>{text}</Text>
-    </View>
-  );
-}
-
-function getDayStatusLabel(status: RoutineDayDetail['status']): string {
-  if (status === 'complete') return 'Completo';
-  if (status === 'partial') return 'Parcial';
-  if (status === 'pending') return 'Pendiente';
-  return 'Incompleto';
-}
-
-function getDaySummaryText(detail: RoutineDayDetail): string {
-  if (detail.status === 'complete') {
-    return 'Completaste todas tus rutinas del día.';
-  }
-
-  return `Completaste ${detail.completedRoutines} de ${detail.totalRoutines} rutinas.`;
-}
-
-function getRoutineStatusLabel(status: RoutineDayDetail['routines'][number]['status']): string {
-  if (status === 'complete') return 'Completa';
-  if (status === 'partial') return 'Parcial';
-  return 'Pendiente';
-}
-
 function getRoutineStatusStyle(status: RoutineDayDetail['routines'][number]['status']) {
   if (status === 'complete') return styles.statusComplete;
   if (status === 'partial') return styles.statusPartial;
   return styles.statusPending;
-}
-
-function getRoutineTimeLabel(timeOfDay?: RoutineDayDetail['routines'][number]['timeOfDay']): string {
-  if (timeOfDay === 'morning') return 'Rutina de mañana';
-  if (timeOfDay === 'night') return 'Rutina de noche';
-  if (timeOfDay === 'custom') return 'Rutina personalizada';
-  return 'Rutina';
-}
-
-function formatDateTitle(date?: string): string {
-  if (!date) return 'Fecha no disponible';
-
-  return new Intl.DateTimeFormat('es-AR', {
-    day: 'numeric',
-    month: 'long',
-    timeZone: 'UTC',
-    weekday: 'long',
-    year: 'numeric'
-  }).format(new Date(`${date}T00:00:00.000Z`));
 }
 
 const styles = StyleSheet.create({
@@ -345,26 +303,5 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     fontSize: 13,
     lineHeight: 18
-  },
-  stateCard: {
-    alignItems: 'center',
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderRadius: 24,
-    borderWidth: 1,
-    padding: 24
-  },
-  stateTitle: {
-    color: colors.textPrimary,
-    fontSize: 19,
-    fontWeight: '900',
-    marginTop: 12
-  },
-  stateText: {
-    color: colors.textSecondary,
-    fontSize: 14,
-    lineHeight: 20,
-    marginTop: 6,
-    textAlign: 'center'
   }
 });

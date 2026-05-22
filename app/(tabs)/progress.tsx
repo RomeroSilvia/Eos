@@ -8,6 +8,7 @@ import { ProgressMetricCard } from "@/components/progress/ProgressMetricCard";
 import { ProgressSummaryCard } from "@/components/progress/ProgressSummaryCard";
 import { StreakCard } from "@/components/progress/StreakCard";
 import { colors } from "@/constants/colors";
+import { routes } from "@/constants/routes";
 import { useProgress } from "@/hooks/useProgress";
 import type { CalendarDayProgress, ProgressCTA } from "@/types/progress";
 
@@ -17,16 +18,16 @@ export default function ProgressScreen() {
 
   function handleProgressCTA(target: ProgressCTA["target"]) {
     if (target === "progressHistory") {
-      router.push("/progress");
+      router.push(routes.progressHistory as never);
       return;
     }
 
-    router.push("/routine");
+    router.push(routes.routine);
   }
 
   function handleCalendarDayPress(day: CalendarDayProgress) {
     router.push({
-      pathname: "/progress/history/[date]",
+      pathname: routes.progressDayDetail,
       params: { date: day.date },
     });
   }
@@ -100,7 +101,7 @@ export default function ProgressScreen() {
         <View style={styles.statsHeaderRow}>
           <Text style={styles.statsHeaderLabel}>Resumen mensual</Text>
 
-          <Pressable onPress={() => undefined} hitSlop={8}>
+          <Pressable onPress={() => router.push(routes.progressStats)} hitSlop={8}>
             <Text style={styles.moreStatsText}>Ver más estadísticas &gt;</Text>
           </Pressable>
         </View>
@@ -108,7 +109,7 @@ export default function ProgressScreen() {
         <MonthCalendarCard days={summary.calendarProgress} onDayPress={handleCalendarDayPress} />
         <ProgressHistoryPreview
           items={summary.historyPreview}
-          onPressViewAll={() => undefined}
+          onPressViewAll={() => router.push(routes.progressHistory as never)}
         />
       </ScrollView>
     </SafeAreaView>

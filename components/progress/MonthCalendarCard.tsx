@@ -4,6 +4,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { colors } from '@/constants/colors';
 import type { CalendarDayProgress, CalendarDayStatus } from '@/types/progress';
 import { addMonths, buildCalendarGrid, formatMonthTitle, getInitialVisibleMonth } from '@/utils/month-calendar.utils';
+import { getCalendarStatusLabel } from '@/utils/progress';
 type MonthCalendarCardProps = {
   days: CalendarDayProgress[];
   onDayPress?: (day: CalendarDayProgress) => void;
@@ -86,7 +87,7 @@ export function MonthCalendarCard({ days, onDayPress }: MonthCalendarCardProps) 
             <View key={cell.id} style={styles.dayWrapper}>
               <Pressable
                 accessibilityRole={isInteractive ? 'button' : undefined}
-                accessibilityLabel={`${cell.day}, ${getStatusLabel(cell.status)}`}
+                accessibilityLabel={`${cell.day}, ${getCalendarStatusLabel(cell.status)}`}
                 disabled={!isInteractive}
                 onPress={() => {
                   if (dayProgress) {
@@ -117,13 +118,6 @@ export function MonthCalendarCard({ days, onDayPress }: MonthCalendarCardProps) 
       </View>
     </View>
   );
-}
-
-function getStatusLabel(status: CalendarDayStatus): string {
-  if (status === 'completed') return 'Completo';
-  if (status === 'partial') return 'Parcial';
-  if (status === 'pending') return 'Pendiente';
-  return 'Sin progreso';
 }
 
 function LegendItem({ label, status }: { label: string; status: CalendarDayStatus }) {
