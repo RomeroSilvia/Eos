@@ -25,8 +25,30 @@ function getDefaultApiUrl(): string {
   return host ? `http://${host}:3000/api` : 'http://localhost:3000/api';
 }
 
+function getApiBaseUrl(): string {
+  const configuredUrl = process.env.EXPO_PUBLIC_API_URL ?? getDefaultApiUrl();
+
+  if (Platform.OS !== 'android') {
+    return configuredUrl;
+  }
+
+  try {
+    const url = new URL(configuredUrl);
+
+    if (url.hostname !== 'localhost' && url.hostname !== '127.0.0.1') {
+      return configuredUrl;
+    }
+
+    const expoHost = getExpoHostUri()?.split(':')[0];
+    url.hostname = expoHost || '10.0.2.2';
+    return url.toString().replace(/\/$/, '');
+  } catch {
+    return configuredUrl;
+  }
+}
+
 export const apiConfig = {
-  baseUrl: process.env.EXPO_PUBLIC_API_URL ?? getDefaultApiUrl(),
+  baseUrl: getApiBaseUrl(),
   useMocks: process.env.EXPO_PUBLIC_USE_MOCKS !== 'false'
 };
 
@@ -45,19 +67,46 @@ export async function apiRequest<TResponse>({ path, headers, ...options }: ApiRe
     }
   });
 
-  if (response.status === 404) {
-    console.error('URL NO EXISTE:', url);
-  }
+  const text = await response.text();
+  const body = parseResponseBody(text);
 
   if (!response.ok) {
-    const text = await response.text();
-    console.error('RESPONSE ERROR:', text);
-    throw new Error(`API request failed with status ${response.status}: ${text}`);
+    if (process.env.NODE_ENV !== 'production') {
+      console.error('FETCH URL:', url);
+      console.error('FETCH STATUS:', response.status);
+      console.error('FETCH BODY:', body);
+    }
+
+    throw new Error(`API request failed ${response.status}: ${formatErrorBody(body)}`);
   }
 
   if (response.status === 204) {
     return undefined as TResponse;
   }
 
-  return response.json() as Promise<TResponse>;
+  return body as TResponse;
+}
+
+function parseResponseBody(text: string): unknown {
+  if (!text) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(text);
+  } catch {
+    return text;
+  }
+}
+
+function formatErrorBody(body: unknown): string {
+  if (typeof body === 'string') {
+    return body;
+  }
+
+  if (body === null || typeof body === 'undefined') {
+    return 'Empty response body';
+  }
+
+  return JSON.stringify(body);
 }

@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { StyleSheet, Text, View } from 'react-native';
 import { colors } from '@/constants/colors';
 import type { StreakProgress } from '@/types/progress';
+import { formatDayCount } from '@/utils/progress';
 
 type StreakCardProps = {
   streak: StreakProgress;
@@ -17,7 +18,7 @@ export function StreakCard({ streak }: StreakCardProps) {
 
         <View style={styles.textBlock}>
           <Text style={styles.label}>Racha actual</Text>
-          <Text style={styles.value}>{streak.currentDays} días</Text>
+          <Text style={styles.value}>{formatDayCount(streak.currentDays)}</Text>
           <Text style={styles.subtitle}>{streak.subtitle}</Text>
         </View>
       </View>

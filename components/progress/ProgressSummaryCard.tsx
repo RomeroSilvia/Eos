@@ -1,13 +1,16 @@
 import { Ionicons } from '@expo/vector-icons';
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { ProgressBar } from '@/components/progress/ProgressBar';
 import { colors } from '@/constants/colors';
-import type { PeriodProgress } from '@/types/progress';
+import type { PeriodProgress, ProgressCTA } from '@/types/progress';
 
 type ProgressSummaryCardProps = {
   progress: PeriodProgress;
+  cta: ProgressCTA;
+  onPressCTA: (target: ProgressCTA['target']) => void;
 };
 
-export function ProgressSummaryCard({ progress }: ProgressSummaryCardProps) {
+export function ProgressSummaryCard({ progress, cta, onPressCTA }: ProgressSummaryCardProps) {
   return (
     <View style={styles.card}>
       <View style={styles.header}>
@@ -22,9 +25,20 @@ export function ProgressSummaryCard({ progress }: ProgressSummaryCardProps) {
 
       <Text style={styles.description}>{progress.label}</Text>
 
-      <View style={styles.progressTrack}>
-        <View style={[styles.progressFill, { width: `${progress.percent}%` }]} />
-      </View>
+      <ProgressBar percentage={progress.percent} />
+
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={cta.label}
+        onPress={() => onPressCTA(cta.target)}
+        style={({ pressed }) => [styles.ctaButton, pressed ? styles.ctaButtonPressed : null]}
+      >
+        <View style={styles.ctaTextBlock}>
+          <Text style={styles.ctaLabel}>{cta.label}</Text>
+          {cta.description ? <Text style={styles.ctaDescription}>{cta.description}</Text> : null}
+        </View>
+        <Ionicons color={colors.surface} name="arrow-forward" size={18} />
+      </Pressable>
     </View>
   );
 }
@@ -68,15 +82,34 @@ const styles = StyleSheet.create({
     fontSize: 15,
     lineHeight: 21
   },
-  progressTrack: {
-    backgroundColor: colors.border,
-    borderRadius: 999,
-    height: 10,
-    overflow: 'hidden'
+  ctaButton: {
+    alignItems: 'center',
+    backgroundColor: colors.secondaryDark,
+    borderRadius: 18,
+    flexDirection: 'row',
+    gap: 10,
+    justifyContent: 'space-between',
+    minHeight: 54,
+    paddingHorizontal: 16,
+    paddingVertical: 10
   },
-  progressFill: {
-    backgroundColor: colors.primary,
-    borderRadius: 999,
-    height: '100%'
+  ctaButtonPressed: {
+    opacity: 0.85
+  },
+  ctaTextBlock: {
+    flex: 1,
+    gap: 2,
+    minWidth: 0
+  },
+  ctaLabel: {
+    color: colors.surface,
+    fontSize: 15,
+    fontWeight: '900'
+  },
+  ctaDescription: {
+    color: colors.surface,
+    fontSize: 12,
+    fontWeight: '700',
+    opacity: 0.82
   }
 });

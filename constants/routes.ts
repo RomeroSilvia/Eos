@@ -5,6 +5,9 @@ export const routes = {
   routine: '/routine',
   products: '/products',
   progress: '/progress',
+  progressHistory: '/progress/history',
+  progressStats: '/progress/stats',
+  progressDayDetail: '/progress/history/[date]',
   profile: '/profile'
 } as const;
 

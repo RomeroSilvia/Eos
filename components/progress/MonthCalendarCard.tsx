@@ -4,8 +4,10 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { colors } from '@/constants/colors';
 import type { CalendarDayProgress, CalendarDayStatus } from '@/types/progress';
 import { addMonths, buildCalendarGrid, formatMonthTitle, getInitialVisibleMonth } from '@/utils/month-calendar.utils';
+import { getCalendarStatusLabel } from '@/utils/progress';
 type MonthCalendarCardProps = {
   days: CalendarDayProgress[];
+  onDayPress?: (day: CalendarDayProgress) => void;
 };
 
 const statusStyle: Record<CalendarDayStatus, { backgroundColor: string; borderColor: string; color: string }> = {
@@ -31,7 +33,7 @@ const statusStyle: Record<CalendarDayStatus, { backgroundColor: string; borderCo
   }
 };
 
-export function MonthCalendarCard({ days }: MonthCalendarCardProps) {
+export function MonthCalendarCard({ days, onDayPress }: MonthCalendarCardProps) {
   const initialMonth = useMemo(() => getInitialVisibleMonth(days), [days]);
   const [visibleMonth, setVisibleMonth] = useState(initialMonth);
   const calendarCells = useMemo(() => buildCalendarGrid(visibleMonth, days), [days, visibleMonth]);
@@ -78,12 +80,24 @@ export function MonthCalendarCard({ days }: MonthCalendarCardProps) {
           }
 
           const variant = statusStyle[cell.status];
+          const dayProgress = days.find((day) => day.date === cell.date);
+          const isInteractive = Boolean(dayProgress && (cell.status === 'completed' || cell.status === 'partial'));
 
           return (
             <View key={cell.id} style={styles.dayWrapper}>
-              <View
-                style={[
+              <Pressable
+                accessibilityRole={isInteractive ? 'button' : undefined}
+                accessibilityLabel={`${cell.day}, ${getCalendarStatusLabel(cell.status)}`}
+                disabled={!isInteractive}
+                onPress={() => {
+                  if (dayProgress) {
+                    onDayPress?.(dayProgress);
+                  }
+                }}
+                style={({ pressed }) => [
                   styles.day,
+                  isInteractive ? styles.dayInteractive : null,
+                  pressed ? styles.dayPressed : null,
                   {
                     backgroundColor: variant.backgroundColor,
                     borderColor: variant.borderColor
@@ -91,7 +105,7 @@ export function MonthCalendarCard({ days }: MonthCalendarCardProps) {
                 ]}
               >
                 <Text style={[styles.dayText, { color: variant.color }]}>{cell.day}</Text>
-              </View>
+              </Pressable>
             </View>
           );
         })}
@@ -181,6 +195,16 @@ const styles = StyleSheet.create({
     height: 34,
     justifyContent: 'center',
     width: 34
+  },
+  dayInteractive: {
+    shadowColor: colors.primaryDark,
+    shadowOffset: { height: 2, width: 0 },
+    shadowOpacity: 0.12,
+    shadowRadius: 4
+  },
+  dayPressed: {
+    opacity: 0.78,
+    transform: [{ scale: 0.96 }]
   },
   spacerDay: {
     height: 34,
