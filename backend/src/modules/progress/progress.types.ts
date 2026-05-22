@@ -7,6 +7,9 @@ export type RoutineStepLog = Tables<'routine_step_logs'>;
 export type RoutineStepLogInsert = TablesInsert<'routine_step_logs'>;
 export type RoutineStepLogUpdate = TablesUpdate<'routine_step_logs'>;
 
+export type RoutineForProgress = Pick<Tables<'routines'>, 'id' | 'name' | 'time_of_day' | 'created_at'>;
+export type RoutineStepForProgress = Pick<Tables<'routine_steps'>, 'id' | 'routine_id' | 'name' | 'step_order'>;
+
 export type PeriodProgress = {
   percent: number;
   completedRoutines: number;
@@ -19,10 +22,17 @@ export type StreakProgress = {
 };
 
 export type CalendarDayStatus = 'completed' | 'partial' | 'pending' | 'empty';
+export type DayProgressStatus = 'complete' | 'partial' | 'incomplete' | 'pending';
 
 export type CalendarDayProgress = {
   date: string;
   status: CalendarDayStatus;
+  dayStatus?: DayProgressStatus;
+  completedRoutines: number;
+  totalRoutines: number;
+  completionPercentage: number;
+  isToday: boolean;
+  isDayFinished: boolean;
 };
 
 export type ProgressSummary = {
@@ -47,4 +57,26 @@ export type RoutineDayProgress = {
   routine_log_id: string | null;
   completed_step_ids: string[];
   completion_percentage: number;
+};
+
+export type RoutineDayDetail = {
+  date: string;
+  status: DayProgressStatus;
+  completionPercentage: number;
+  completedRoutines: number;
+  totalRoutines: number;
+  routines: {
+    id: string;
+    name: string;
+    timeOfDay?: 'morning' | 'night' | 'custom';
+    status: 'complete' | 'partial' | 'pending';
+    completedSteps: number;
+    totalSteps: number;
+    steps: {
+      id: string;
+      name: string;
+      completed: boolean;
+      productName?: string;
+    }[];
+  }[];
 };

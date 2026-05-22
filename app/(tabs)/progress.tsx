@@ -1,4 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
 import { ScrollView, StyleSheet, Text, View, Pressable } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MonthCalendarCard } from "@/components/progress/MonthCalendarCard";
@@ -8,9 +9,27 @@ import { ProgressSummaryCard } from "@/components/progress/ProgressSummaryCard";
 import { StreakCard } from "@/components/progress/StreakCard";
 import { colors } from "@/constants/colors";
 import { useProgress } from "@/hooks/useProgress";
+import type { CalendarDayProgress, ProgressCTA } from "@/types/progress";
 
 export default function ProgressScreen() {
   const { error, isLoading, summary } = useProgress();
+  const router = useRouter();
+
+  function handleProgressCTA(target: ProgressCTA["target"]) {
+    if (target === "progressHistory") {
+      router.push("/progress");
+      return;
+    }
+
+    router.push("/routine");
+  }
+
+  function handleCalendarDayPress(day: CalendarDayProgress) {
+    router.push({
+      pathname: "/progress/history/[date]",
+      params: { date: day.date },
+    });
+  }
 
   if (isLoading) {
     return (
@@ -65,7 +84,11 @@ export default function ProgressScreen() {
           </View>
         </View>
 
-        <ProgressSummaryCard progress={summary.weeklyProgress} />
+        <ProgressSummaryCard
+          cta={summary.progressCTA}
+          onPressCTA={handleProgressCTA}
+          progress={summary.weeklyProgress}
+        />
         <StreakCard streak={summary.streakProgress} />
 
         <View style={styles.metricsRow}>
@@ -82,7 +105,7 @@ export default function ProgressScreen() {
           </Pressable>
         </View>
 
-        <MonthCalendarCard days={summary.calendarProgress} />
+        <MonthCalendarCard days={summary.calendarProgress} onDayPress={handleCalendarDayPress} />
         <ProgressHistoryPreview
           items={summary.historyPreview}
           onPressViewAll={() => undefined}

@@ -9,13 +9,15 @@ type StreakCardProps = {
 };
 
 export function StreakCard({ streak }: StreakCardProps) {
+  const streakLabel = streak.currentDays === 1 ? '1 dia' : `${streak.currentDays} dias`;
+
   return (
     <Card style={styles.card}>
       <View style={styles.icon}>
         <Ionicons color={colors.secondary} name="flame-outline" size={24} />
       </View>
       <View>
-        <Text style={styles.value}>{streak.currentDays} dias</Text>
+        <Text style={styles.value}>{streakLabel}</Text>
         <Text style={styles.label}>Racha actual</Text>
       </View>
     </Card>

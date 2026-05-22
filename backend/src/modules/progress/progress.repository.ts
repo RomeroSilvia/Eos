@@ -1,15 +1,50 @@
 import { supabase } from '../../config/supabase';
 import { TABLE_NAMES } from '../../database/tableNames';
 import type {
+  RoutineForProgress,
   RoutineLog,
   RoutineLogInsert,
   RoutineLogUpdate,
+  RoutineStepForProgress,
   RoutineStepLog,
   RoutineStepLogInsert,
   RoutineStepLogUpdate
 } from './progress.types';
 
 export const progressRepository = {
+  findActiveRoutinesByUserId: async (userId: string): Promise<RoutineForProgress[]> => {
+    const { data, error } = await supabase
+      .from(TABLE_NAMES.routines)
+      .select('id, name, time_of_day, created_at')
+      .eq('user_id', userId)
+      .eq('is_active', true)
+      .order('created_at', { ascending: true });
+
+    if (error) {
+      throw error;
+    }
+
+    return data ?? [];
+  },
+
+  findRoutinesByIds: async (userId: string, routineIds: string[]): Promise<RoutineForProgress[]> => {
+    if (routineIds.length === 0) {
+      return [];
+    }
+
+    const { data, error } = await supabase
+      .from(TABLE_NAMES.routines)
+      .select('id, name, time_of_day, created_at')
+      .eq('user_id', userId)
+      .in('id', routineIds);
+
+    if (error) {
+      throw error;
+    }
+
+    return data ?? [];
+  },
+
   findRoutineLogsByUserId: async (userId: string): Promise<RoutineLog[]> => {
     const { data, error } = await supabase
       .from(TABLE_NAMES.routineLogs)
@@ -116,6 +151,42 @@ export const progressRepository = {
       .select('*')
       .eq('routine_log_id', routineLogId)
       .order('created_at', { ascending: true });
+
+    if (error) {
+      throw error;
+    }
+
+    return data ?? [];
+  },
+
+  findStepLogsByRoutineLogIds: async (routineLogIds: string[]): Promise<RoutineStepLog[]> => {
+    if (routineLogIds.length === 0) {
+      return [];
+    }
+
+    const { data, error } = await supabase
+      .from(TABLE_NAMES.routineStepLogs)
+      .select('*')
+      .in('routine_log_id', routineLogIds)
+      .order('created_at', { ascending: true });
+
+    if (error) {
+      throw error;
+    }
+
+    return data ?? [];
+  },
+
+  findRoutineStepsByRoutineIds: async (routineIds: string[]): Promise<RoutineStepForProgress[]> => {
+    if (routineIds.length === 0) {
+      return [];
+    }
+
+    const { data, error } = await supabase
+      .from(TABLE_NAMES.routineSteps)
+      .select('id, routine_id, name, step_order')
+      .in('routine_id', routineIds)
+      .order('step_order', { ascending: true });
 
     if (error) {
       throw error;
