@@ -1,10 +1,12 @@
 import { supabase } from '../../config/supabase';
 import { TABLE_NAMES } from '../../database/tableNames';
 import type {
+  ProductForProgress,
   RoutineForProgress,
   RoutineLog,
   RoutineLogInsert,
   RoutineLogUpdate,
+  RoutineStepProductForProgress,
   RoutineStepForProgress,
   RoutineStepLog,
   RoutineStepLogInsert,
@@ -187,6 +189,37 @@ export const progressRepository = {
       .select('id, routine_id, name, step_order')
       .in('routine_id', routineIds)
       .order('step_order', { ascending: true });
+
+    if (error) {
+      throw error;
+    }
+
+    return data ?? [];
+  },
+
+  findProductsByUserId: async (userId: string): Promise<ProductForProgress[]> => {
+    const { data, error } = await supabase
+      .from(TABLE_NAMES.products)
+      .select('id, name, category, created_at')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: true });
+
+    if (error) {
+      throw error;
+    }
+
+    return data ?? [];
+  },
+
+  findRoutineStepProductsByStepIds: async (stepIds: string[]): Promise<RoutineStepProductForProgress[]> => {
+    if (stepIds.length === 0) {
+      return [];
+    }
+
+    const { data, error } = await supabase
+      .from(TABLE_NAMES.routineStepProducts)
+      .select('step_id, product_id')
+      .in('step_id', stepIds);
 
     if (error) {
       throw error;
