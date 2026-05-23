@@ -13,6 +13,18 @@ create table if not exists public.profiles (
   updated_at timestamptz not null default now()
 );
 
+-- Skin diagnosis profile created from the onboarding quiz.
+create table if not exists public.skin_profiles (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references public.profiles(id) on delete cascade,
+  age_range text,
+  skin_type text,
+  imperfections text,
+  main_goal text,
+  routine_steps text,
+  created_at timestamptz not null default now()
+);
+
 -- Skincare routines owned by a user profile.
 create table if not exists public.routines (
   id uuid primary key default gen_random_uuid(),
@@ -86,6 +98,7 @@ create table if not exists public.routine_step_logs (
 
 -- TODO: Enable RLS policies before production.
 -- alter table public.profiles enable row level security;
+-- alter table public.skin_profiles enable row level security;
 -- alter table public.routines enable row level security;
 -- alter table public.routine_steps enable row level security;
 -- alter table public.products enable row level security;
@@ -95,6 +108,7 @@ create table if not exists public.routine_step_logs (
 
 -- TODO: Add indexes once access patterns are confirmed.
 -- create index if not exists routines_user_id_idx on public.routines(user_id);
+-- create index if not exists skin_profiles_user_id_idx on public.skin_profiles(user_id);
 -- create index if not exists routine_steps_routine_id_idx on public.routine_steps(routine_id);
 -- create index if not exists products_user_id_idx on public.products(user_id);
 -- create index if not exists routine_logs_user_id_log_date_idx on public.routine_logs(user_id, log_date);

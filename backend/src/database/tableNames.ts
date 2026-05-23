@@ -3,6 +3,7 @@ export const TABLE_NAMES = {
   routines: 'routines',
   routineSteps: 'routine_steps',
   products: 'products',
+  skinProfiles: 'skin_profiles',
   routineStepProducts: 'routine_step_products',
   routineLogs: 'routine_logs',
   routineStepLogs: 'routine_step_logs'

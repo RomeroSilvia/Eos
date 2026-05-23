@@ -187,8 +187,9 @@ export default function NewProductScreen() {
             </Pressable>
 
             <Button
+              disabled={!name.trim() || loading}
               onPress={handleSave}
-              style={{ ...styles.button, ...( (!name.trim() || loading) && styles.buttonDisabled ) }}
+              style={styles.button}
             >
               {loading ? 'Guardando...' : 'Guardar'}
             </Button>
@@ -289,9 +290,6 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     marginTop: 16,
     paddingVertical: 16
-  },
-  buttonDisabled: {
-    opacity: 0.5
   },
   header: {
     alignItems: 'center',

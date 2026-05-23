@@ -1,13 +1,20 @@
 import { Ionicons } from '@expo/vector-icons';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useRouter } from 'expo-router';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
 import { colors } from '@/constants/colors';
 import { useProfile } from '@/hooks/useProfile';
+import { logout } from '@/services/auth';
 
 export default function ProfileScreen() {
+  const router = useRouter();
   const { profile } = useProfile();
+
+  async function handleLogout() {
+    await logout();
+    router.replace('/landing');
+  }
 
   return (
     <SafeAreaView style={styles.screen}>
@@ -25,8 +32,11 @@ export default function ProfileScreen() {
         <Card style={styles.settings}>
           <Text style={styles.sectionTitle}>Recordatorios</Text>
           <Text style={styles.description}>Configura permisos y prueba un recordatorio local.</Text>
-
         </Card>
+
+        <Pressable style={styles.logoutButton} onPress={handleLogout}>
+          <Text style={styles.logoutText}>Cerrar sesión</Text>
+        </Pressable>
       </ScrollView>
     </SafeAreaView>
   );
@@ -83,5 +93,18 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     fontSize: 14,
     lineHeight: 20
+  },
+  logoutButton: {
+    alignItems: 'center',
+    borderColor: colors.secondary,
+    borderRadius: 14,
+    borderWidth: 1,
+    minHeight: 48,
+    justifyContent: 'center'
+  },
+  logoutText: {
+    color: colors.secondary,
+    fontSize: 15,
+    fontWeight: '800'
   }
 });

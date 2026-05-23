@@ -10,25 +10,23 @@ export type Database = {
       profiles: {
         Row: {
           id: string;
-          full_name: string;
-          email: string | null;
-          skin_type: string | null;
-          created_at: string;
-          updated_at: string;
+          username: string | null;
+          first_name: string | null;
+          last_name: string | null;
+          role: string | null;
         };
         Insert: {
-          id?: string;
-          full_name: string;
-          email?: string | null;
-          skin_type?: string | null;
-          created_at?: string;
-          updated_at?: string;
+          id: string;
+          username?: string | null;
+          first_name?: string | null;
+          last_name?: string | null;
+          role?: string | null;
         };
         Update: {
-          full_name?: string;
-          email?: string | null;
-          skin_type?: string | null;
-          updated_at?: string;
+          username?: string | null;
+          first_name?: string | null;
+          last_name?: string | null;
+          role?: string | null;
         };
         Relationships: [];
       };
@@ -128,6 +126,37 @@ export type Database = {
           notes?: string | null;
           image_url?: string | null;
           updated_at?: string;
+        };
+        Relationships: [];
+      };
+
+      skin_profiles: {
+        Row: {
+          id: string;
+          user_id: string;
+          age_range: string | null;
+          skin_type: string | null;
+          imperfections: string | null;
+          main_goal: string | null;
+          routine_steps: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          age_range?: string | null;
+          skin_type?: string | null;
+          imperfections?: string | null;
+          main_goal?: string | null;
+          routine_steps?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          age_range?: string | null;
+          skin_type?: string | null;
+          imperfections?: string | null;
+          main_goal?: string | null;
+          routine_steps?: string | null;
         };
         Relationships: [];
       };

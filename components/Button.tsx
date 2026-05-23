@@ -5,19 +5,23 @@ import { colors } from '@/constants/colors';
 type ButtonProps = PropsWithChildren<{
   onPress?: () => void;
   variant?: 'primary' | 'secondary' | 'ghost';
+  disabled?: boolean;
   style?: ViewStyle;
   textStyle?: TextStyle; 
 }>;
 
-export function Button({ children, onPress, variant = 'primary', style, textStyle }: ButtonProps) {
+export function Button({ children, onPress, variant = 'primary', disabled = false, style, textStyle }: ButtonProps) {
   return (
     <Pressable
       accessibilityRole="button"
+      accessibilityState={{ disabled }}
+      disabled={disabled}
       onPress={onPress}
       style={({ pressed }) => [
         styles.button,
         styles[variant],
-        pressed && styles.pressed,
+        pressed && !disabled && styles.pressed,
+        disabled && styles.disabled,
         style
       ]}
     >
@@ -45,6 +49,9 @@ const styles = StyleSheet.create({
   },
   pressed: {
     opacity: 0.82
+  },
+  disabled: {
+    opacity: 0.5
   },
   label: {
     color: colors.surface,
