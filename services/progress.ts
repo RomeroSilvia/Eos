@@ -62,14 +62,13 @@ type BackendRoutineLog = {
 };
 
 export async function getProgressSummary(): Promise<ProgressSummary> {
-
-  const today = getTodayIsoDate();
-  const [summary, history] = await Promise.all([
+  const [summary, stats, history] = await Promise.all([
     apiRequest<BackendProgressSummary>({ path: '/progress/summary' }),
+    getProgressStats(),
     getProgressHistory()
   ]);
 
-  return mapBackendSummaryToProgressSummary(summary, history);
+  return mapBackendSummaryToProgressSummary(summary, history, stats);
 }
 
 export async function getProgressHistoryByDate(date: string): Promise<ProgressHistoryItem[]> {
@@ -118,23 +117,32 @@ export async function getCalendarProgress() {
 
 function mapBackendSummaryToProgressSummary(
   backendSummary: BackendProgressSummary,
-  history: ProgressHistoryDay[]
+  history: ProgressHistoryDay[],
+  stats?: RoutineStats
 ): ProgressSummary {
-  const weeklyProgress = backendSummary.weeklyProgress ?? {
+  const weeklyProgress = stats ? {
+    percent: stats.weekly.completionPercentage,
+    completedRoutines: stats.weekly.completedRoutines,
+    totalRoutines: stats.weekly.totalExpectedRoutines
+  } : backendSummary.weeklyProgress ?? {
     percent: backendSummary.completionRate ?? 0,
     completedRoutines: backendSummary.completedRoutines ?? 0,
     totalRoutines: backendSummary.completedRoutines ?? 0
   };
 
-  const monthlyProgress = backendSummary.monthlyProgress ?? weeklyProgress;
+  const monthlyProgress = stats ? {
+    percent: stats.monthly.completionPercentage,
+    completedRoutines: stats.monthly.completedRoutines,
+    totalRoutines: stats.monthly.totalExpectedRoutines
+  } : backendSummary.monthlyProgress ?? weeklyProgress;
   const calendarProgress = (backendSummary.calendarProgress ?? []).map(mapCalendarDay);
-  const streakProgress = mapStreakProgress(backendSummary, calendarProgress);
-  const completedDays = backendSummary.completedDays ?? calendarProgress.filter((day) => day.status === 'completed').length;
+  const streakProgress = mapStreakProgress(backendSummary, calendarProgress, stats);
+  const completedDays = stats?.monthly.completeDays ?? backendSummary.completedDays ?? calendarProgress.filter((day) => day.status === 'completed').length;
   const progressCTA = getProgressCTA({
     overallProgressPercentage: monthlyProgress.percent,
-    todayStatus: getTodayProgressStatus(calendarProgress),
-    completedTodayRoutines: getTodayProgressDay(calendarProgress)?.completedRoutines ?? 0,
-    totalTodayRoutines: getTodayProgressDay(calendarProgress)?.totalRoutines ?? 0,
+    todayStatus: getTodayProgressStatus(calendarProgress, stats),
+    completedTodayRoutines: getTodayProgressDayFromStats(stats)?.completedRoutines ?? getTodayProgressDay(calendarProgress)?.completedRoutines ?? 0,
+    totalTodayRoutines: getTodayProgressDayFromStats(stats)?.totalExpectedRoutines ?? getTodayProgressDay(calendarProgress)?.totalRoutines ?? 0,
     hasPreviousProgress: monthlyProgress.completedRoutines > 0 || completedDays > 0 || streakProgress.currentDays > 0,
     streak: streakProgress.currentDays,
     previousDayStatus: getPreviousDayProgressStatus(calendarProgress)
@@ -163,7 +171,7 @@ function mapBackendSummaryToProgressSummary(
       {
         id: 'best-streak',
         label: 'Mejor racha',
-        value: String(streakProgress.bestDays ?? 0),
+        value: String(stats?.weekly.bestStreak ?? streakProgress.bestDays ?? 0),
         detail: 'dias'
       }
     ],
@@ -175,9 +183,20 @@ function getTodayProgressDay(calendarProgress: CalendarDayProgress[]): CalendarD
   return calendarProgress.find((day) => day.isToday);
 }
 
-function getTodayProgressStatus(calendarProgress: CalendarDayProgress[]): DayProgressStatus {
+function getTodayProgressStatus(calendarProgress: CalendarDayProgress[], stats?: RoutineStats): DayProgressStatus {
+  const todayStats = getTodayProgressDayFromStats(stats);
+
+  if (todayStats) {
+    return mapStatsWeekDayStatusToDayProgressStatus(todayStats.status);
+  }
+
   const today = getTodayProgressDay(calendarProgress);
   return today?.dayStatus ?? mapCalendarStatusToDayProgressStatus(today?.status);
+}
+
+function getTodayProgressDayFromStats(stats?: RoutineStats): RoutineStats['weekDays'][number] | undefined {
+  const today = getTodayIsoDate();
+  return stats?.weekDays.find((day) => day.date === today);
 }
 
 function getPreviousDayProgressStatus(calendarProgress: CalendarDayProgress[]): DayProgressStatus | undefined {
@@ -210,6 +229,22 @@ function mapCalendarStatusToDayProgressStatus(status?: CalendarDayStatus): DayPr
   return 'incomplete';
 }
 
+function mapStatsWeekDayStatusToDayProgressStatus(status: RoutineStats['weekDays'][number]['status']): DayProgressStatus {
+  if (status === 'complete') {
+    return 'complete';
+  }
+
+  if (status === 'partial') {
+    return 'partial';
+  }
+
+  if (status === 'pending' || status === 'no_routine') {
+    return 'pending';
+  }
+
+  return 'incomplete';
+}
+
 function formatRoutineCompletionLabel(completedRoutines: number, totalRoutines: number): string {
   if (totalRoutines === 0) {
     return 'Todavía no tenés rutinas configuradas para esta semana';
@@ -235,17 +270,34 @@ function mapCalendarDay(day: BackendCalendarDayProgress): CalendarDayProgress {
 
 function mapStreakProgress(
   backendSummary: BackendProgressSummary,
-  calendarProgress: CalendarDayProgress[]
+  calendarProgress: CalendarDayProgress[],
+  stats?: RoutineStats
 ): StreakProgress {
-  const currentDays = backendSummary.streakProgress?.currentStreak ?? backendSummary.currentStreak ?? 0;
-  const bestDays = backendSummary.streakProgress?.longestStreak ?? backendSummary.bestStreak ?? 0;
+  const currentDays = stats?.weekly.currentStreak ?? backendSummary.streakProgress?.currentStreak ?? backendSummary.currentStreak ?? 0;
+  const bestDays = stats?.weekly.bestStreak ?? backendSummary.streakProgress?.longestStreak ?? backendSummary.bestStreak ?? 0;
 
   return {
     currentDays,
     bestDays,
     subtitle: currentDays > 0 ? '¡Seguí así!' : 'Empezá tu racha',
-    weekProgress: buildWeekProgress(calendarProgress)
+    weekProgress: stats ? buildStatsWeekProgress(stats.weekDays) : buildWeekProgress(calendarProgress)
   };
+}
+
+function buildStatsWeekProgress(weekDays: RoutineStats['weekDays']): WeekProgressDay[] {
+  return weekDays.map((day) => ({
+    day: mapWeekdayLabelToShortLabel(day.dayLabel),
+    completed: day.status === 'complete'
+  }));
+}
+
+function mapWeekdayLabelToShortLabel(label: string): WeekProgressDay['day'] {
+  if (label.startsWith('L')) return 'L';
+  if (label.startsWith('J')) return 'J';
+  if (label.startsWith('V')) return 'V';
+  if (label.startsWith('S')) return 'S';
+  if (label.startsWith('D')) return 'D';
+  return 'M';
 }
 
 function buildWeekProgress(calendarProgress: CalendarDayProgress[]): WeekProgressDay[] {

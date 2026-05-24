@@ -1,5 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
+import { useFocusEffect } from "@react-navigation/native";
 import { useRouter } from "expo-router";
+import { useCallback } from "react";
 import { ScrollView, StyleSheet, Text, View, Pressable } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MonthCalendarCard } from "@/components/progress/MonthCalendarCard";
@@ -13,8 +15,14 @@ import { useProgress } from "@/hooks/useProgress";
 import type { CalendarDayProgress, ProgressCTA } from "@/types/progress";
 
 export default function ProgressScreen() {
-  const { error, isLoading, summary } = useProgress();
+  const { error, isLoading, refetch, summary } = useProgress();
   const router = useRouter();
+
+  useFocusEffect(
+    useCallback(() => {
+      void refetch();
+    }, [refetch])
+  );
 
   function handleProgressCTA(target: ProgressCTA["target"]) {
     if (target === "progressHistory") {
