@@ -1,40 +1,32 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { getProgressSummary } from '@/services/progress';
 import type { ProgressSummary } from '@/types/progress';
 
-export function useProgress(userId?: string) {
+export function useProgress() {
   const [summary, setSummary] = useState<ProgressSummary | null>(null);
   const [error, setError] = useState<Error | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    let isMounted = true;
-
+  const refetch = useCallback(async () => {
     setIsLoading(true);
     setError(null);
 
-    void getProgressSummary(userId)
+    return getProgressSummary()
       .then((progressSummary) => {
-        if (isMounted) {
-          setSummary(progressSummary);
-        }
+        setSummary(progressSummary);
       })
       .catch((unknownError) => {
-        if (isMounted) {
-          setSummary(null);
-          setError(unknownError instanceof Error ? unknownError : new Error('No se pudo cargar el progreso'));
-        }
+        setSummary(null);
+        setError(unknownError instanceof Error ? unknownError : new Error('No se pudo cargar el progreso'));
       })
       .finally(() => {
-        if (isMounted) {
-          setIsLoading(false);
-        }
+        setIsLoading(false);
       });
+  }, []);
 
-    return () => {
-      isMounted = false;
-    };
-  }, [userId]);
+  useEffect(() => {
+    void refetch();
+  }, [refetch]);
 
   return {
     summary,
@@ -44,6 +36,7 @@ export function useProgress(userId?: string) {
     monthlyProgress: summary?.monthlyProgress ?? null,
     streakProgress: summary?.streakProgress ?? null,
     calendarProgress: summary?.calendarProgress ?? [],
+    refetch,
     isEmpty: !summary
   };
 }

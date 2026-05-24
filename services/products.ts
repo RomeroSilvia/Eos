@@ -1,5 +1,14 @@
+import * as SecureStore from 'expo-secure-store';
+import { Platform } from 'react-native';
 import type { Product, ProductCategory, ProductBrand } from '@/types/product';
 import { apiConfig, apiRequest } from '@/services/api/client';
+
+export type ProductImagePayload = {
+  imageUri?: string;
+  imageBase64?: string;
+  imageMimeType?: string;
+  imageFilename?: string;
+};
 
 function getMimeType(uri: string): string {
   const ext = uri.split('.').pop()?.toLowerCase();
@@ -15,11 +24,21 @@ function getFilename(uri: string): string {
   return `product.${normalizedExt}`;
 }
 
-function appendImageToFormData(formData: FormData, uri: string): void {
+async function appendImageToFormData(formData: FormData, uri: string): Promise<void> {
+  const type = getMimeType(uri);
+  const name = getFilename(uri);
+
+  if (Platform.OS === 'web') {
+    const response = await fetch(uri);
+    const blob = await response.blob();
+    formData.append('image', new File([blob], name, { type }));
+    return;
+  }
+
   formData.append('image', {
     uri,
-    type: getMimeType(uri),
-    name: getFilename(uri),
+    type,
+    name,
   } as unknown as Blob);
 }
 
@@ -49,8 +68,7 @@ export async function createProduct(data: {
   description?: string;
   category: ProductCategory;
   brand: ProductBrand;
-  imageUri?: string;
-}): Promise<Product> {
+} & ProductImagePayload): Promise<Product> {
   try {
     const formData = new FormData();
     formData.append('name', data.name);
@@ -59,14 +77,16 @@ export async function createProduct(data: {
     if (data.description) formData.append('notes', data.description);
 
     if (data.imageUri) {
-      appendImageToFormData(formData, data.imageUri);
+      await appendImageToFormData(formData, data.imageUri);
     }
+    appendBase64ImageToFormData(formData, data);
 
     const res = await fetch(`${apiConfig.baseUrl}/products`, {
       method: 'POST',
+      headers: await getMultipartAuthHeaders(),
       body: formData,
     });
-    if (!res.ok) throw new Error('Error al crear producto');
+    if (!res.ok) throw new Error(await getErrorMessage(res, 'Error al crear producto'));
     return mapToProduct(await res.json() as Record<string, unknown>);
   } catch (error) {
     console.error('[createProduct]', error);
@@ -79,8 +99,7 @@ export async function updateProduct(id: string, data: {
   description?: string;
   category?: ProductCategory;
   brand?: ProductBrand;
-  imageUri?: string;
-}): Promise<Product> {
+} & ProductImagePayload): Promise<Product> {
   try {
     const formData = new FormData();
     if (data.name !== undefined) formData.append('name', data.name);
@@ -89,19 +108,49 @@ export async function updateProduct(id: string, data: {
     if (data.description !== undefined) formData.append('notes', data.description);
 
     if (data.imageUri) {
-      appendImageToFormData(formData, data.imageUri);
+      await appendImageToFormData(formData, data.imageUri);
     }
+    appendBase64ImageToFormData(formData, data);
 
     const res = await fetch(`${apiConfig.baseUrl}/products/${id}`, {
       method: 'PATCH',
+      headers: await getMultipartAuthHeaders(),
       body: formData,
     });
-    if (!res.ok) throw new Error('Error al actualizar producto');
+    if (!res.ok) throw new Error(await getErrorMessage(res, 'Error al actualizar producto'));
     return mapToProduct(await res.json() as Record<string, unknown>);
   } catch (error) {
     console.error('[updateProduct]', error);
     throw error instanceof Error ? error : new Error(`Error del servidor: ${String(error)}`);
   }
+}
+
+function appendBase64ImageToFormData(formData: FormData, data: ProductImagePayload): void {
+  if (!data.imageBase64) {
+    return;
+  }
+
+  formData.append('imageBase64', data.imageBase64);
+  formData.append('imageMimeType', data.imageMimeType ?? (data.imageUri ? getMimeType(data.imageUri) : 'image/jpeg'));
+  formData.append('imageFilename', data.imageFilename ?? (data.imageUri ? getFilename(data.imageUri) : 'product.jpg'));
+}
+
+async function getMultipartAuthHeaders(): Promise<HeadersInit> {
+  const token = await getStoredToken();
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
+async function getStoredToken(): Promise<string | null> {
+  if (Platform.OS === 'web') {
+    return localStorage.getItem('eos-access-token');
+  }
+
+  return SecureStore.getItemAsync('eos-access-token');
+}
+
+async function getErrorMessage(response: Response, fallback: string): Promise<string> {
+  const body = await response.json().catch(() => null) as { message?: string } | null;
+  return body?.message ?? fallback;
 }
 
 export async function deleteProduct(id: string): Promise<void> {

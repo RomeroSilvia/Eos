@@ -73,20 +73,10 @@ describe('progress.controller', () => {
     jest.clearAllMocks();
   });
 
-  it('getSummaryByUserId responds 400 when userId is missing', async () => {
-    const req = { params: {} } as Request;
-    const res = createMockResponse();
-
-    await getSummaryByUserId(req, res as Response, jest.fn());
-
-    expect(res.status).toHaveBeenCalledWith(400);
-    expect(res.json).toHaveBeenCalledWith({ message: 'userId is required' });
-  });
-
   it('getSummaryByUserId responds 200 when service returns summary', async () => {
     const summary = createSummary();
     mockedProgressService.getSummaryByUserId.mockResolvedValue(summary);
-    const req = { params: { userId: 'user-1' } } as unknown as Request;
+    const req = { user: { id: 'user-1' } } as unknown as Request;
     const res = createMockResponse();
 
     await getSummaryByUserId(req, res as Response, jest.fn());
@@ -97,7 +87,7 @@ describe('progress.controller', () => {
 
   it('getSummaryByUserId responds 500 when service throws', async () => {
     mockedProgressService.getSummaryByUserId.mockRejectedValue(new Error('Service failed'));
-    const req = { params: { userId: 'user-1' } } as unknown as Request;
+    const req = { user: { id: 'user-1' } } as unknown as Request;
     const res = createMockResponse();
 
     await getSummaryByUserId(req, res as Response, jest.fn());
@@ -110,7 +100,7 @@ describe('progress.controller', () => {
   });
 
   it('getHistoryByDate responds 400 when date is missing', async () => {
-    const req = { params: { userId: 'user-1' }, query: {} } as unknown as Request;
+    const req = { user: { id: 'user-1' }, query: {} } as unknown as Request;
     const res = createMockResponse();
 
     await getHistoryByDate(req, res as Response, jest.fn());
@@ -123,7 +113,7 @@ describe('progress.controller', () => {
     const history = [createRoutineLog()];
     mockedProgressService.getHistoryByDate.mockResolvedValue(history);
     mockedProgressService.isIsoDate.mockReturnValue(true);
-    const req = { params: { userId: 'user-1' }, query: { date: '2026-05-04' } } as unknown as Request;
+    const req = { user: { id: 'user-1' }, query: { date: '2026-05-04' } } as unknown as Request;
     const res = createMockResponse();
 
     await getHistoryByDate(req, res as Response, jest.fn());
@@ -152,7 +142,7 @@ describe('progress.controller', () => {
       }
     ] as Awaited<ReturnType<typeof progressService.getFullHistoryByUserId>>;
     mockedProgressService.getFullHistoryByUserId.mockResolvedValue(history);
-    const req = { params: { userId: 'user-1' } } as unknown as Request;
+    const req = { user: { id: 'user-1' } } as unknown as Request;
     const res = createMockResponse();
 
     await getFullHistoryByUserId(req, res as Response, jest.fn());

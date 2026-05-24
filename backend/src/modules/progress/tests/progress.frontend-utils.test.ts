@@ -1,5 +1,5 @@
-import { routes } from '../../../../../constants/routes';
-import type { RoutineStats } from '../../../../../types/progress';
+import { routes } from '@/constants/routes';
+import type { RoutineStats } from '@/types/progress';
 import {
   calculatePercentage,
   formatDayCount,
@@ -13,7 +13,7 @@ import {
   getRoutineMotivationalMessage,
   getRoutineStatusLabel,
   getStatsWeekDayStatusLabel
-} from '../../../../../utils/progress';
+} from '@/utils/progress';
 
 function makeStats(overrides: Partial<RoutineStats> = {}): RoutineStats {
   return {

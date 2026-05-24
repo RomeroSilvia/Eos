@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { mockAuth } from '../../middlewares/mockAuth.middleware';
+import { authenticate } from '../../middlewares/auth.middleware';
 import {
   getUserRoutines,
   getRoutineById,
@@ -21,7 +21,7 @@ export const routinesRouter = Router();
 
 routinesRouter.get('/health', routinesHealth);
 
-routinesRouter.use(mockAuth);
+routinesRouter.use(authenticate);
 
 // Rutas de productos por paso — deben ir antes que /:id para evitar conflictos
 routinesRouter.get('/steps/:stepId/products', getStepProducts);
