@@ -98,7 +98,7 @@ export const login = asyncHandler(async (req, res) => {
 
   const { data: profile, error: profileError } = await supabase
     .from('profiles')
-    .select('id, username, first_name, last_name, role')
+    .select('*')
     .eq('id', data.user.id)
     .maybeSingle();
 

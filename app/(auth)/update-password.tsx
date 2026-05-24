@@ -15,8 +15,14 @@ export default function UpdatePasswordScreen() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const canSubmit = password.length > 0 && confirmPassword.length > 0;
 
   async function handleSavePassword() {
+    if (!canSubmit) {
+      Alert.alert('Datos incompletos', 'Completa ambos campos de contrasena para continuar.');
+      return;
+    }
+
     if (password !== confirmPassword) {
       Alert.alert('Error', 'Las contraseñas no coinciden.');
       return;
@@ -113,7 +119,11 @@ export default function UpdatePasswordScreen() {
         </View>
       </View>
 
-      <Pressable onPress={handleSavePassword} style={styles.button}>
+      <Pressable
+        disabled={!canSubmit}
+        onPress={handleSavePassword}
+        style={[styles.button, !canSubmit && styles.buttonDisabled]}
+      >
         <Text style={styles.buttonText}>Guardar Contraseña</Text>
       </Pressable>
     </SafeAreaView>
@@ -214,6 +224,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: 40,
     marginTop: 'auto'
+  },
+  buttonDisabled: {
+    opacity: 0.55
   },
   buttonText: {
     color: '#FFFFFF',

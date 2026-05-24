@@ -24,10 +24,13 @@ type AuthUser = {
 
 type AuthProfile = {
   id: string;
-  username: string | null;
-  first_name: string | null;
-  last_name: string | null;
-  role: string | null;
+  full_name?: string | null;
+  email?: string | null;
+  skin_type?: string | null;
+  username?: string | null;
+  first_name?: string | null;
+  last_name?: string | null;
+  role?: string | null;
 };
 
 type AuthResponse = {
@@ -123,10 +126,10 @@ function mapAuthResponseToProfile(data: AuthResponse): UserProfile {
 
   return {
     id: profile?.id ?? data.user.id,
-    name: fullName || profile?.username || data.user.email || mockUserProfile.name,
-    email: data.user.email,
+    name: profile?.full_name ?? (fullName || profile?.username || data.user.email || mockUserProfile.name),
+    email: profile?.email ?? data.user.email,
     role: 'user',
-    skinType: 'mixed'
+    skinType: (profile?.skin_type ?? 'mixed') as UserProfile['skinType']
   };
 }
 

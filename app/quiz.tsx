@@ -59,6 +59,10 @@ export default function QuizScreen() {
   const [isSaving, setIsSaving] = useState(false);
 
   function handleSelect(label: string) {
+    if (isSaving) {
+      return;
+    }
+
     const nextAnswers = {
       ...answers,
       [currentStep]: label
@@ -77,11 +81,23 @@ export default function QuizScreen() {
   }
 
   async function saveQuizAnswers(finalAnswers: Record<number, string>) {
-    setCurrentStep(5);
-    setIsSaving(true);
+    if (!hasAllQuizAnswers(finalAnswers)) {
+      Alert.alert('Quiz incompleto', 'Responde las 5 preguntas antes de guardar tus resultados.');
+      return;
+    }
 
     try {
       const token = await getStoredToken();
+
+      if (!token) {
+        Alert.alert('Sesion requerida', 'Inicia sesion para guardar los resultados del quiz.');
+        router.replace('/login');
+        return;
+      }
+
+      setCurrentStep(5);
+      setIsSaving(true);
+
       const payload = {
         ageRange: getAnswer(finalAnswers, 0),
         skinType: getAnswer(finalAnswers, 1),
@@ -105,13 +121,12 @@ export default function QuizScreen() {
         throw new Error(data?.message ?? 'No pudimos guardar tus respuestas.');
       }
 
-      router.replace('/quiz-results');
+      Alert.alert('Quiz guardado', 'Tus respuestas se guardaron correctamente.', [
+        { text: 'Ver resultados', onPress: () => router.replace('/resultados') }
+      ]);
     } catch (error) {
       console.error(error);
-      Alert.alert(
-        'No pudimos guardar tu perfil',
-        error instanceof Error ? error.message : 'Intentalo nuevamente.'
-      );
+      Alert.alert('Error al guardar', error instanceof Error ? error.message : 'No pudimos guardar tus respuestas.');
       setCurrentStep(quizQuestions.length - 1);
     } finally {
       setIsSaving(false);
@@ -128,6 +143,10 @@ export default function QuizScreen() {
 
   function getAnswer(finalAnswers: Record<number, string>, index: number) {
     return finalAnswers[index]?.trim() || 'No especificado';
+  }
+
+  function hasAllQuizAnswers(finalAnswers: Record<number, string>) {
+    return quizQuestions.every((_, index) => Boolean(finalAnswers[index]?.trim()));
   }
 
   function getCalculatingText() {

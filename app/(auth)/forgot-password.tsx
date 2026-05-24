@@ -11,8 +11,14 @@ type ResetPasswordResponse = {
 export default function ForgotPasswordScreen() {
   const router = useRouter();
   const [email, setEmail] = useState('');
+  const canSubmit = email.trim().length > 0;
 
   async function handleResetPassword() {
+    if (!canSubmit) {
+      Alert.alert('Datos incompletos', 'Ingresa tu email para continuar.');
+      return;
+    }
+
     try {
       const response = await fetch(`${apiConfig.baseUrl}/auth/reset-password`, {
         method: 'POST',
@@ -58,7 +64,11 @@ export default function ForgotPasswordScreen() {
         value={email}
       />
 
-      <Pressable onPress={handleResetPassword} style={styles.button}>
+      <Pressable
+        disabled={!canSubmit}
+        onPress={handleResetPassword}
+        style={[styles.button, !canSubmit && styles.buttonDisabled]}
+      >
         <Text style={styles.buttonText}>Restablecer</Text>
       </Pressable>
     </SafeAreaView>
@@ -113,6 +123,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: 40,
     marginTop: 'auto'
+  },
+  buttonDisabled: {
+    opacity: 0.55
   },
   buttonText: {
     color: '#FFFFFF',

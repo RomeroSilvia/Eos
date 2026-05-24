@@ -1,6 +1,6 @@
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
-import { Link } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
   Alert,
@@ -15,16 +15,35 @@ import {
   View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { register as registerUser } from '@/services/auth';
 
 const roleOptions = ['No, soy usuario', 'Si, soy dermatologo/a'];
+const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+type RegisterErrors = {
+  username?: string;
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  password?: string;
+  confirmPassword?: string;
+  role?: string;
+  form?: string;
+};
 
 export default function RegisterScreen() {
+  const router = useRouter();
   const [username, setUsername] = useState('');
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [role, setRole] = useState(roleOptions[0]);
   const [isRoleMenuOpen, setIsRoleMenuOpen] = useState(false);
   const [profileImageUri, setProfileImageUri] = useState<string | null>(null);
+  const [errors, setErrors] = useState<RegisterErrors>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   async function handlePickImage() {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -46,6 +65,46 @@ export default function RegisterScreen() {
     }
   }
 
+  async function handleContinue() {
+    const validationErrors = validateRegister({
+      username,
+      firstName,
+      lastName,
+      email,
+      password,
+      confirmPassword,
+      role
+    });
+
+    setErrors(validationErrors);
+
+    if (Object.keys(validationErrors).length > 0) {
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      await registerUser({
+        email: email.trim(),
+        password,
+        username: username.trim(),
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
+        role
+      });
+
+      router.push('/start-diagnosis');
+    } catch (error) {
+      console.error(error);
+      const message = error instanceof Error ? error.message : 'No se pudo crear la cuenta.';
+      setErrors({ form: message });
+      Alert.alert('Error del Servidor', message);
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
   return (
     <SafeAreaView style={styles.screen}>
       <KeyboardAvoidingView
@@ -58,6 +117,14 @@ export default function RegisterScreen() {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
+          <Pressable
+            accessibilityLabel="Volver a la landing"
+            onPress={() => router.replace('/landing')}
+            style={styles.backButton}
+          >
+            <Ionicons color="#0B132B" name="chevron-back" size={26} />
+          </Pressable>
+
           <View style={styles.avatarWrapper}>
             <View style={styles.avatar}>
               {profileImageUri ? (
@@ -74,36 +141,97 @@ export default function RegisterScreen() {
           <FieldLabel text="Usuario" />
           <TextInput
             autoCapitalize="none"
-            onChangeText={setUsername}
+            onChangeText={(value) => {
+              setUsername(value);
+              setErrors((current) => ({ ...current, username: undefined, form: undefined }));
+            }}
             placeholder="@example_example"
             placeholderTextColor="#A0AEC0"
-            style={styles.input}
+            style={[styles.input, errors.username ? styles.inputError : null]}
             value={username}
           />
+          {errors.username ? <Text style={styles.errorText}>{errors.username}</Text> : null}
 
           <FieldLabel text="Nombre" />
           <TextInput
-            onChangeText={setFirstName}
+            onChangeText={(value) => {
+              setFirstName(value);
+              setErrors((current) => ({ ...current, firstName: undefined, form: undefined }));
+            }}
             placeholder="Example"
             placeholderTextColor="#A0AEC0"
-            style={styles.input}
+            style={[styles.input, errors.firstName ? styles.inputError : null]}
             value={firstName}
           />
+          {errors.firstName ? <Text style={styles.errorText}>{errors.firstName}</Text> : null}
 
           <FieldLabel text="Apellido" />
           <TextInput
-            onChangeText={setLastName}
+            onChangeText={(value) => {
+              setLastName(value);
+              setErrors((current) => ({ ...current, lastName: undefined, form: undefined }));
+            }}
             placeholder="Example"
             placeholderTextColor="#A0AEC0"
-            style={styles.input}
+            style={[styles.input, errors.lastName ? styles.inputError : null]}
             value={lastName}
           />
+          {errors.lastName ? <Text style={styles.errorText}>{errors.lastName}</Text> : null}
+
+          <FieldLabel text="Email" />
+          <TextInput
+            autoCapitalize="none"
+            keyboardType="email-address"
+            onChangeText={(value) => {
+              setEmail(value);
+              setErrors((current) => ({ ...current, email: undefined, form: undefined }));
+            }}
+            placeholder="email@domain.com"
+            placeholderTextColor="#A0AEC0"
+            style={[styles.input, errors.email ? styles.inputError : null]}
+            value={email}
+          />
+          {errors.email ? <Text style={styles.errorText}>{errors.email}</Text> : null}
+
+          <FieldLabel text="Contrasena" />
+          <TextInput
+            onChangeText={(value) => {
+              setPassword(value);
+              setErrors((current) => ({
+                ...current,
+                password: undefined,
+                confirmPassword: undefined,
+                form: undefined
+              }));
+            }}
+            placeholder="Minimo 6 caracteres"
+            placeholderTextColor="#A0AEC0"
+            secureTextEntry
+            style={[styles.input, errors.password ? styles.inputError : null]}
+            value={password}
+          />
+          {errors.password ? <Text style={styles.errorText}>{errors.password}</Text> : null}
+
+          <FieldLabel text="Confirmar contrasena" />
+          <TextInput
+            onChangeText={(value) => {
+              setConfirmPassword(value);
+              setErrors((current) => ({ ...current, confirmPassword: undefined, form: undefined }));
+            }}
+            placeholder="Repeti tu contrasena"
+            placeholderTextColor="#A0AEC0"
+            secureTextEntry
+            style={[styles.input, errors.confirmPassword ? styles.inputError : null]}
+            value={confirmPassword}
+          />
+          {errors.confirmPassword ? <Text style={styles.errorText}>{errors.confirmPassword}</Text> : null}
 
           <FieldLabel text="¿Eres Dermatologo?" />
           <Pressable style={styles.selectInput} onPress={() => setIsRoleMenuOpen((current) => !current)}>
             <Text style={styles.selectText}>{role}</Text>
             <Ionicons color="#495057" name="chevron-down" size={20} />
           </Pressable>
+          {errors.role ? <Text style={styles.errorText}>{errors.role}</Text> : null}
 
           {isRoleMenuOpen ? (
             <View style={styles.roleMenu}>
@@ -112,6 +240,7 @@ export default function RegisterScreen() {
                   key={option}
                   onPress={() => {
                     setRole(option);
+                    setErrors((current) => ({ ...current, role: undefined, form: undefined }));
                     setIsRoleMenuOpen(false);
                   }}
                   style={styles.roleOption}
@@ -122,11 +251,15 @@ export default function RegisterScreen() {
             </View>
           ) : null}
 
-          <Link href="/start-diagnosis" asChild>
-            <Pressable style={styles.submitButton}>
-              <Text style={styles.submitButtonText}>Continuar</Text>
-            </Pressable>
-          </Link>
+          {errors.form ? <Text style={styles.formErrorText}>{errors.form}</Text> : null}
+
+          <Pressable
+            disabled={isSubmitting}
+            onPress={handleContinue}
+            style={[styles.submitButton, isSubmitting && styles.submitButtonDisabled]}
+          >
+            <Text style={styles.submitButtonText}>{isSubmitting ? 'Creando cuenta...' : 'Continuar'}</Text>
+          </Pressable>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -139,6 +272,55 @@ function FieldLabel({ text }: { text: string }) {
       {text} <Text style={styles.required}>*</Text>
     </Text>
   );
+}
+
+function validateRegister(values: {
+  username: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  password: string;
+  confirmPassword: string;
+  role: string;
+}): RegisterErrors {
+  const nextErrors: RegisterErrors = {};
+  const trimmedEmail = values.email.trim();
+
+  if (!values.username.trim()) {
+    nextErrors.username = 'El usuario es obligatorio.';
+  }
+
+  if (!values.firstName.trim()) {
+    nextErrors.firstName = 'El nombre es obligatorio.';
+  }
+
+  if (!values.lastName.trim()) {
+    nextErrors.lastName = 'El apellido es obligatorio.';
+  }
+
+  if (!trimmedEmail) {
+    nextErrors.email = 'El email es obligatorio.';
+  } else if (!emailPattern.test(trimmedEmail)) {
+    nextErrors.email = 'Ingresa un email valido.';
+  }
+
+  if (!values.password) {
+    nextErrors.password = 'La contrasena es obligatoria.';
+  } else if (values.password.length < 6) {
+    nextErrors.password = 'La contrasena debe tener al menos 6 caracteres.';
+  }
+
+  if (!values.confirmPassword) {
+    nextErrors.confirmPassword = 'Confirma tu contrasena.';
+  } else if (values.password !== values.confirmPassword) {
+    nextErrors.confirmPassword = 'Las contrasenas no coinciden.';
+  }
+
+  if (!values.role.trim()) {
+    nextErrors.role = 'Selecciona un rol para continuar.';
+  }
+
+  return nextErrors;
 }
 
 const styles = StyleSheet.create({
@@ -154,13 +336,21 @@ const styles = StyleSheet.create({
     paddingBottom: 180,
     paddingHorizontal: 24
   },
+  backButton: {
+    alignItems: 'center',
+    height: 44,
+    justifyContent: 'center',
+    marginLeft: -10,
+    marginTop: 8,
+    width: 44
+  },
   avatarWrapper: {
     alignItems: 'center',
     alignSelf: 'center',
     height: 132,
     justifyContent: 'center',
     marginBottom: 22,
-    marginTop: 40,
+    marginTop: 8,
     position: 'relative',
     width: 132
   },
@@ -215,6 +405,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     width: '100%'
   },
+  inputError: {
+    borderColor: '#C98F90'
+  },
   selectInput: {
     alignItems: 'center',
     backgroundColor: '#FFFFFF',
@@ -248,6 +441,16 @@ const styles = StyleSheet.create({
     color: '#495057',
     fontSize: 15
   },
+  errorText: {
+    color: '#B42318',
+    fontSize: 12,
+    marginTop: 6
+  },
+  formErrorText: {
+    color: '#B42318',
+    fontSize: 13,
+    marginTop: 18
+  },
   submitButton: {
     alignItems: 'center',
     backgroundColor: '#C98F90',
@@ -257,6 +460,9 @@ const styles = StyleSheet.create({
     marginBottom: 40,
     marginTop: 40,
     width: '100%'
+  },
+  submitButtonDisabled: {
+    opacity: 0.7
   },
   submitButtonText: {
     color: '#FFFFFF',
