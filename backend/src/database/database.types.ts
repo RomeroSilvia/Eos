@@ -10,23 +10,27 @@ export type Database = {
       profiles: {
         Row: {
           id: string;
-          username: string | null;
-          first_name: string | null;
-          last_name: string | null;
-          role: string | null;
+          full_name: string;
+          email: string | null;
+          skin_type: string | null;
+          created_at: string;
+          updated_at: string;
         };
         Insert: {
-          id: string;
-          username?: string | null;
-          first_name?: string | null;
-          last_name?: string | null;
-          role?: string | null;
+          id?: string;
+          full_name: string;
+          email?: string | null;
+          skin_type?: string | null;
+          created_at?: string;
+          updated_at?: string;
         };
         Update: {
-          username?: string | null;
-          first_name?: string | null;
-          last_name?: string | null;
-          role?: string | null;
+          id?: string;
+          full_name?: string;
+          email?: string | null;
+          skin_type?: string | null;
+          created_at?: string;
+          updated_at?: string;
         };
         Relationships: [];
       };

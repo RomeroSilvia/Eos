@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { getProgressHistory } from '@/services/progress';
 import type { ProgressHistoryDay } from '@/types/progress';
 
-export function useProgressHistory(userId?: string) {
+export function useProgressHistory() {
   const [history, setHistory] = useState<ProgressHistoryDay[]>([]);
   const [error, setError] = useState<Error | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -12,7 +12,7 @@ export function useProgressHistory(userId?: string) {
     setError(null);
 
     try {
-      const progressHistory = await getProgressHistory(userId);
+      const progressHistory = await getProgressHistory();
       setHistory(progressHistory);
     } catch (unknownError) {
       setHistory([]);
@@ -20,7 +20,7 @@ export function useProgressHistory(userId?: string) {
     } finally {
       setIsLoading(false);
     }
-  }, [userId]);
+  }, []);
 
   useEffect(() => {
     void refetch();

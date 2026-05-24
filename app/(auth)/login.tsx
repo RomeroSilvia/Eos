@@ -63,7 +63,7 @@ export default function LoginScreen() {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          email: email.trim(),
+          email: email.trim().toLowerCase(),
           password
         })
       });
@@ -71,7 +71,7 @@ export default function LoginScreen() {
       const data = (await response.json()) as LoginResponse;
 
       if (!response.ok) {
-        const message = data.message ?? 'No se pudo iniciar sesion. Revisa tus credenciales.';
+        const message = getLoginErrorMessage(data.message);
         setErrors({ form: message });
         Alert.alert('Error del Servidor', message);
         return;
@@ -87,7 +87,7 @@ export default function LoginScreen() {
       }
 
       await saveSession(token, data);
-      router.replace('/(tabs)/profile');
+      router.replace('/(tabs)/home');
     } catch (error) {
       console.error(error);
       const message = 'No se pudo conectar con el backend. Revisa tu consola.';
@@ -131,6 +131,7 @@ export default function LoginScreen() {
 
         <TextInput
           autoCapitalize="none"
+          autoCorrect={false}
           keyboardType="email-address"
           onChangeText={(value) => {
             setEmail(value);
@@ -145,6 +146,8 @@ export default function LoginScreen() {
 
         <View style={styles.passwordWrapper}>
           <TextInput
+            autoCapitalize="none"
+            autoCorrect={false}
             onChangeText={(value) => {
               setPassword(value);
               setErrors((current) => ({ ...current, password: undefined, form: undefined }));
@@ -241,6 +244,14 @@ function validateLogin(email: string, password: string): LoginErrors {
   }
 
   return nextErrors;
+}
+
+function getLoginErrorMessage(message?: string) {
+  if (message?.toLowerCase().includes('invalid login credentials')) {
+    return 'Email o contrasena incorrectos.';
+  }
+
+  return message ?? 'No se pudo iniciar sesion. Revisa tus credenciales.';
 }
 
 const styles = StyleSheet.create({

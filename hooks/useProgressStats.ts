@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { getProgressStats } from '@/services/progress';
 import type { RoutineStats } from '@/types/progress';
 
-export function useProgressStats(userId?: string) {
+export function useProgressStats() {
   const [stats, setStats] = useState<RoutineStats | null>(null);
   const [error, setError] = useState<Error | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -12,7 +12,7 @@ export function useProgressStats(userId?: string) {
     setError(null);
 
     try {
-      const progressStats = await getProgressStats(userId);
+      const progressStats = await getProgressStats();
       setStats(progressStats);
     } catch (unknownError) {
       setStats(null);
@@ -20,7 +20,7 @@ export function useProgressStats(userId?: string) {
     } finally {
       setIsLoading(false);
     }
-  }, [userId]);
+  }, []);
 
   useEffect(() => {
     void refetch();

@@ -1,4 +1,5 @@
 import Constants from 'expo-constants';
+import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
 
 function getExpoHostUri(): string | undefined {
@@ -48,13 +49,24 @@ function getApiBaseUrl(): string {
 }
 
 export const apiConfig = {
-  baseUrl: getApiBaseUrl(),
-  useMocks: process.env.EXPO_PUBLIC_USE_MOCKS !== 'false'
+  baseUrl: getApiBaseUrl()
 };
 
 type ApiRequestOptions = RequestInit & {
   path: string;
 };
+
+export class ApiRequestError extends Error {
+  status: number;
+  body: unknown;
+
+  constructor(status: number, body: unknown) {
+    super(formatErrorBody(body));
+    this.name = 'ApiRequestError';
+    this.status = status;
+    this.body = body;
+  }
+}
 
 export async function apiRequest<TResponse>({ path, headers, ...options }: ApiRequestOptions): Promise<TResponse> {
   const url = `${apiConfig.baseUrl}/${path.replace(/^\//, '')}`;
@@ -63,6 +75,7 @@ export async function apiRequest<TResponse>({ path, headers, ...options }: ApiRe
     ...options,
     headers: {
       'Content-Type': 'application/json',
+      ...(await getAuthHeader()),
       ...headers
     }
   });
@@ -77,7 +90,7 @@ export async function apiRequest<TResponse>({ path, headers, ...options }: ApiRe
       console.error('FETCH BODY:', body);
     }
 
-    throw new Error(`API request failed ${response.status}: ${formatErrorBody(body)}`);
+    throw new ApiRequestError(response.status, body);
   }
 
   if (response.status === 204) {
@@ -85,6 +98,19 @@ export async function apiRequest<TResponse>({ path, headers, ...options }: ApiRe
   }
 
   return body as TResponse;
+}
+
+async function getAuthHeader(): Promise<Record<string, string>> {
+  const token = await getStoredToken();
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
+async function getStoredToken(): Promise<string | null> {
+  if (Platform.OS === 'web') {
+    return localStorage.getItem('eos-access-token');
+  }
+
+  return SecureStore.getItemAsync('eos-access-token');
 }
 
 function parseResponseBody(text: string): unknown {

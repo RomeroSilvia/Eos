@@ -1,8 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import * as SecureStore from 'expo-secure-store';
 import { useEffect, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { apiConfig } from '@/services/api/client';
 
 type SkinProfileResult = {
   ageRange: string;
@@ -11,25 +13,75 @@ type SkinProfileResult = {
   mainGoal: string;
 };
 
-const mockSkinProfile: SkinProfileResult = {
-  ageRange: '-25',
-  skinType: 'Piel normal',
-  imperfections: 'Tendencia a acné',
-  mainGoal: 'Hidratar y dar luminosidad'
+type QuizProfileResponse = {
+  skinProfile?: {
+    age_range?: string | null;
+    skin_type?: string | null;
+    imperfections?: string | null;
+    main_goal?: string | null;
+  };
+  message?: string;
 };
 
 export default function QuizResultsScreen() {
   const router = useRouter();
-  const [skinProfile, setSkinProfile] = useState<SkinProfileResult>(mockSkinProfile);
+  const [skinProfile, setSkinProfile] = useState<SkinProfileResult | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     async function loadSkinProfile() {
-      // Futuro: GET /api/quiz/profile para reemplazar mockSkinProfile con datos de Supabase.
-      setSkinProfile(mockSkinProfile);
+      try {
+        const token = await getStoredToken();
+
+        if (!token) {
+          router.replace('/login');
+          return;
+        }
+
+        const response = await fetch(`${apiConfig.baseUrl}/quiz/profile`, {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        });
+
+        const data = (await response.json().catch(() => null)) as QuizProfileResponse | null;
+
+        if (!response.ok || !data?.skinProfile) {
+          throw new Error(data?.message ?? 'No pudimos cargar tus resultados.');
+        }
+
+        setSkinProfile({
+          ageRange: data.skinProfile.age_range ?? '',
+          skinType: data.skinProfile.skin_type ?? '',
+          imperfections: data.skinProfile.imperfections ?? '',
+          mainGoal: data.skinProfile.main_goal ?? ''
+        });
+      } catch (error) {
+        console.error(error);
+        Alert.alert('Error', error instanceof Error ? error.message : 'No pudimos cargar tus resultados.');
+      } finally {
+        setIsLoading(false);
+      }
     }
 
     void loadSkinProfile();
-  }, []);
+  }, [router]);
+
+  if (isLoading) {
+    return (
+      <SafeAreaView style={styles.screen}>
+        <Text style={styles.loadingText}>Cargando resultados...</Text>
+      </SafeAreaView>
+    );
+  }
+
+  if (!skinProfile) {
+    return (
+      <SafeAreaView style={styles.screen}>
+        <Text style={styles.loadingText}>No encontramos resultados para este usuario.</Text>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.screen}>
@@ -37,7 +89,7 @@ export default function QuizResultsScreen() {
         <Ionicons color="#4B7C6E" name="checkmark" size={32} />
       </View>
 
-      <Text style={styles.title}>Análisis completo</Text>
+      <Text style={styles.title}>Analisis completo</Text>
       <Text style={styles.subtitle}>Tu perfil de piel esta listo</Text>
 
       <View style={styles.card}>
@@ -59,6 +111,14 @@ export default function QuizResultsScreen() {
       </Pressable>
     </SafeAreaView>
   );
+}
+
+async function getStoredToken() {
+  if (Platform.OS === 'web') {
+    return localStorage.getItem('eos-access-token');
+  }
+
+  return SecureStore.getItemAsync('eos-access-token');
 }
 
 function Badge({ label, variant = 'default' }: { label: string; variant?: 'default' | 'goal' }) {
@@ -152,6 +212,13 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: 'bold',
+    textAlign: 'center'
+  },
+  loadingText: {
+    color: '#0B132B',
+    fontSize: 18,
+    fontWeight: '700',
+    marginTop: 40,
     textAlign: 'center'
   }
 });

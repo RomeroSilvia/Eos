@@ -1,10 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
-import { mockUserProfile } from '@/services/auth';
-import { getActiveRoutine } from '@/services/routines';
+import { getCurrentProfile } from '@/services/auth';
 import { getRoutineDayProgress } from '@/services/progress';
-import { scheduleRemindersByTime } from '@/services/notifications';
+import { getActiveRoutine } from '@/services/routines';
 import type { DailyHomeSummary } from '@/types/home';
-import type { Reminder } from '@/types/reminder';
 import type { RoutineStep } from '@/types/routine';
 
 const hydrationCategories = new Set(['hidratacion', 'proteccion', 'proteccion solar']);
@@ -27,6 +25,7 @@ export function useHome() {
 
   const refreshSummary = useCallback(async () => {
     try {
+      const user = await getCurrentProfile();
       const activeRoutine = await getActiveRoutine();
       const steps = activeRoutine?.routine_steps ?? [];
       const progress = activeRoutine ? await getRoutineDayProgress(activeRoutine.id) : null;
@@ -35,43 +34,20 @@ export function useHome() {
       const hydrationSteps = getMetricStepsByCategory(steps, hydrationCategories);
       const glowSteps = getMetricStepsByCategory(steps, glowCategories);
 
-      const hydrationMetric = computeMetricValue(hydrationSteps, completedStepIds);
-      const glowMetric = computeMetricValue(glowSteps, completedStepIds);
-
-      const reminders = buildTestReminders();
-
       setSummary({
-        user: mockUserProfile,
+        user,
         activeRoutine,
         completedSteps,
         totalSteps: steps.length,
         metrics: [
-          { id: 'hydration', label: 'Hidratacion', value: hydrationMetric, suffix: '%' },
-          { id: 'glow', label: 'Luminosidad', value: glowMetric, suffix: '%' }
+          { id: 'hydration', label: 'Hidratacion', value: computeMetricValue(hydrationSteps, completedStepIds), suffix: '%' },
+          { id: 'glow', label: 'Luminosidad', value: computeMetricValue(glowSteps, completedStepIds), suffix: '%' }
         ],
-        reminders
+        reminders: []
       });
-
-      // Programar notificaciones
-      await scheduleRemindersByTime(reminders);
     } catch (error) {
       console.error(error);
-      const reminders = buildTestReminders();
-
-      setSummary({
-        user: mockUserProfile,
-        activeRoutine: null,
-        completedSteps: 0,
-        totalSteps: 0,
-        metrics: [
-          { id: 'hydration', label: 'Hidratacion', value: 0, suffix: '%' },
-          { id: 'glow', label: 'Luminosidad', value: 0, suffix: '%' }
-        ],
-        reminders
-      });
-
-      // Programar notificaciones aún en caso de error
-      await scheduleRemindersByTime(reminders);
+      setSummary(null);
     }
   }, []);
 
@@ -105,11 +81,4 @@ function normalizeCategory(value: string | null): string {
     .replace(/[\u0300-\u036f]/g, '')
     .replace(/\s+/g, ' ')
     .trim();
-}
-
-function buildTestReminders(): Reminder[] {
-  return [
-    { id: 'sunscreen-reminder', title: 'Protector solar', time: '15:00 hs', enabled: true },
-    { id: 'night-routine-reminder', title: 'Rutina de noche', time: '22:00 hs', enabled: true }
-  ];
 }

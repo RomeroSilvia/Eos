@@ -121,12 +121,13 @@ export default function QuizScreen() {
         throw new Error(data?.message ?? 'No pudimos guardar tus respuestas.');
       }
 
-      Alert.alert('Quiz guardado', 'Tus respuestas se guardaron correctamente.', [
-        { text: 'Ver resultados', onPress: () => router.replace('/resultados') }
-      ]);
+      router.replace('/resultados');
     } catch (error) {
       console.error(error);
-      Alert.alert('Error al guardar', error instanceof Error ? error.message : 'No pudimos guardar tus respuestas.');
+      Alert.alert(
+        'Error al guardar',
+        error instanceof Error ? error.message : 'No pudimos guardar tus respuestas.'
+      );
       setCurrentStep(quizQuestions.length - 1);
     } finally {
       setIsSaving(false);

@@ -4,6 +4,12 @@ import { productsRepository } from './products.repository';
 import type { ProductUpdate } from '../../database/schema.types';
  
 const BUCKET = 'product-images';
+
+type ProductImageBody = {
+  imageBase64?: string;
+  imageMimeType?: string;
+  imageFilename?: string;
+};
  
 export function getProductsHealth() {
   return {
@@ -33,13 +39,34 @@ export const productsService = {
     const { data } = supabase.storage.from(BUCKET).getPublicUrl(path);
     return data.publicUrl;
   },
+
+  uploadBase64Image: async ({ imageBase64, imageMimeType, imageFilename }: ProductImageBody): Promise<string | null> => {
+    if (!imageBase64) {
+      return null;
+    }
+
+    const contentType = imageMimeType || 'image/jpeg';
+    const ext = getImageExtension(imageFilename, contentType);
+    const path = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+    const buffer = Buffer.from(imageBase64, 'base64');
+    const { error } = await supabase.storage
+      .from(BUCKET)
+      .upload(path, buffer, { contentType });
+
+    if (error) throw new ApiError(500, `Error al subir imagen: ${error.message}`);
+
+    const { data } = supabase.storage.from(BUCKET).getPublicUrl(path);
+    return data.publicUrl;
+  },
  
   create: async (
     userId: string,
     body: Record<string, unknown>,
     file?: Express.Multer.File
   ) => {
-    const image_url = file ? await productsService.uploadImage(file) : null;
+    const image_url = file
+      ? await productsService.uploadImage(file)
+      : await productsService.uploadBase64Image(body as ProductImageBody);
  
     const { name, brand, category, notes } = body as {
       name: string;
@@ -67,7 +94,9 @@ export const productsService = {
     body: Record<string, unknown>,
     file?: Express.Multer.File
   ) => {
-    const image_url = file ? await productsService.uploadImage(file) : undefined;
+    const image_url = file
+      ? await productsService.uploadImage(file)
+      : await productsService.uploadBase64Image(body as ProductImageBody) ?? undefined;
 
     const { name, brand, category, notes } = body as {
       name?: string;
@@ -93,4 +122,17 @@ export const productsService = {
     await productsRepository.remove(productId, userId);
   }
 };
+
+function getImageExtension(filename: string | undefined, mimeType: string): string {
+  const filenameExt = filename?.split('.').pop()?.toLowerCase();
+
+  if (filenameExt && ['jpg', 'jpeg', 'png', 'webp', 'heic'].includes(filenameExt)) {
+    return filenameExt === 'jpeg' ? 'jpg' : filenameExt;
+  }
+
+  if (mimeType.includes('png')) return 'png';
+  if (mimeType.includes('webp')) return 'webp';
+  if (mimeType.includes('heic')) return 'heic';
+  return 'jpg';
+}
  

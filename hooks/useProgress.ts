@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { getProgressSummary } from '@/services/progress';
 import type { ProgressSummary } from '@/types/progress';
 
-export function useProgress(userId?: string) {
+export function useProgress() {
   const [summary, setSummary] = useState<ProgressSummary | null>(null);
   const [error, setError] = useState<Error | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -13,7 +13,7 @@ export function useProgress(userId?: string) {
     setIsLoading(true);
     setError(null);
 
-    void getProgressSummary(userId)
+    void getProgressSummary()
       .then((progressSummary) => {
         if (isMounted) {
           setSummary(progressSummary);
@@ -34,7 +34,7 @@ export function useProgress(userId?: string) {
     return () => {
       isMounted = false;
     };
-  }, [userId]);
+  }, []);
 
   return {
     summary,

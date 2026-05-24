@@ -11,13 +11,16 @@ type ResetPasswordResponse = {
 export default function ForgotPasswordScreen() {
   const router = useRouter();
   const [email, setEmail] = useState('');
-  const canSubmit = email.trim().length > 0;
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const canSubmit = email.trim().length > 0 && !isSubmitting;
 
   async function handleResetPassword() {
-    if (!canSubmit) {
+    if (!email.trim()) {
       Alert.alert('Datos incompletos', 'Ingresa tu email para continuar.');
       return;
     }
+
+    setIsSubmitting(true);
 
     try {
       const response = await fetch(`${apiConfig.baseUrl}/auth/reset-password`, {
@@ -31,15 +34,22 @@ export default function ForgotPasswordScreen() {
       const data = (await response.json().catch(() => null)) as ResetPasswordResponse | null;
 
       if (!response.ok) {
-        Alert.alert('Error del Servidor', data?.message ?? 'No pudimos enviar el correo.');
+        const fallbackMessage =
+          response.status === 429
+            ? 'Ya pediste un restablecimiento hace poco. Espera unos minutos antes de intentarlo otra vez.'
+            : 'No pudimos enviar el correo.';
+
+        Alert.alert('Error del Servidor', data?.message ?? fallbackMessage);
         return;
       }
 
-      Alert.alert('Correo enviado', data?.message ?? 'Te enviamos un enlace para restablecer tu contraseña.');
+      Alert.alert('Correo enviado', data?.message ?? 'Te enviamos un enlace para restablecer tu contrasena.');
       router.push('/login');
     } catch (error) {
       console.error(error);
-      Alert.alert('Error de Conexión', 'No se pudo conectar con el backend. Revisa tu consola.');
+      Alert.alert('Error de Conexion', 'No se pudo conectar con el backend. Revisa tu consola.');
+    } finally {
+      setIsSubmitting(false);
     }
   }
 
@@ -47,10 +57,10 @@ export default function ForgotPasswordScreen() {
     <SafeAreaView style={styles.screen}>
       <View style={styles.header}>
         <Image source={require('@/assets/images/logo.png')} style={styles.logo} />
-        <Text style={styles.title}>Restablecer Contraseña</Text>
+        <Text style={styles.title}>Restablecer Contrasena</Text>
         <Text style={styles.description}>
-          Introduce tu dirección de correo electrónico, y te enviaremos un enlace para restablecer
-          tu contraseña
+          Introduce tu direccion de correo electronico, y te enviaremos un enlace para restablecer
+          tu contrasena
         </Text>
       </View>
 
@@ -69,7 +79,7 @@ export default function ForgotPasswordScreen() {
         onPress={handleResetPassword}
         style={[styles.button, !canSubmit && styles.buttonDisabled]}
       >
-        <Text style={styles.buttonText}>Restablecer</Text>
+        <Text style={styles.buttonText}>{isSubmitting ? 'Enviando...' : 'Restablecer'}</Text>
       </Pressable>
     </SafeAreaView>
   );

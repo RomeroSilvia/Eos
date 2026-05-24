@@ -53,6 +53,9 @@ export default function NewProductScreen() {
   const [category, setCategory] = useState<ProductCategory>((initialCategory as ProductCategory) ?? 'other');
   const [brand, setBrand] = useState<ProductBrand>((initialBrand as ProductBrand) ?? 'other');
   const [imageUri, setImageUri] = useState<string | null>(null);
+  const [imageBase64, setImageBase64] = useState<string | null>(null);
+  const [imageMimeType, setImageMimeType] = useState<string | null>(null);
+  const [imageFilename, setImageFilename] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   const displayImage = imageUri ?? initialImageUrl ?? null;
@@ -65,10 +68,15 @@ export default function NewProductScreen() {
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
         aspect: [1, 1],
+        base64: true,
         quality: 0.8,
       });
       if (!result.canceled) {
-        setImageUri(result.assets[0].uri);
+        const asset = result.assets[0];
+        setImageUri(asset.uri);
+        setImageBase64(asset.base64 ?? null);
+        setImageMimeType(asset.mimeType ?? null);
+        setImageFilename(asset.fileName ?? null);
       }
     } catch (error) {
       console.error('[handlePickImage]', error);
@@ -86,6 +94,9 @@ export default function NewProductScreen() {
           category,
           brand,
           imageUri: imageUri ?? undefined,
+          imageBase64: imageBase64 ?? undefined,
+          imageMimeType: imageMimeType ?? undefined,
+          imageFilename: imageFilename ?? undefined,
         });
       } else {
         await createProduct({
@@ -94,6 +105,9 @@ export default function NewProductScreen() {
           category,
           brand,
           imageUri: imageUri ?? undefined,
+          imageBase64: imageBase64 ?? undefined,
+          imageMimeType: imageMimeType ?? undefined,
+          imageFilename: imageFilename ?? undefined,
         });
       }
       const returnParam = returnTo ? `&returnTo=${returnTo}` : '';

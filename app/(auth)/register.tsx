@@ -15,6 +15,7 @@ import {
   View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { ApiRequestError } from '@/services/api/client';
 import { register as registerUser } from '@/services/auth';
 
 const roleOptions = ['No, soy usuario', 'Si, soy dermatologo/a'];
@@ -86,7 +87,7 @@ export default function RegisterScreen() {
 
     try {
       await registerUser({
-        email: email.trim(),
+        email: email.trim().toLowerCase(),
         password,
         username: username.trim(),
         firstName: firstName.trim(),
@@ -97,9 +98,16 @@ export default function RegisterScreen() {
       router.push('/start-diagnosis');
     } catch (error) {
       console.error(error);
-      const message = error instanceof Error ? error.message : 'No se pudo crear la cuenta.';
+      const isDuplicateEmail = error instanceof ApiRequestError && error.status === 409;
+      const message =
+        isDuplicateEmail
+          ? 'Este correo ya esta registrado. Inicia sesion o usa otro email.'
+          : error instanceof Error
+            ? error.message
+            : 'No se pudo crear la cuenta.';
+
       setErrors({ form: message });
-      Alert.alert('Error del Servidor', message);
+      Alert.alert(isDuplicateEmail ? 'Correo ya registrado' : 'Error del Servidor', message);
     } finally {
       setIsSubmitting(false);
     }
@@ -181,6 +189,7 @@ export default function RegisterScreen() {
           <FieldLabel text="Email" />
           <TextInput
             autoCapitalize="none"
+            autoCorrect={false}
             keyboardType="email-address"
             onChangeText={(value) => {
               setEmail(value);
@@ -195,6 +204,8 @@ export default function RegisterScreen() {
 
           <FieldLabel text="Contrasena" />
           <TextInput
+            autoCapitalize="none"
+            autoCorrect={false}
             onChangeText={(value) => {
               setPassword(value);
               setErrors((current) => ({
@@ -214,6 +225,8 @@ export default function RegisterScreen() {
 
           <FieldLabel text="Confirmar contrasena" />
           <TextInput
+            autoCapitalize="none"
+            autoCorrect={false}
             onChangeText={(value) => {
               setConfirmPassword(value);
               setErrors((current) => ({ ...current, confirmPassword: undefined, form: undefined }));

@@ -28,12 +28,7 @@ export const progressHealth: RequestHandler = (_req, res) => {
 
 
 export const getSummaryByUserId: RequestHandler = async (req, res) => {
-  const userId = typeof req.params.userId === 'string' ? req.params.userId : undefined;
-
-  if (!userId) {
-    res.status(400).json({ message: 'userId is required' });
-    return;
-  }
+  const userId = req.user.id;
 
   try {
     const summary = await getProgressSummaryByUserId(userId);
@@ -47,13 +42,8 @@ export const getSummaryByUserId: RequestHandler = async (req, res) => {
 };
 
 export const getHistoryByDate: RequestHandler = async (req, res) => {
-  const userId = typeof req.params.userId === 'string' ? req.params.userId : undefined;
+  const userId = req.user.id;
   const date = typeof req.query.date === 'string' ? req.query.date : undefined;
-
-  if (!userId) {
-    res.status(400).json({ message: 'userId is required' });
-    return;
-  }
 
   if (!date) {
     res.status(400).json({ message: 'date query param is required' });
@@ -77,12 +67,7 @@ export const getHistoryByDate: RequestHandler = async (req, res) => {
 };
 
 export const getFullHistoryByUserId: RequestHandler = async (req, res) => {
-  const userId = typeof req.params.userId === 'string' ? req.params.userId : undefined;
-
-  if (!userId) {
-    res.status(400).json({ message: 'userId is required' });
-    return;
-  }
+  const userId = req.user.id;
 
   try {
     const history = await getProgressFullHistoryByUserId(userId);
@@ -96,12 +81,7 @@ export const getFullHistoryByUserId: RequestHandler = async (req, res) => {
 };
 
 export const getStatsByUserId: RequestHandler = async (req, res) => {
-  const userId = typeof req.params.userId === 'string' ? req.params.userId : undefined;
-
-  if (!userId) {
-    res.status(400).json({ message: 'userId is required' });
-    return;
-  }
+  const userId = req.user.id;
 
   try {
     const stats = await getProgressStatsByUserId(userId);
@@ -115,13 +95,8 @@ export const getStatsByUserId: RequestHandler = async (req, res) => {
 };
 
 export const getDayDetailByDate: RequestHandler = async (req, res) => {
-  const userId = typeof req.params.userId === 'string' ? req.params.userId : undefined;
+  const userId = req.user.id;
   const date = typeof req.params.date === 'string' ? req.params.date : undefined;
-
-  if (!userId) {
-    res.status(400).json({ message: 'userId is required' });
-    return;
-  }
 
   if (!date) {
     res.status(400).json({ message: 'date is required' });

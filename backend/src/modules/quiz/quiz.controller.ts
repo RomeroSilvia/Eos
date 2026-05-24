@@ -10,19 +10,8 @@ type SaveQuizBody = {
   routineSteps?: string;
 };
 
-function getBearerToken(authorizationHeader?: string): string | null {
-  const [scheme, token] = authorizationHeader?.split(' ') ?? [];
-
-  if (scheme !== 'Bearer' || !token) {
-    return null;
-  }
-
-  return token;
-}
-
 export const saveQuiz: RequestHandler = async (req, res, next) => {
   try {
-    const token = getBearerToken(req.header('Authorization'));
     const {
       ageRange,
       skinType,
@@ -31,47 +20,22 @@ export const saveQuiz: RequestHandler = async (req, res, next) => {
       routineSteps
     } = req.body as SaveQuizBody;
 
+    if (!ageRange?.trim() || !skinType?.trim() || !imperfections?.trim() || !mainGoal?.trim() || !routineSteps?.trim()) {
+      throw new ApiError(400, 'All quiz answers are required');
+    }
+
     const normalizedBody = {
-      ageRange: ageRange?.trim() || 'No especificado',
-      skinType: skinType?.trim() || 'No especificado',
-      imperfections: imperfections?.trim() || 'No especificado',
-      mainGoal: mainGoal?.trim() || 'No especificado',
-      routineSteps: routineSteps?.trim() || 'No especificado'
+      ageRange: ageRange.trim(),
+      skinType: skinType.trim(),
+      imperfections: imperfections.trim(),
+      mainGoal: mainGoal.trim(),
+      routineSteps: routineSteps.trim()
     };
-
-    let userId: string | undefined;
-
-    if (token) {
-      const { data: authData, error: authError } = await supabase.auth.getUser(token);
-
-      if (authError || !authData.user) {
-        throw new ApiError(401, 'Invalid or expired token');
-      }
-
-      userId = authData.user.id;
-    }
-
-    if (!userId) {
-      res.status(201).json({
-        message: 'Skin profile received in development mode',
-        skinProfile: {
-          id: 'development-preview',
-          user_id: req.user?.id ?? 'development-user',
-          age_range: normalizedBody.ageRange,
-          skin_type: normalizedBody.skinType,
-          imperfections: normalizedBody.imperfections,
-          main_goal: normalizedBody.mainGoal,
-          routine_steps: normalizedBody.routineSteps,
-          created_at: new Date().toISOString()
-        }
-      });
-      return;
-    }
 
     const { data, error } = await supabase
       .from('skin_profiles')
       .insert({
-        user_id: userId,
+        user_id: req.user.id,
         age_range: normalizedBody.ageRange,
         skin_type: normalizedBody.skinType,
         imperfections: normalizedBody.imperfections,
@@ -88,6 +52,32 @@ export const saveQuiz: RequestHandler = async (req, res, next) => {
 
     res.status(201).json({
       message: 'Skin profile created',
+      skinProfile: data
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getQuizProfile: RequestHandler = async (req, res, next) => {
+  try {
+    const { data, error } = await supabase
+      .from('skin_profiles')
+      .select('id, user_id, age_range, skin_type, imperfections, main_goal, routine_steps, created_at')
+      .eq('user_id', req.user.id)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (error) {
+      throw new ApiError(500, error.message);
+    }
+
+    if (!data) {
+      throw new ApiError(404, 'Skin profile not found');
+    }
+
+    res.json({
       skinProfile: data
     });
   } catch (error) {

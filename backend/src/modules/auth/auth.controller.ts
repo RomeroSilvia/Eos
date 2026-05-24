@@ -24,40 +24,58 @@ export const register = asyncHandler(async (req, res) => {
     throw new ApiError(400, 'email, password, username, firstName, lastName and role are required');
   }
 
-  const { data, error } = await supabase.auth.signUp({
-    email,
+  const normalizedEmail = email.trim().toLowerCase();
+  const fullName = [firstName, lastName].filter(Boolean).join(' ').trim();
+
+  const { data: createdUser, error: createUserError } = await supabase.auth.admin.createUser({
+    email: normalizedEmail,
     password,
-    options: {
-      data: {
-        username,
-        first_name: firstName,
-        last_name: lastName,
-        role
-      }
+    email_confirm: true,
+    user_metadata: {
+      username,
+      first_name: firstName,
+      last_name: lastName,
+      full_name: fullName,
+      role
     }
   });
 
-  if (error) {
-    throw new ApiError(error.status ?? 400, error.message);
+  if (createUserError) {
+    if (isDuplicateEmailError(createUserError.message)) {
+      throw new ApiError(409, 'Ya existe una cuenta registrada con ese correo.');
+    }
+
+    throw new ApiError(createUserError.status ?? 400, createUserError.message);
   }
 
-  if (!data.user) {
+  if (!createdUser.user) {
     throw new ApiError(500, 'User registration did not return a user');
+  }
+
+  const { data: sessionData, error: sessionError } = await supabase.auth.signInWithPassword({
+    email: normalizedEmail,
+    password
+  });
+
+  if (sessionError) {
+    throw new ApiError(sessionError.status ?? 401, sessionError.message);
+  }
+
+  if (!sessionData.session || !sessionData.user) {
+    throw new ApiError(500, 'User registration did not return a session token');
   }
 
   const { data: profile, error: profileError } = await supabase
     .from('profiles')
     .upsert(
       {
-        id: data.user.id,
-        username,
-        first_name: firstName,
-        last_name: lastName,
-        role
+        id: createdUser.user.id,
+        email: normalizedEmail,
+        full_name: fullName
       },
       { onConflict: 'id' }
     )
-    .select('id, username, first_name, last_name, role')
+    .select('*')
     .single();
 
   if (profileError) {
@@ -66,9 +84,9 @@ export const register = asyncHandler(async (req, res) => {
 
   res.status(201).json({
     message: 'User registered successfully',
-    token: data.session?.access_token ?? null,
-    session: data.session,
-    user: data.user,
+    token: sessionData.session.access_token,
+    session: sessionData.session,
+    user: sessionData.user,
     profile
   });
 });
@@ -83,12 +101,18 @@ export const login = asyncHandler(async (req, res) => {
     throw new ApiError(400, 'email and password are required');
   }
 
+  const normalizedEmail = email.trim().toLowerCase();
+
   const { data, error } = await supabase.auth.signInWithPassword({
-    email,
+    email: normalizedEmail,
     password
   });
 
   if (error) {
+    if (error.message.toLowerCase().includes('invalid login credentials')) {
+      throw new ApiError(401, 'Email o contrasena incorrectos.');
+    }
+
     throw new ApiError(error.status ?? 401, error.message);
   }
 
@@ -174,10 +198,8 @@ export const googleLogin: RequestHandler = async (req, res, next) => {
         .from('profiles')
         .insert({
           id: data.user.id,
-          username,
-          first_name: firstName,
-          last_name: lastName,
-          role: 'usuario'
+          email,
+          full_name: [firstName, lastName].filter(Boolean).join(' ').trim() || username
         });
 
       if (insertError) {
@@ -211,11 +233,15 @@ export const resetPassword: RequestHandler = async (req, res, next) => {
     });
 
     if (error) {
+      if (error.status === 429) {
+        throw new ApiError(429, 'Ya se solicito un restablecimiento recientemente. Espera unos minutos antes de intentarlo otra vez.');
+      }
+
       throw new ApiError(error.status ?? 400, error.message);
     }
 
     res.status(200).json({
-      message: 'Password reset email sent successfully'
+      message: 'Te enviamos un enlace para restablecer tu contrasena.'
     });
   } catch (error) {
     next(error);
@@ -228,6 +254,16 @@ function getPasswordResetRedirectUrl(): string {
   }
 
   return `${env.corsOrigin.replace(/\/$/, '')}/update-password`;
+}
+
+function isDuplicateEmailError(message: string): boolean {
+  const normalizedMessage = message.toLowerCase();
+
+  return (
+    normalizedMessage.includes('already') ||
+    normalizedMessage.includes('registered') ||
+    normalizedMessage.includes('exists')
+  );
 }
 
 export const updatePassword: RequestHandler = async (req, res, next) => {

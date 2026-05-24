@@ -1,6 +1,8 @@
 import { Router } from 'express';
-import { saveQuiz } from './quiz.controller';
+import { authenticate } from '../../middlewares/auth.middleware';
+import { getQuizProfile, saveQuiz } from './quiz.controller';
 
 export const quizRouter = Router();
 
-quizRouter.post('/save', saveQuiz);
+quizRouter.get('/profile', authenticate, getQuizProfile);
+quizRouter.post('/save', authenticate, saveQuiz);

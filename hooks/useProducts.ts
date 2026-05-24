@@ -3,6 +3,7 @@ import {
   createProduct as createProductService,
   deleteProduct as deleteProductService,
   getProducts,
+  type ProductImagePayload,
   updateProduct as updateProductService,
 } from '@/services/products';
 import type { Product, ProductBrand, ProductCategory } from '@/types/product';
@@ -32,8 +33,7 @@ export function useProducts() {
     description?: string;
     category: ProductCategory;
     brand: ProductBrand;
-    imageUri?: string;
-  }) => {
+  } & ProductImagePayload) => {
     const newProduct = await createProductService(data);
     setProducts((prev) => [newProduct, ...prev]);
     return newProduct;
@@ -44,8 +44,7 @@ export function useProducts() {
     description?: string;
     category?: ProductCategory;
     brand?: ProductBrand;
-    imageUri?: string;
-  }) => {
+  } & ProductImagePayload) => {
     const updated = await updateProductService(id, data);
     setProducts((prev) => prev.map((p) => p.id === id ? updated : p));
     return updated;

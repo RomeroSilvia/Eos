@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { mockAuth } from '../../middlewares/mockAuth.middleware';
+import { authenticate } from '../../middlewares/auth.middleware';
 import {
   getDayDetailByDate,
   getFullHistoryByUserId,
@@ -14,12 +14,14 @@ import {
 export const progressRouter = Router();
 
 progressRouter.get('/health', progressHealth);
-progressRouter.get('/summary/:userId', getSummaryByUserId);
-progressRouter.get('/stats/:userId', getStatsByUserId);
-progressRouter.get('/day/:userId/:date', getDayDetailByDate);
-progressRouter.get('/history/:userId/all', getFullHistoryByUserId);
-progressRouter.get('/history/:userId', getHistoryByDate);
-progressRouter.get('/routines/:routineId/today', mockAuth, getRoutineDayProgress);
-progressRouter.patch('/routines/:routineId/today/steps/:stepId', mockAuth, setRoutineStepCompletion);
+progressRouter.use(authenticate);
+
+progressRouter.get('/summary', getSummaryByUserId);
+progressRouter.get('/stats', getStatsByUserId);
+progressRouter.get('/day/:date', getDayDetailByDate);
+progressRouter.get('/history/all', getFullHistoryByUserId);
+progressRouter.get('/history', getHistoryByDate);
+progressRouter.get('/routines/:routineId/today', getRoutineDayProgress);
+progressRouter.patch('/routines/:routineId/today/steps/:stepId', setRoutineStepCompletion);
 
 export default progressRouter;

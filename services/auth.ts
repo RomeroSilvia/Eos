@@ -6,13 +6,6 @@ import type { UserProfile } from '@/types/user';
 const sessionKey = 'eos-session';
 const accessTokenKey = 'eos-access-token';
 
-export const mockUserProfile: UserProfile = {
-  id: 'user-marta',
-  name: 'Marta',
-  role: 'user',
-  skinType: 'mixed'
-};
-
 type AuthSession = {
   access_token: string;
 };
@@ -78,22 +71,22 @@ export async function getCurrentProfile(): Promise<UserProfile> {
   const storedSession = await getStoredItem(sessionKey);
 
   if (!storedSession) {
-    return mockUserProfile;
+    throw new Error('No hay una sesion activa.');
   }
 
   const session = JSON.parse(storedSession) as { profile?: UserProfile };
-  return session.profile ?? mockUserProfile;
+
+  if (!session.profile) {
+    throw new Error('No se encontro el perfil del usuario.');
+  }
+
+  return session.profile;
 }
 
 export async function logout(): Promise<void> {
   await deleteStoredItem(sessionKey);
   await deleteStoredItem(accessTokenKey);
 }
-
-export const loginMock = (email: string): Promise<UserProfile> => login({ email, password: '' });
-export const registerMock = (email: string): Promise<UserProfile> =>
-  register({ email, password: '', username: email.split('@')[0] ?? email, firstName: 'Marta', lastName: '', role: 'user' });
-export const logoutMock = logout;
 
 export async function saveAccessToken(token: string): Promise<void> {
   await setStoredItem(accessTokenKey, token);
@@ -126,7 +119,7 @@ function mapAuthResponseToProfile(data: AuthResponse): UserProfile {
 
   return {
     id: profile?.id ?? data.user.id,
-    name: profile?.full_name ?? (fullName || profile?.username || data.user.email || mockUserProfile.name),
+    name: profile?.full_name ?? (fullName || profile?.username || data.user.email || 'Usuario'),
     email: profile?.email ?? data.user.email,
     role: 'user',
     skinType: (profile?.skin_type ?? 'mixed') as UserProfile['skinType']
