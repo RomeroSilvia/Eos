@@ -123,13 +123,13 @@ describe('productsService', () => {
     it('sube la imagen y devuelve la URL pública', async () => {
       const file = makeFile('crema.jpg');
 
-      const url = await productsService.uploadImage(file);
+      const url = await productsService.uploadImage('user-1', file);
 
       expect(mockedStorageFrom).toHaveBeenCalledWith('product-images');
       expect(mockUpload).toHaveBeenCalledWith(
-        expect.stringMatching(/\.jpg$/),
+        expect.stringMatching(/^user-1\/products\/.+\.jpg$/),
         file.buffer,
-        { contentType: 'image/jpeg' }
+        { contentType: 'image/jpeg', upsert: false }
       );
       expect(url).toBe('https://cdn.example.com/image.jpg');
     });
@@ -137,20 +137,30 @@ describe('productsService', () => {
     it('usa la extensión correcta según el nombre del archivo', async () => {
       const file = makeFile('foto.png');
 
-      await productsService.uploadImage(file);
+      await productsService.uploadImage('user-1', file);
 
       expect(mockUpload).toHaveBeenCalledWith(
-        expect.stringMatching(/\.png$/),
+        expect.stringMatching(/^user-1\/products\/.+\.png$/),
         expect.anything(),
         expect.anything()
+      );
+    });
+
+    it('incluye el userId como primera carpeta para cumplir las policies de Storage', async () => {
+      await productsService.uploadImage('profile-123', makeFile('foto.webp'));
+
+      expect(mockUpload).toHaveBeenCalledWith(
+        expect.stringMatching(/^profile-123\/products\/.+\.webp$/),
+        expect.anything(),
+        expect.objectContaining({ contentType: 'image/jpeg', upsert: false })
       );
     });
 
     it('lanza ApiError 500 cuando falla la subida', async () => {
       mockUpload.mockResolvedValue({ error: { message: 'Bucket not found' } });
 
-      await expect(productsService.uploadImage(makeFile())).rejects.toThrow(ApiError);
-      await expect(productsService.uploadImage(makeFile())).rejects.toMatchObject({
+      await expect(productsService.uploadImage('user-1', makeFile())).rejects.toThrow(ApiError);
+      await expect(productsService.uploadImage('user-1', makeFile())).rejects.toMatchObject({
         statusCode: 500
       });
     });
