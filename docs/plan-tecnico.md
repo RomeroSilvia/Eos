@@ -484,7 +484,7 @@ Mitigación: definir una única regla para calcular cumplimiento, racha y rutina
 
 ## Objetivo De La Etapa
 
-Preparar Eos como producto escalable para usuarios, especialistas, clientes y centros/gabinetes, con roles, gestión avanzada, suscripciones y arquitectura lista para crecimiento.
+Preparar Eos como producto escalable para usuarios, especialistas, clientes y centros/gabinetes, con roles, gestión avanzada y arquitectura lista para crecimiento.
 
 Esta etapa transforma la app de seguimiento personal en una plataforma de bienestar y gestión profesional, sin caer en diagnóstico médico automático.
 
@@ -500,7 +500,7 @@ Esta etapa transforma la app de seguimiento personal en una plataforma de bienes
 | 2 | Rutinas | Rutinas asignadas por especialista, plantillas y seguimiento |
 | 3 | Productos | Catálogo recomendado, productos por especialista/centro |
 | 4 | Progreso | Reportes para usuario y especialista, evolución por cliente |
-| 5 | Perfil/Auth/Config | Roles avanzados, permisos, suscripción, organización/centro |
+| 5 | Perfil/Auth/Config | Roles avanzados, permisos, organización/centro |
 
 ## Tareas Técnicas Priorizadas
 
@@ -521,7 +521,6 @@ Esta etapa transforma la app de seguimiento personal en una plataforma de bienes
      - `clients`.
      - `client_specialist_links`.
      - `routine_templates`.
-     - `subscriptions`.
    - Aislar datos por organización cuando corresponda.
 
 3. **Dashboard por rol**
@@ -544,32 +543,24 @@ Esta etapa transforma la app de seguimiento personal en una plataforma de bienes
    - Export básico o vista compartible.
    - Sin diagnóstico automático.
 
-6. **Suscripciones**
-   - Dependencia: roles y organizaciones.
-   - Plan gratuito.
-   - Plan especialista.
-   - Plan centro.
-   - Preparar integración con pagos, aunque puede quedar mockeada académicamente.
-
-7. **Gestión avanzada de productos**
+6. **Gestión avanzada de productos**
    - Dependencia: catálogo.
    - Productos propios.
    - Productos sugeridos por especialista.
    - Productos del centro.
    - Asociación con plantillas.
 
-8. **Arquitectura de servicios**
+7. **Arquitectura de servicios**
    - Dependencia: crecimiento funcional.
    - Separar servicios por dominio:
      - auth;
      - routines;
      - products;
      - progress;
-     - organizations;
-     - subscriptions.
+     - organizations.
    - Centralizar manejo de errores.
 
-9. **Seguridad y auditoría básica**
+8. **Seguridad y auditoría básica**
    - Dependencia: permisos.
    - Validar acceso a datos.
    - Registrar cambios importantes.

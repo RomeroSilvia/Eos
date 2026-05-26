@@ -1,40 +1,51 @@
 # Database setup
 
-Eos usara Supabase PostgreSQL como base de datos.
+Eos usa Supabase PostgreSQL como base de datos.
 
 ## Crear proyecto en Supabase
 
-1. Crear un proyecto nuevo en Supabase.
-2. Entrar a SQL Editor.
-3. Abrir el archivo `database/initial_schema.sql`.
+1. Crear un proyecto nuevo en [supabase.com](https://supabase.com).
+2. Ir a **SQL Editor**.
+3. Abrir el archivo `database/initial_schema.sql` del repositorio.
 4. Copiar el contenido y ejecutarlo en Supabase.
 
-## Esquema inicial
+## Tablas del schema
 
-El SQL propone estas tablas:
+| Tabla | Descripción |
+|---|---|
+| `profiles` | Perfil del usuario (nombre, email, skin_type) |
+| `skin_profiles` | Resultado del quiz de diagnóstico de piel por usuario |
+| `routines` | Rutinas del usuario (mañana / noche / personalizada) |
+| `routine_steps` | Pasos de cada rutina con orden y categoría |
+| `products` | Productos de skincare del usuario con imagen |
+| `routine_step_products` | Asociación N:M entre pasos y productos |
+| `routine_logs` | Registro diario de completitud por rutina |
+| `routine_step_logs` | Registro diario de completitud por paso |
 
-- `profiles`
-- `routines`
-- `routine_steps`
-- `products`
-- `routine_step_products`
-- `routine_logs`
-- `routine_step_logs`
+## Obtener credenciales
 
-## Pendiente
+En Supabase, ir a **Project Settings → API**:
 
-- Definir enums o constraints mas estrictos para categorias y estados.
-- Agregar triggers para actualizar `updated_at`.
-- Activar RLS antes de produccion.
-- Crear politicas por usuario autenticado.
-- Agregar seeds de desarrollo si el equipo los necesita.
+- `SUPABASE_URL` — URL del proyecto
+- `SUPABASE_ANON_KEY` — Clave anónima (pública)
+- `SUPABASE_SERVICE_ROLE_KEY` — Clave de service role (solo backend, nunca exponer)
 
-## RLS
+Completar estas credenciales en `backend/.env` (ver `docs/env.md`).
 
-El archivo SQL deja una seccion comentada:
+## Actualizar tipos generados
 
-```sql
--- TODO: Enable RLS policies before production
+Si se modifica el schema, regenerar los tipos de TypeScript con la CLI de Supabase:
+
+```bash
+npx supabase gen types typescript --project-id <project-id> > backend/src/database/database.types.ts
 ```
 
-No activar produccion sin reglas de seguridad revisadas.
+Los aliases de conveniencia (`RoutineRow`, `ProductInsert`, etc.) están en `backend/src/database/schema.types.ts` y deben actualizarse manualmente si cambian las tablas.
+
+## Pendientes antes de producción
+
+- **RLS (Row Level Security):** El schema tiene las políticas comentadas (`-- TODO: Enable RLS policies before production`). Activar y definir políticas por usuario autenticado antes de cualquier despliegue.
+- **Triggers `updated_at`:** Agregar triggers para actualizar automáticamente el campo `updated_at` en cada tabla (también comentados en el schema).
+- **Índices:** Crear índices en columnas de búsqueda frecuente como `user_id`, `routine_id` y `log_date` (comentados en el schema; confirmar patrones de acceso primero).
+- **Enums o constraints:** Definir constraints más estrictos para categorías de productos, roles y estados si se requiere integridad a nivel de base de datos.
+- **Seeds de desarrollo:** Considerar datos de prueba si el equipo necesita un estado inicial reproducible.
