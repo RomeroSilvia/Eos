@@ -81,7 +81,7 @@ export default function ProductDetailScreen() {
   return (
     <SafeAreaView style={styles.screen}>
       <View style={styles.header}>
-        <Pressable onPress={() => router.push('/products')} style={styles.backBtn}>
+        <Pressable onPress={() => router.back()} style={styles.backBtn}>
           <Ionicons color={colors.textPrimary} name="chevron-back" size={18} />
           <Text style={styles.backText}>Volver atras</Text>
         </Pressable>
