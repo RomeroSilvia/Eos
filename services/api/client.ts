@@ -68,6 +68,29 @@ export class ApiRequestError extends Error {
   }
 }
 
+export function getFriendlyApiErrorMessage(status?: number): string {
+  if (status === 400) return 'Revisa los datos ingresados e intenta nuevamente.';
+  if (status === 401) return 'Tu sesion expiro. Volve a iniciar sesion.';
+  if (status === 403) return 'No tenes permisos para realizar esta accion.';
+  if (status === 404) return 'No pudimos encontrar la informacion solicitada.';
+  if (status === 409) return 'Ya existe un registro con esos datos.';
+  if (status === 413) return 'La imagen es demasiado grande. Proba con una foto mas liviana.';
+  if (status === 500) return 'Ocurrio un error del servidor. Intenta nuevamente mas tarde.';
+  return 'No pudimos completar la accion. Intenta nuevamente.';
+}
+
+export function getFriendlyErrorMessage(error: unknown, fallback = 'No pudimos completar la accion. Intenta nuevamente.'): string {
+  if (error instanceof ApiRequestError) {
+    return getFriendlyApiErrorMessage(error.status);
+  }
+
+  if (error instanceof Error && !hasTechnicalDetails(error.message)) {
+    return error.message;
+  }
+
+  return fallback;
+}
+
 export async function apiRequest<TResponse>({ path, headers, ...options }: ApiRequestOptions): Promise<TResponse> {
   const url = `${apiConfig.baseUrl}/${path.replace(/^\//, '')}`;
 
@@ -98,6 +121,25 @@ export async function apiRequest<TResponse>({ path, headers, ...options }: ApiRe
   }
 
   return body as TResponse;
+}
+
+function hasTechnicalDetails(message: string): boolean {
+  const normalizedMessage = message.toLowerCase();
+  return [
+    'stack',
+    'sql',
+    'row-level security',
+    'rls',
+    'supabase',
+    'specialist_profiles',
+    'specialist-docs',
+    'bucket',
+    'storage.objects',
+    'trace',
+    '{"',
+    'error:',
+    'exception'
+  ].some((unsafeText) => normalizedMessage.includes(unsafeText));
 }
 
 async function getAuthHeader(): Promise<Record<string, string>> {

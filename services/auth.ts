@@ -42,7 +42,7 @@ type RegisterPayload = LoginPayload & {
   username: string;
   firstName: string;
   lastName: string;
-  role: string;
+  role: 'user' | 'specialist';
 };
 
 export async function login({ email, password }: LoginPayload): Promise<UserProfile> {
@@ -116,14 +116,23 @@ async function persistAuthSession(data: AuthResponse): Promise<void> {
 function mapAuthResponseToProfile(data: AuthResponse): UserProfile {
   const profile = data.profile;
   const fullName = [profile?.first_name, profile?.last_name].filter(Boolean).join(' ').trim();
+  const role = getSupportedRole(profile?.role);
 
   return {
     id: profile?.id ?? data.user.id,
     name: profile?.full_name ?? (fullName || profile?.username || data.user.email || 'Usuario'),
     email: profile?.email ?? data.user.email,
-    role: 'user',
+    role,
     skinType: (profile?.skin_type ?? 'mixed') as UserProfile['skinType']
   };
+}
+
+function getSupportedRole(role?: string | null): UserProfile['role'] {
+  if (role === 'specialist' || role === 'center_admin') {
+    return role;
+  }
+
+  return 'user';
 }
 
 async function getStoredItem(key: string): Promise<string | null> {

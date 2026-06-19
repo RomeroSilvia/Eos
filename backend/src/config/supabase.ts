@@ -11,3 +11,24 @@ export const supabase = createClient<Database>(
     }
   }
 );
+
+export function createSupabaseUserClient(accessToken: string) {
+  return createClient<Database>(
+    env.supabaseUrl!,
+    env.supabaseAnonKey!,
+    {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      },
+      db: {
+        schema: 'public'
+      },
+      global: {
+        headers: {
+          Authorization: `Bearer ${accessToken}`
+        }
+      }
+    }
+  );
+}

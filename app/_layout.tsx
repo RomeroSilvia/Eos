@@ -13,8 +13,11 @@ export default function RootLayout() {
         <Stack.Screen name="start-quiz" />
         <Stack.Screen name="quiz-results" />
         <Stack.Screen name="resultados" />
+        <Stack.Screen name="specialist-status" />
         <Stack.Screen name="(auth)" />
         <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="(tabs-admin)" />
+        <Stack.Screen name="(tabs-specialist)" />
       </Stack>
     </GestureHandlerRootView>
   );

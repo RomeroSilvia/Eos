@@ -4,7 +4,8 @@ import * as SecureStore from 'expo-secure-store';
 import { useState } from 'react';
 import { Alert, Image, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { apiConfig } from '@/services/api/client';
+import { apiConfig, getFriendlyApiErrorMessage } from '@/services/api/client';
+import { getSpecialistStatus } from '@/services/specialist';
 
 type LoginResponse = {
   token?: string | null;
@@ -23,6 +24,7 @@ type LoginResponse = {
     username?: string | null;
     first_name?: string | null;
     last_name?: string | null;
+    role?: string | null;
   } | null;
   message?: string;
 };
@@ -71,7 +73,7 @@ export default function LoginScreen() {
       const data = (await response.json()) as LoginResponse;
 
       if (!response.ok) {
-        const message = getLoginErrorMessage(data.message);
+        const message = getLoginErrorMessage(response.status, data.message);
         setErrors({ form: message });
         Alert.alert('Error del Servidor', message);
         return;
@@ -86,11 +88,13 @@ export default function LoginScreen() {
         return;
       }
 
-      await saveSession(token, data);
-      router.replace('/(tabs)/home');
+      const profile = await saveSession(token, data);
+      await routeAfterLogin(profile.role, router);
     } catch (error) {
-      console.error(error);
-      const message = 'No se pudo conectar con el backend. Revisa tu consola.';
+      if (process.env.NODE_ENV !== 'production') {
+        console.error(error);
+      }
+      const message = 'No pudimos completar la accion. Intenta nuevamente.';
       setErrors({ form: message });
       Alert.alert('Error de Conexión', message);
     } finally {
@@ -197,7 +201,7 @@ export default function LoginScreen() {
   );
 }
 
-async function saveSession(token: string, data: LoginResponse): Promise<void> {
+async function saveSession(token: string, data: LoginResponse): Promise<{ role: string }> {
   const profile = mapLoginResponseToProfile(data);
   const serializedSession = JSON.stringify({
     token,
@@ -209,24 +213,55 @@ async function saveSession(token: string, data: LoginResponse): Promise<void> {
   if (Platform.OS === 'web') {
     localStorage.setItem(accessTokenKey, token);
     localStorage.setItem(sessionKey, serializedSession);
-    return;
+    return profile;
   }
 
   await SecureStore.setItemAsync(accessTokenKey, token);
   await SecureStore.setItemAsync(sessionKey, serializedSession);
+  return profile;
 }
 
 function mapLoginResponseToProfile(data: LoginResponse) {
   const profile = data.profile;
   const fullName = [profile?.first_name, profile?.last_name].filter(Boolean).join(' ').trim();
+  const role = getSupportedRole(profile?.role);
 
   return {
     id: profile?.id ?? data.user?.id ?? 'user',
     name: profile?.full_name ?? (fullName || profile?.username || data.user?.email || 'Usuario'),
     email: profile?.email ?? data.user?.email,
-    role: 'user',
+    role,
     skinType: profile?.skin_type ?? 'mixed'
   };
+}
+
+async function routeAfterLogin(role: string, router: ReturnType<typeof useRouter>) {
+  if (role === 'center_admin') {
+    router.replace('/(tabs-admin)' as never);
+    return;
+  }
+
+  if (role !== 'specialist') {
+    router.replace('/(tabs)/home');
+    return;
+  }
+
+  const status = await getSpecialistStatus().catch(() => null);
+
+  if (status?.license_status === 'verified') {
+    router.replace('/(tabs-specialist)' as never);
+    return;
+  }
+
+  router.replace('/specialist-status' as never);
+}
+
+function getSupportedRole(role?: string | null): 'user' | 'specialist' | 'center_admin' {
+  if (role === 'specialist' || role === 'center_admin') {
+    return role;
+  }
+
+  return 'user';
 }
 
 function validateLogin(email: string, password: string): LoginErrors {
@@ -246,12 +281,12 @@ function validateLogin(email: string, password: string): LoginErrors {
   return nextErrors;
 }
 
-function getLoginErrorMessage(message?: string) {
+function getLoginErrorMessage(status: number, message?: string) {
   if (message?.toLowerCase().includes('invalid login credentials')) {
     return 'Email o contrasena incorrectos.';
   }
 
-  return message ?? 'No se pudo iniciar sesion. Revisa tus credenciales.';
+  return getFriendlyApiErrorMessage(status);
 }
 
 const styles = StyleSheet.create({

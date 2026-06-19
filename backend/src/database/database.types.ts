@@ -12,6 +12,7 @@ export type Database = {
           id: string;
           full_name: string;
           email: string | null;
+          role: string;
           skin_type: string | null;
           created_at: string;
           updated_at: string;
@@ -20,6 +21,7 @@ export type Database = {
           id?: string;
           full_name: string;
           email?: string | null;
+          role?: string;
           skin_type?: string | null;
           created_at?: string;
           updated_at?: string;
@@ -28,6 +30,7 @@ export type Database = {
           id?: string;
           full_name?: string;
           email?: string | null;
+          role?: string;
           skin_type?: string | null;
           created_at?: string;
           updated_at?: string;
@@ -129,6 +132,43 @@ export type Database = {
           category?: string | null;
           notes?: string | null;
           image_url?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+
+      specialist_profiles: {
+        Row: {
+          id: string;
+          user_id: string;
+          specialty: string;
+          license_number: string;
+          dni_photo_url: string;
+          title_photo_url: string;
+          license_status: string;
+          rejection_reason: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          specialty: string;
+          license_number: string;
+          dni_photo_url: string;
+          title_photo_url: string;
+          license_status?: string;
+          rejection_reason?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          specialty?: string;
+          license_number?: string;
+          dni_photo_url?: string;
+          title_photo_url?: string;
+          license_status?: string;
+          rejection_reason?: string | null;
           updated_at?: string;
         };
         Relationships: [];

@@ -24,6 +24,7 @@ export const register = asyncHandler(async (req, res) => {
     throw new ApiError(400, 'email, password, username, firstName, lastName and role are required');
   }
 
+  const normalizedRole = normalizePublicRegistrationRole(role);
   const normalizedEmail = email.trim().toLowerCase();
   const fullName = [firstName, lastName].filter(Boolean).join(' ').trim();
 
@@ -36,7 +37,7 @@ export const register = asyncHandler(async (req, res) => {
       first_name: firstName,
       last_name: lastName,
       full_name: fullName,
-      role
+      role: normalizedRole
     }
   });
 
@@ -71,7 +72,8 @@ export const register = asyncHandler(async (req, res) => {
       {
         id: createdUser.user.id,
         email: normalizedEmail,
-        full_name: fullName
+        full_name: fullName,
+        role: normalizedRole
       },
       { onConflict: 'id' }
     )
@@ -90,6 +92,34 @@ export const register = asyncHandler(async (req, res) => {
     profile
   });
 });
+
+type UserRole = 'user' | 'specialist' | 'center_admin';
+
+function normalizeRole(role: string): UserRole {
+  if (role === 'specialist') {
+    return 'specialist';
+  }
+
+  if (role === 'center_admin') {
+    return 'center_admin';
+  }
+
+  if (role === 'user') {
+    return 'user';
+  }
+
+  throw new ApiError(400, 'role must be user, specialist or center_admin');
+}
+
+function normalizePublicRegistrationRole(role: string): 'user' | 'specialist' {
+  const normalizedRole = normalizeRole(role);
+
+  if (normalizedRole === 'center_admin') {
+    throw new ApiError(403, 'No podes registrarte como administrador desde el registro publico.');
+  }
+
+  return normalizedRole;
+}
 
 export const login = asyncHandler(async (req, res) => {
   const { email, password } = req.body as {
