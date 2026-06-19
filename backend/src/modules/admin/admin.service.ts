@@ -61,7 +61,13 @@ export const adminService = {
     });
 
     if (!updated) {
-      throw new ApiError(404, 'Solicitud de especialista no encontrada.');
+      const current = await adminRepository.findSpecialistStatusById(specialistProfileId);
+
+      if (!current) {
+        throw new ApiError(404, 'Solicitud de especialista no encontrada.');
+      }
+
+      throw new ApiError(409, 'La solicitud ya fue procesada.');
     }
 
     const profiles = await adminRepository.findProfilesByIds([updated.user_id]);

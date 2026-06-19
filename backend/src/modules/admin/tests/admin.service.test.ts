@@ -16,6 +16,7 @@ jest.mock('../admin.repository', () => ({
     findPendingSpecialists: jest.fn(),
     findProfilesByIds: jest.fn(),
     findSpecialistDocumentsById: jest.fn(),
+    findSpecialistStatusById: jest.fn(),
     updateSpecialistStatus: jest.fn()
   }
 }));
@@ -137,12 +138,31 @@ describe('adminService', () => {
 
   it('specialistProfileId inexistente devuelve 404', async () => {
     mockedRepo.updateSpecialistStatus.mockResolvedValue(null);
+    mockedRepo.findSpecialistStatusById.mockResolvedValue(null);
 
     await expect(
       adminService.updateSpecialistStatus('inexistente', { licenseStatus: 'verified' })
     ).rejects.toMatchObject({
       statusCode: 404,
       message: 'Solicitud de especialista no encontrada.'
+    });
+  });
+
+  it('solicitud ya procesada devuelve 409', async () => {
+    mockedRepo.updateSpecialistStatus.mockResolvedValue(null);
+    mockedRepo.findSpecialistStatusById.mockResolvedValue({
+      id: 'specialist-profile-1',
+      license_status: 'verified'
+    });
+
+    await expect(
+      adminService.updateSpecialistStatus('specialist-profile-1', {
+        licenseStatus: 'rejected',
+        rejectionReason: 'Duplicada'
+      })
+    ).rejects.toMatchObject({
+      statusCode: 409,
+      message: 'La solicitud ya fue procesada.'
     });
   });
 
