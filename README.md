@@ -69,7 +69,32 @@ Antes de probar el registro de especialistas, ejecutar en Supabase SQL Editor, e
 
 -- 3
 -- database/specialist_profiles_rls_policies.sql
+
+-- 4
+-- database/e2_profiles_rls_policies.sql
 ```
+
+### Alcance real Modulo 3
+
+Implementado realmente:
+
+- Registro con roles `user` y `specialist`.
+- Bloqueo de `center_admin` en registro publico.
+- Middleware `authenticate`.
+- Middleware `requireRole`.
+- Registro de especialista con documentacion.
+- Estado de especialista `pending`, `verified` y `rejected`.
+- Panel admin para aprobar o rechazar especialistas.
+- Storage privado para documentos y signed URLs temporales.
+- Navegacion protegida por rol y `license_status`.
+
+Placeholder / fuera del Modulo 3:
+
+- Gestion real de clientes.
+- Consultas/chat.
+- Buscador de especialistas.
+- Asignacion de rutinas.
+- Tabs especialista con datos reales.
 
 ## Modulos verticales
 

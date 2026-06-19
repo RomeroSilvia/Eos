@@ -11,9 +11,11 @@ const menuGap = 12;
 
 type Props = {
   tabBarHeight: number;
+  productRoute?: Parameters<typeof router.push>[0];
+  routineRoute?: Parameters<typeof router.push>[0];
 };
 
-export function FloatingActionMenu({ tabBarHeight }: Props) {
+export function FloatingActionMenu({ productRoute, routineRoute, tabBarHeight }: Props) {
   const [isOpen, setIsOpen] = useState(false);
   const fabBottom = tabBarHeight + fabGapAboveTabBar;
   const menuBottom = fabBottom + fabSize + menuGap;
@@ -24,12 +26,12 @@ export function FloatingActionMenu({ tabBarHeight }: Props) {
 
   function handleAddProduct() {
     closeMenu();
-    router.push('/products/create');
+    router.push(productRoute ?? '/products/create');
   }
 
   function handleAddRoutine() {
     closeMenu();
-    router.push('/routine/Create');
+    router.push(routineRoute ?? '/routine/Create');
   }
 
   return (

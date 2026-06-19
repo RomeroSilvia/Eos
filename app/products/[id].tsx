@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
 import { colors } from '@/constants/colors';
+import { useProfile } from '@/hooks/useProfile';
 import { useProducts } from '@/hooks/useProducts';
 import type { ProductCategory } from '@/types/product';
 
@@ -26,6 +27,7 @@ export default function ProductDetailScreen() {
     affectedRoutines: { routineId: string; routineName: string; stepName: string }[];
   } | null>(null);
   const [selectedReplacementId, setSelectedReplacementId] = useState<string | null>(null);
+  const { profile } = useProfile();
   const product = products.find((p) => p.id === id);
   const replacementCandidates = useMemo(
     () => products.filter((item) => item.id !== id),
@@ -63,6 +65,7 @@ export default function ProductDetailScreen() {
         initialCategory: product.category,
         initialDescription: product.description ?? '',
         initialImageUrl: product.image_url ?? '',
+        ...(profile?.role === 'specialist' ? { returnTo: 'specialist-products' } : {}),
       },
     });
   };

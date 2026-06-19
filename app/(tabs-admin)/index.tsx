@@ -274,8 +274,8 @@ export default function AdminHomeScreen() {
 
             {!documentsLoading && !documentsError && documents ? (
               <ScrollView contentContainerStyle={styles.documentsContent} showsVerticalScrollIndicator={false}>
-                <DocumentImageSection label="Foto del DNI" imageUrl={documents.dniPhotoUrl} />
-                <DocumentImageSection label="Foto del título" imageUrl={documents.titlePhotoUrl} />
+                <DocumentImageSection document={documents.dniPhoto} label="Foto del DNI" />
+                <DocumentImageSection document={documents.titlePhoto} label="Foto del título" />
                 <Text style={styles.expirationText}>
                   Los enlaces temporales vencen en {documents.expiresIn} segundos.
                 </Text>
@@ -344,16 +344,26 @@ function SpecialistRequestCard({
   );
 }
 
-function DocumentImageSection({ imageUrl, label }: { imageUrl: string | null; label: string }) {
+function DocumentImageSection({
+  document,
+  label
+}: {
+  document: SpecialistDocuments['dniPhoto'];
+  label: string;
+}) {
+  const documentUrl = document.available ? document.url : null;
+
   return (
     <View style={styles.documentSection}>
       <Text style={styles.documentLabel}>{label}</Text>
-      {imageUrl ? (
-        <Image resizeMode="contain" source={{ uri: imageUrl }} style={styles.documentImage} />
+      {documentUrl ? (
+        <Image resizeMode="contain" source={{ uri: documentUrl }} style={styles.documentImage} />
       ) : (
         <View style={styles.documentUnavailable}>
           <Ionicons color={colors.textSecondary} name="image-outline" size={28} />
-          <Text style={styles.stateText}>Documento no disponible</Text>
+          <Text style={styles.stateText}>
+            {document.errorMessage ?? 'No se encontró el archivo subido para este documento.'}
+          </Text>
         </View>
       )}
     </View>

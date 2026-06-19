@@ -618,7 +618,7 @@ function PasswordField({
         onPress={onToggleVisibility}
         style={styles.passwordToggle}
       >
-        <Text style={styles.passwordToggleText}>{isVisible ? 'Ocultar' : 'Mostrar'}</Text>
+        <Ionicons color="#718096" name={isVisible ? 'eye-off-outline' : 'eye-outline'} size={22} />
       </Pressable>
     </View>
   );
@@ -922,20 +922,15 @@ const styles = StyleSheet.create({
     flex: 1,
     height: '100%',
     paddingLeft: 14,
-    paddingRight: 90
+    paddingRight: 50
   },
   passwordToggle: {
     alignItems: 'center',
     height: '100%',
     justifyContent: 'center',
-    paddingHorizontal: 12,
     position: 'absolute',
-    right: 0
-  },
-  passwordToggleText: {
-    color: '#6D8D76',
-    fontSize: 13,
-    fontWeight: '800'
+    right: 0,
+    width: 50
   },
   selectInput: {
     alignItems: 'center',

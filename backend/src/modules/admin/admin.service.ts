@@ -23,9 +23,19 @@ export type AdminSpecialistSummary = {
 };
 
 export type AdminSpecialistDocuments = {
-  dniPhotoUrl: string;
-  titlePhotoUrl: string;
+  dniPhoto: AdminSpecialistDocument;
+  titlePhoto: AdminSpecialistDocument;
   expiresIn: number;
+};
+
+export type AdminSpecialistDocument = {
+  available: boolean;
+  url: string | null;
+  errorMessage: string | null;
+};
+
+type DocumentSigningResult = AdminSpecialistDocument & {
+  statusCode: number | null;
 };
 
 type UpdateSpecialistStatusBody = {
@@ -61,7 +71,7 @@ export const adminService = {
     });
 
     if (!updated) {
-      throw new ApiError(404, 'Solicitud de especialista no encontrada.');
+      throw new ApiError(409, 'La solicitud ya fue procesada.');
     }
 
     const profiles = await adminRepository.findProfilesByIds([updated.user_id]);
@@ -75,18 +85,24 @@ export const adminService = {
       throw new ApiError(404, 'Solicitud de especialista no encontrada.');
     }
 
-    if (!profile.dni_photo_url || !profile.title_photo_url) {
-      throw new ApiError(404, 'El documento no esta disponible.');
-    }
-
-    const [dniPhotoUrl, titlePhotoUrl] = await Promise.all([
-      createSignedDocumentUrl(profile.dni_photo_url, 'dniPhoto'),
-      createSignedDocumentUrl(profile.title_photo_url, 'titlePhoto')
+    const [dniPhoto, titlePhoto] = await Promise.all([
+      createDocumentSigningResult(profile.dni_photo_url, 'dniPhoto'),
+      createDocumentSigningResult(profile.title_photo_url, 'titlePhoto')
     ]);
 
+    if (!dniPhoto.available && !titlePhoto.available) {
+      const statusCode = dniPhoto.statusCode === 500 || titlePhoto.statusCode === 500 ? 500 : 404;
+      throw new ApiError(
+        statusCode,
+        statusCode === 404
+          ? 'No se encontraron los archivos subidos para esta solicitud.'
+          : 'No pudimos generar los enlaces seguros de los documentos.'
+      );
+    }
+
     return {
-      dniPhotoUrl,
-      titlePhotoUrl,
+      dniPhoto: toPublicDocumentResult(dniPhoto),
+      titlePhoto: toPublicDocumentResult(titlePhoto),
       expiresIn: SPECIALIST_DOCUMENT_SIGNED_URL_EXPIRES_IN
     };
   }
@@ -125,11 +141,46 @@ function toAdminSpecialistSummary(
     createdAt: specialist.created_at
   };
 }
+
+async function createDocumentSigningResult(
+  path: string | null,
+  documentType: 'dniPhoto' | 'titlePhoto'
+): Promise<DocumentSigningResult> {
+  try {
+    return {
+      available: true,
+      url: await createSignedDocumentUrl(path, documentType),
+      errorMessage: null,
+      statusCode: null
+    };
+  } catch (error) {
+    const apiError = error instanceof ApiError
+      ? error
+      : new ApiError(500, 'No pudimos generar el enlace seguro del documento.');
+
+    return {
+      available: false,
+      url: null,
+      errorMessage: apiError.message,
+      statusCode: apiError.statusCode
+    };
+  }
+}
+
+function toPublicDocumentResult(result: DocumentSigningResult): AdminSpecialistDocument {
+  return {
+    available: result.available,
+    url: result.url,
+    errorMessage: result.errorMessage
+  };
+}
+
 async function createSignedDocumentUrl(path: string | null, documentType: 'dniPhoto' | 'titlePhoto'): Promise<string> {
   const internalPath = normalizeSpecialistDocumentPath(path);
 
   logDocumentSigningDebug({
     documentType,
+    bucket: SPECIALIST_DOCS_BUCKET,
     hasRawPath: Boolean(path?.trim()),
     normalizedPath: internalPath
   });
@@ -168,16 +219,25 @@ function extractStoragePathFromUrl(value: string): string | null {
   try {
     const url = new URL(value);
     const path = decodeStoragePath(url.pathname);
-    const objectMarker = `/storage/v1/object/${SPECIALIST_DOCS_BUCKET}/`;
-    const publicMarker = `/storage/v1/object/public/${SPECIALIST_DOCS_BUCKET}/`;
-    const signedMarker = `/storage/v1/object/sign/${SPECIALIST_DOCS_BUCKET}/`;
-    const marker = [objectMarker, publicMarker, signedMarker].find((candidate) => path.includes(candidate));
+    const segments = path.split('/').filter(Boolean);
+    const storageIndex = segments.findIndex((segment, index) => (
+      segment === 'storage' &&
+      segments[index + 1] === 'v1' &&
+      segments[index + 2] === 'object'
+    ));
 
-    if (!marker) {
+    if (storageIndex === -1) {
       return null;
     }
 
-    return path.slice(path.indexOf(marker) + marker.length);
+    const objectSegments = segments.slice(storageIndex + 3);
+    const bucketIndex = objectSegments.findIndex((segment) => segment === SPECIALIST_DOCS_BUCKET);
+
+    if (bucketIndex === -1) {
+      return null;
+    }
+
+    return objectSegments.slice(bucketIndex + 1).join('/');
   } catch {
     return null;
   }
@@ -225,6 +285,7 @@ function mapSignedUrlError(error: unknown): ApiError {
 
 function logDocumentSigningDebug(meta: {
   documentType: 'dniPhoto' | 'titlePhoto';
+  bucket: string;
   hasRawPath: boolean;
   normalizedPath: string;
 }): void {
@@ -240,6 +301,7 @@ function logDocumentSigningError(
   if (env.nodeEnv !== 'development') return;
   console.error('[admin/specialist-documents:error]', {
     documentType,
+    bucket: SPECIALIST_DOCS_BUCKET,
     normalizedPath,
     errorMessage: getErrorMessage(error)
   });

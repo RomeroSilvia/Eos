@@ -1,6 +1,7 @@
 import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
-import { apiRequest } from '@/services/api/client';
+import { ApiRequestError, apiRequest } from '@/services/api/client';
+import { getSpecialistStatus } from '@/services/specialist';
 import type { UserProfile } from '@/types/user';
 
 const sessionKey = 'eos-session';
@@ -54,6 +55,8 @@ export const mockUserProfile: UserProfile = {
   skinType: 'mixed'
 };
 
+export type PostLoginRoute = '/(tabs-admin)' | '/(tabs)/home' | '/(tabs-specialist)' | '/specialist-status';
+
 export async function login({ email, password }: LoginPayload): Promise<UserProfile> {
   const data = await apiRequest<AuthResponse>({
     path: '/auth/login',
@@ -63,6 +66,47 @@ export async function login({ email, password }: LoginPayload): Promise<UserProf
 
   await persistAuthSession(data);
   return mapAuthResponseToProfile(data);
+}
+
+export async function getPostLoginRoute(profile: Pick<UserProfile, 'role'>): Promise<PostLoginRoute> {
+  if (profile.role === 'center_admin') {
+    return '/(tabs-admin)';
+  }
+
+  if (profile.role !== 'specialist') {
+    return '/(tabs)/home';
+  }
+
+  const status = await getSpecialistStatus().catch(() => null);
+
+  if (status?.license_status === 'verified') {
+    return '/(tabs-specialist)';
+  }
+
+  return '/specialist-status';
+}
+
+export function getLoginErrorMessage(error: unknown): string {
+  if (error instanceof ApiRequestError) {
+    if (process.env.NODE_ENV !== 'production') {
+      console.warn('[auth/login]', {
+        status: error.status,
+        body: error.body
+      });
+    }
+
+    if (error.status === 401) return 'Email o contrasena incorrectos.';
+    if (error.status === 400) return 'Revisa los datos ingresados e intenta nuevamente.';
+    if (error.status === 403) return 'No tenes permisos para realizar esta accion.';
+    if (error.status === 429) return 'Demasiados intentos. Proba nuevamente en unos minutos.';
+    return 'No pudimos completar la accion. Intenta nuevamente.';
+  }
+
+  if (process.env.NODE_ENV !== 'production' && error instanceof Error) {
+    console.warn('[auth/login]', error.message);
+  }
+
+  return 'No pudimos completar la accion. Intenta nuevamente.';
 }
 
 export async function register(payload: RegisterPayload): Promise<UserProfile> {
