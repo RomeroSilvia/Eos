@@ -3,11 +3,30 @@ import { env } from '../config/env';
 import { ApiError } from '../utils/ApiError';
 
 export const errorMiddleware: ErrorRequestHandler = (error, _req, res, _next) => {
-  const statusCode = error instanceof ApiError ? error.statusCode : 500;
+  const isApiError = error instanceof ApiError;
+  const statusCode = isApiError ? error.statusCode : 500;
+  const message = isApiError
+    ? error.message
+    : env.nodeEnv === 'development'
+      ? getUnexpectedErrorMessage(error)
+      : 'Unexpected server error';
+
+  if (!isApiError && env.nodeEnv === 'development') {
+    console.error('[unexpected-error]', {
+      name: error instanceof Error ? error.name : typeof error,
+      message: error instanceof Error ? error.message : String(error)
+    });
+  }
 
   res.status(statusCode).json({
     status: 'error',
-    message: error instanceof Error ? error.message : 'Unexpected server error',
+    message,
     stack: env.nodeEnv === 'development' && error instanceof Error ? error.stack : undefined
   });
 };
+
+function getUnexpectedErrorMessage(error: unknown): string {
+  if (error instanceof Error) return error.message;
+  if (typeof error === 'string') return error;
+  return 'Unexpected server error';
+}
