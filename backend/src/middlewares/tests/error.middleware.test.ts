@@ -53,4 +53,38 @@ describe('errorMiddleware', () => {
     process.env.NODE_ENV = previousNodeEnv;
     jest.resetModules();
   });
+
+  it('mantiene mensaje generico para errores inesperados en desarrollo', () => {
+    const res = makeResponse();
+
+    errorMiddleware(
+      new Error('storage unavailable con detalle interno'),
+      {} as Request,
+      res,
+      jest.fn() as NextFunction
+    );
+
+    expect(res.status).toHaveBeenCalledWith(500);
+    expect(res.json).toHaveBeenCalledWith({
+      status: 'error',
+      message: 'Unexpected server error'
+    });
+  });
+
+  it('no expone stack trace en la respuesta', () => {
+    const res = makeResponse();
+
+    errorMiddleware(
+      new ApiError(404, 'No se encontraron los archivos subidos para esta solicitud.'),
+      {} as Request,
+      res,
+      jest.fn() as NextFunction
+    );
+
+    expect(res.status).toHaveBeenCalledWith(404);
+    expect(res.json).toHaveBeenCalledWith({
+      status: 'error',
+      message: 'No se encontraron los archivos subidos para esta solicitud.'
+    });
+  });
 });

@@ -135,14 +135,41 @@ describe('adminService', () => {
     ).rejects.toThrow(ApiError);
   });
 
-  it('specialistProfileId inexistente devuelve 404', async () => {
+  it('devuelve 409 cuando no se actualiza ninguna fila', async () => {
     mockedRepo.updateSpecialistStatus.mockResolvedValue(null);
 
     await expect(
-      adminService.updateSpecialistStatus('inexistente', { licenseStatus: 'verified' })
+      adminService.updateSpecialistStatus('specialist-profile-1', { licenseStatus: 'verified' })
     ).rejects.toMatchObject({
-      statusCode: 404,
-      message: 'Solicitud de especialista no encontrada.'
+      statusCode: 409,
+      message: 'La solicitud ya fue procesada.'
+    });
+  });
+
+  it('devuelve 409 si la solicitud ya estaba verified', async () => {
+    mockedRepo.updateSpecialistStatus.mockResolvedValue(null);
+
+    await expect(
+      adminService.updateSpecialistStatus('specialist-profile-1', {
+        licenseStatus: 'rejected',
+        rejectionReason: 'Duplicada'
+      })
+    ).rejects.toMatchObject({
+      statusCode: 409,
+      message: 'La solicitud ya fue procesada.'
+    });
+  });
+
+  it('devuelve 409 si la solicitud ya estaba rejected', async () => {
+    mockedRepo.updateSpecialistStatus.mockResolvedValue(null);
+
+    await expect(
+      adminService.updateSpecialistStatus('specialist-profile-1', {
+        licenseStatus: 'verified'
+      })
+    ).rejects.toMatchObject({
+      statusCode: 409,
+      message: 'La solicitud ya fue procesada.'
     });
   });
 
@@ -159,8 +186,16 @@ describe('adminService', () => {
     expect(mockedCreateSignedUrl).toHaveBeenNthCalledWith(1, 'user-1/dni/documento.jpg', 300);
     expect(mockedCreateSignedUrl).toHaveBeenNthCalledWith(2, 'user-1/titulo/titulo.jpg', 300);
     expect(result).toEqual({
-      dniPhotoUrl: 'https://signed.example/user-1/dni/documento.jpg',
-      titlePhotoUrl: 'https://signed.example/user-1/titulo/titulo.jpg',
+      dniPhoto: {
+        available: true,
+        url: 'https://signed.example/user-1/dni/documento.jpg',
+        errorMessage: null
+      },
+      titlePhoto: {
+        available: true,
+        url: 'https://signed.example/user-1/titulo/titulo.jpg',
+        errorMessage: null
+      },
       expiresIn: 300
     });
     expect(result).not.toHaveProperty('dni_photo_url');
@@ -187,8 +222,16 @@ describe('adminService', () => {
     expect(mockedCreateSignedUrl).toHaveBeenNthCalledWith(1, 'user-1/dni/documento.jpg', 300);
     expect(mockedCreateSignedUrl).toHaveBeenNthCalledWith(2, 'user-1/titulo/titulo.jpg', 300);
     expect(result).toEqual({
-      dniPhotoUrl: 'https://signed.example/user-1/dni/documento.jpg',
-      titlePhotoUrl: 'https://signed.example/user-1/titulo/titulo.jpg',
+      dniPhoto: {
+        available: true,
+        url: 'https://signed.example/user-1/dni/documento.jpg',
+        errorMessage: null
+      },
+      titlePhoto: {
+        available: true,
+        url: 'https://signed.example/user-1/titulo/titulo.jpg',
+        errorMessage: null
+      },
       expiresIn: 300
     });
   });
@@ -205,8 +248,16 @@ describe('adminService', () => {
     expect(mockedCreateSignedUrl).toHaveBeenNthCalledWith(1, 'user-1/dni/documento.jpg', 300);
     expect(mockedCreateSignedUrl).toHaveBeenNthCalledWith(2, 'user-1/titulo/titulo.jpg', 300);
     expect(result).toEqual({
-      dniPhotoUrl: 'https://signed.example/user-1/dni/documento.jpg',
-      titlePhotoUrl: 'https://signed.example/user-1/titulo/titulo.jpg',
+      dniPhoto: {
+        available: true,
+        url: 'https://signed.example/user-1/dni/documento.jpg',
+        errorMessage: null
+      },
+      titlePhoto: {
+        available: true,
+        url: 'https://signed.example/user-1/titulo/titulo.jpg',
+        errorMessage: null
+      },
       expiresIn: 300
     });
   });
@@ -223,8 +274,16 @@ describe('adminService', () => {
     expect(mockedCreateSignedUrl).toHaveBeenNthCalledWith(1, 'user-1/dni/documento.jpg', 300);
     expect(mockedCreateSignedUrl).toHaveBeenNthCalledWith(2, 'user-1/titulo/titulo.jpg', 300);
     expect(result).toEqual({
-      dniPhotoUrl: 'https://signed.example/user-1/dni/documento.jpg',
-      titlePhotoUrl: 'https://signed.example/user-1/titulo/titulo.jpg',
+      dniPhoto: {
+        available: true,
+        url: 'https://signed.example/user-1/dni/documento.jpg',
+        errorMessage: null
+      },
+      titlePhoto: {
+        available: true,
+        url: 'https://signed.example/user-1/titulo/titulo.jpg',
+        errorMessage: null
+      },
       expiresIn: 300
     });
   });
@@ -238,33 +297,111 @@ describe('adminService', () => {
     });
   });
 
-  it('falla claro si falta dni_photo_url', async () => {
+  it('maneja dni faltante sin romper la respuesta completa', async () => {
     mockedRepo.findSpecialistDocumentsById.mockResolvedValue({
       id: 'specialist-profile-1',
       dni_photo_url: null,
       title_photo_url: 'user-1/titulo/titulo.jpg'
     });
 
-    await expect(adminService.getSpecialistDocuments('specialist-profile-1')).rejects.toMatchObject({
-      statusCode: 404,
-      message: 'El documento no esta disponible.'
+    const result = await adminService.getSpecialistDocuments('specialist-profile-1');
+
+    expect(mockedCreateSignedUrl).toHaveBeenCalledTimes(1);
+    expect(mockedCreateSignedUrl).toHaveBeenCalledWith('user-1/titulo/titulo.jpg', 300);
+    expect(result).toEqual({
+      dniPhoto: {
+        available: false,
+        url: null,
+        errorMessage: 'El documento no está disponible.'
+      },
+      titlePhoto: {
+        available: true,
+        url: 'https://signed.example/user-1/titulo/titulo.jpg',
+        errorMessage: null
+      },
+      expiresIn: 300
     });
   });
 
-  it('falla claro si falta title_photo_url', async () => {
+  it('maneja titulo faltante sin romper la respuesta completa', async () => {
     mockedRepo.findSpecialistDocumentsById.mockResolvedValue({
       id: 'specialist-profile-1',
       dni_photo_url: 'user-1/dni/documento.jpg',
       title_photo_url: null
     });
 
-    await expect(adminService.getSpecialistDocuments('specialist-profile-1')).rejects.toMatchObject({
-      statusCode: 404,
-      message: 'El documento no esta disponible.'
+    const result = await adminService.getSpecialistDocuments('specialist-profile-1');
+
+    expect(mockedCreateSignedUrl).toHaveBeenCalledTimes(1);
+    expect(mockedCreateSignedUrl).toHaveBeenCalledWith('user-1/dni/documento.jpg', 300);
+    expect(result).toEqual({
+      dniPhoto: {
+        available: true,
+        url: 'https://signed.example/user-1/dni/documento.jpg',
+        errorMessage: null
+      },
+      titlePhoto: {
+        available: false,
+        url: null,
+        errorMessage: 'El documento no está disponible.'
+      },
+      expiresIn: 300
     });
   });
 
-  it('archivo inexistente en storage devuelve 404 claro', async () => {
+  it('devuelve 404 controlado si ambos paths faltan en DB', async () => {
+    mockedRepo.findSpecialistDocumentsById.mockResolvedValue({
+      id: 'specialist-profile-1',
+      dni_photo_url: null,
+      title_photo_url: null
+    });
+
+    await expect(adminService.getSpecialistDocuments('specialist-profile-1')).rejects.toMatchObject({
+      statusCode: 404,
+      message: 'No se encontraron los archivos subidos para esta solicitud.'
+    });
+    expect(mockedCreateSignedUrl).not.toHaveBeenCalled();
+  });
+
+  it('maneja archivo inexistente en storage sin romper si el otro documento existe', async () => {
+    mockedRepo.findSpecialistDocumentsById.mockResolvedValue({
+      id: 'specialist-profile-1',
+      dni_photo_url: 'user-1/dni/documento.jpg',
+      title_photo_url: 'user-1/titulo/titulo.jpg'
+    });
+    const createSignedUrl = jest.fn((path: string) => Promise.resolve(
+      path.includes('/dni/')
+        ? {
+          data: null,
+          error: { message: 'Object not found' }
+        }
+        : {
+          data: { signedUrl: `https://signed.example/${path}` },
+          error: null
+        }
+    ));
+    mockedStorageFrom.mockReturnValue({
+      createSignedUrl
+    });
+
+    const result = await adminService.getSpecialistDocuments('specialist-profile-1');
+
+    expect(result).toEqual({
+      dniPhoto: {
+        available: false,
+        url: null,
+        errorMessage: 'No encontramos el archivo subido para este documento.'
+      },
+      titlePhoto: {
+        available: true,
+        url: 'https://signed.example/user-1/titulo/titulo.jpg',
+        errorMessage: null
+      },
+      expiresIn: 300
+    });
+  });
+
+  it('devuelve 404 controlado si ambos documentos faltan en storage', async () => {
     mockedRepo.findSpecialistDocumentsById.mockResolvedValue({
       id: 'specialist-profile-1',
       dni_photo_url: 'user-1/dni/documento.jpg',
@@ -279,11 +416,11 @@ describe('adminService', () => {
 
     await expect(adminService.getSpecialistDocuments('specialist-profile-1')).rejects.toMatchObject({
       statusCode: 404,
-      message: 'No encontramos el archivo subido para este documento.'
+      message: 'No se encontraron los archivos subidos para esta solicitud.'
     });
   });
 
-  it('error de storage devuelve mensaje claro', async () => {
+  it('error de storage devuelve mensaje claro si ambos documentos fallan', async () => {
     mockedRepo.findSpecialistDocumentsById.mockResolvedValue({
       id: 'specialist-profile-1',
       dni_photo_url: 'user-1/dni/documento.jpg',
@@ -298,7 +435,7 @@ describe('adminService', () => {
 
     await expect(adminService.getSpecialistDocuments('specialist-profile-1')).rejects.toMatchObject({
       statusCode: 500,
-      message: 'No pudimos generar el enlace seguro del documento.'
+      message: 'No pudimos generar los enlaces seguros de los documentos.'
     });
   });
 });

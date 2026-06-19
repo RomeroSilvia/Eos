@@ -79,6 +79,15 @@ export function getFriendlyApiErrorMessage(status?: number): string {
   return 'No pudimos completar la accion. Intenta nuevamente.';
 }
 
+export function getFriendlyAuthErrorMessage(status?: number): string {
+  if (status === 400) return 'Revisá los datos ingresados.';
+  if (status === 401) return 'Tu sesión expiró. Iniciá sesión nuevamente.';
+  if (status === 403) return 'No tenés permisos para realizar esta acción.';
+  if (status === 404) return 'No se encontró la solicitud.';
+  if (status === 429) return 'Demasiados intentos. Probá nuevamente en unos minutos.';
+  return 'Ocurrió un error. Intentá nuevamente.';
+}
+
 export function getFriendlyErrorMessage(error: unknown, fallback = 'No pudimos completar la accion. Intenta nuevamente.'): string {
   if (error instanceof ApiRequestError) {
     return getFriendlyApiErrorMessage(error.status);

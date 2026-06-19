@@ -79,9 +79,6 @@ export default function SpecialistHomeScreen() {
         </View>
       </ScrollView>
 
-      <Pressable accessibilityLabel="Nueva consulta" style={styles.floatingButton}>
-        <Ionicons color={colors.surface} name="add" size={34} />
-      </Pressable>
     </SafeAreaView>
   );
 }
@@ -266,23 +263,5 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     fontSize: 14,
     fontWeight: '800'
-  },
-  floatingButton: {
-    alignItems: 'center',
-    backgroundColor: colors.primary,
-    borderColor: colors.surface,
-    borderRadius: 28,
-    borderWidth: 3,
-    bottom: 84,
-    elevation: 4,
-    height: 56,
-    justifyContent: 'center',
-    position: 'absolute',
-    right: 20,
-    shadowColor: colors.textPrimary,
-    shadowOffset: { height: 4, width: 0 },
-    shadowOpacity: 0.18,
-    shadowRadius: 8,
-    width: 56
   }
 });

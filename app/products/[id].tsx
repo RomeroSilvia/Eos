@@ -5,6 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
 import { colors } from '@/constants/colors';
+import { useProfile } from '@/hooks/useProfile';
 import { useProducts } from '@/hooks/useProducts';
 import type { ProductCategory } from '@/types/product';
 
@@ -20,6 +21,7 @@ const CATEGORY_LABELS: Record<ProductCategory, string> = {
 export default function ProductDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { products, removeProduct, isLoading } = useProducts();
+  const { profile } = useProfile();
   const product = products.find((p) => p.id === id);
 
   if (isLoading) {
@@ -53,6 +55,7 @@ export default function ProductDetailScreen() {
         initialCategory: product.category,
         initialDescription: product.description ?? '',
         initialImageUrl: product.image_url ?? '',
+        ...(profile?.role === 'specialist' ? { returnTo: 'specialist-products' } : {}),
       },
     });
   };

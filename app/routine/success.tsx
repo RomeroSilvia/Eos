@@ -4,6 +4,7 @@ import { colors } from '@/constants/colors';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
+import { useProfile } from '@/hooks/useProfile';
 import { getRoutineById } from '@/services/routines';
 import type { Routine, RoutineTimeOfDay } from '@/types/routine';
 
@@ -11,6 +12,7 @@ export default function SuccessScreen() {
   const router = useRouter();
   const { routineId } = useLocalSearchParams<{ routineId: string }>();
   const [routine, setRoutine] = useState<Routine | null>(null);
+  const { profile } = useProfile();
 
   useEffect(() => {
     if (!routineId) return;
@@ -57,7 +59,7 @@ export default function SuccessScreen() {
 
         <Pressable
           style={styles.button}
-          onPress={() => router.push('/routine')}
+          onPress={() => router.push((profile?.role === 'specialist' ? '/(tabs-specialist)/rutinas' : '/routine') as never)}
         >
           <Text style={styles.buttonText}>Ver mi rutina</Text>
         </Pressable>

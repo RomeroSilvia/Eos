@@ -1,36 +1,10 @@
 import { AntDesign, Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import * as SecureStore from 'expo-secure-store';
 import { useState } from 'react';
-import { Alert, Image, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, Image, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { apiConfig, getFriendlyApiErrorMessage } from '@/services/api/client';
-import { getSpecialistStatus } from '@/services/specialist';
+import { getLoginErrorMessage, getPostLoginRoute, login as loginUser } from '@/services/auth';
 
-type LoginResponse = {
-  token?: string | null;
-  session?: {
-    access_token?: string | null;
-  } | null;
-  user?: {
-    id?: string;
-    email?: string;
-  };
-  profile?: {
-    id?: string;
-    full_name?: string | null;
-    email?: string | null;
-    skin_type?: string | null;
-    username?: string | null;
-    first_name?: string | null;
-    last_name?: string | null;
-    role?: string | null;
-  } | null;
-  message?: string;
-};
-
-const accessTokenKey = 'eos-access-token';
-const sessionKey = 'eos-session';
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 type LoginErrors = {
@@ -59,42 +33,14 @@ export default function LoginScreen() {
     setIsSubmitting(true);
 
     try {
-      const response = await fetch(`${apiConfig.baseUrl}/auth/login`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          email: email.trim().toLowerCase(),
-          password
-        })
+      const profile = await loginUser({
+        email: email.trim().toLowerCase(),
+        password
       });
-
-      const data = (await response.json()) as LoginResponse;
-
-      if (!response.ok) {
-        const message = getLoginErrorMessage(response.status, data.message);
-        setErrors({ form: message });
-        Alert.alert('Error del Servidor', message);
-        return;
-      }
-
-      const token = data.token ?? data.session?.access_token;
-
-      if (!token) {
-        const message = 'No se recibio un token de sesion.';
-        setErrors({ form: message });
-        Alert.alert('Error del servidor', message);
-        return;
-      }
-
-      const profile = await saveSession(token, data);
-      await routeAfterLogin(profile.role, router);
+      const route = await getPostLoginRoute(profile);
+      router.replace(route as never);
     } catch (error) {
-      if (process.env.NODE_ENV !== 'production') {
-        console.error(error);
-      }
-      const message = 'No pudimos completar la accion. Intenta nuevamente.';
+      const message = getLoginErrorMessage(error);
       setErrors({ form: message });
       Alert.alert('Error de Conexión', message);
     } finally {
@@ -201,69 +147,6 @@ export default function LoginScreen() {
   );
 }
 
-async function saveSession(token: string, data: LoginResponse): Promise<{ role: string }> {
-  const profile = mapLoginResponseToProfile(data);
-  const serializedSession = JSON.stringify({
-    token,
-    session: data.session ?? null,
-    user: data.user ?? null,
-    profile
-  });
-
-  if (Platform.OS === 'web') {
-    localStorage.setItem(accessTokenKey, token);
-    localStorage.setItem(sessionKey, serializedSession);
-    return profile;
-  }
-
-  await SecureStore.setItemAsync(accessTokenKey, token);
-  await SecureStore.setItemAsync(sessionKey, serializedSession);
-  return profile;
-}
-
-function mapLoginResponseToProfile(data: LoginResponse) {
-  const profile = data.profile;
-  const fullName = [profile?.first_name, profile?.last_name].filter(Boolean).join(' ').trim();
-  const role = getSupportedRole(profile?.role);
-
-  return {
-    id: profile?.id ?? data.user?.id ?? 'user',
-    name: profile?.full_name ?? (fullName || profile?.username || data.user?.email || 'Usuario'),
-    email: profile?.email ?? data.user?.email,
-    role,
-    skinType: profile?.skin_type ?? 'mixed'
-  };
-}
-
-async function routeAfterLogin(role: string, router: ReturnType<typeof useRouter>) {
-  if (role === 'center_admin') {
-    router.replace('/(tabs-admin)' as never);
-    return;
-  }
-
-  if (role !== 'specialist') {
-    router.replace('/(tabs)/home');
-    return;
-  }
-
-  const status = await getSpecialistStatus().catch(() => null);
-
-  if (status?.license_status === 'verified') {
-    router.replace('/(tabs-specialist)' as never);
-    return;
-  }
-
-  router.replace('/specialist-status' as never);
-}
-
-function getSupportedRole(role?: string | null): 'user' | 'specialist' | 'center_admin' {
-  if (role === 'specialist' || role === 'center_admin') {
-    return role;
-  }
-
-  return 'user';
-}
-
 function validateLogin(email: string, password: string): LoginErrors {
   const nextErrors: LoginErrors = {};
   const trimmedEmail = email.trim();
@@ -279,14 +162,6 @@ function validateLogin(email: string, password: string): LoginErrors {
   }
 
   return nextErrors;
-}
-
-function getLoginErrorMessage(status: number, message?: string) {
-  if (message?.toLowerCase().includes('invalid login credentials')) {
-    return 'Email o contrasena incorrectos.';
-  }
-
-  return getFriendlyApiErrorMessage(status);
 }
 
 const styles = StyleSheet.create({

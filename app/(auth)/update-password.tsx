@@ -3,11 +3,7 @@ import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Alert, Image, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { apiConfig } from '@/services/api/client';
-
-type UpdatePasswordResponse = {
-  message?: string;
-};
+import { apiConfig, getFriendlyAuthErrorMessage } from '@/services/api/client';
 
 export default function UpdatePasswordScreen() {
   const router = useRouter();
@@ -53,18 +49,17 @@ export default function UpdatePasswordScreen() {
         body: JSON.stringify({ newPassword: password, accessToken })
       });
 
-      const data = (await response.json().catch(() => null)) as UpdatePasswordResponse | null;
-
       if (!response.ok) {
-        Alert.alert('Error del Servidor', data?.message ?? 'No pudimos guardar tu contraseña.');
+        await logAuthResponseInDevelopment(response, 'update-password');
+        Alert.alert('Error del Servidor', getFriendlyAuthErrorMessage(response.status));
         return;
       }
 
-      Alert.alert('Contraseña actualizada', data?.message ?? 'Tu contraseña fue actualizada.');
+      Alert.alert('Contraseña actualizada', 'Tu contraseña fue actualizada.');
       router.replace('/login');
     } catch (error) {
-      console.error(error);
-      Alert.alert('Error de Conexión', 'No se pudo conectar con el backend. Revisa tu consola.');
+      logAuthErrorInDevelopment(error, 'update-password');
+      Alert.alert('Error de Conexión', 'Ocurrió un error. Intentá nuevamente.');
     }
   }
 
@@ -128,6 +123,24 @@ export default function UpdatePasswordScreen() {
       </Pressable>
     </SafeAreaView>
   );
+}
+
+async function logAuthResponseInDevelopment(response: Response, flow: string): Promise<void> {
+  if (process.env.NODE_ENV === 'production') {
+    return;
+  }
+
+  const body = await response.clone().json().catch(() => null);
+  console.warn(`[auth/${flow}]`, {
+    status: response.status,
+    body
+  });
+}
+
+function logAuthErrorInDevelopment(error: unknown, flow: string): void {
+  if (process.env.NODE_ENV !== 'production') {
+    console.warn(`[auth/${flow}]`, error);
+  }
 }
 
 function isValidPassword(value: string) {
