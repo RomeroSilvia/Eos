@@ -63,16 +63,30 @@ export async function rejectSpecialist(
 }
 
 export function getAdminErrorMessage(error: unknown): string {
-  if (error instanceof ApiRequestError && error.status === 403) {
-    return 'No tenés permisos para acceder a esta sección';
-  }
-
   if (error instanceof ApiRequestError) {
-    const body = error.body as { message?: string } | null;
-    return body?.message ?? 'No pudimos completar la operación.';
+    if (process.env.NODE_ENV !== 'production') {
+      console.warn('[admin/api]', {
+        status: error.status,
+        body: error.body
+      });
+    }
+
+    return getAdminFriendlyMessage(error.status);
   }
 
-  return error instanceof Error ? error.message : 'No pudimos conectar con el backend.';
+  if (process.env.NODE_ENV !== 'production' && error instanceof Error) {
+    console.warn('[admin/api]', error.message);
+  }
+
+  return 'Ocurrió un error. Intentá nuevamente.';
+}
+
+function getAdminFriendlyMessage(status: number): string {
+  if (status === 401) return 'Tu sesión expiró. Iniciá sesión nuevamente.';
+  if (status === 403) return 'No tenés permisos para realizar esta acción.';
+  if (status === 404) return 'No se encontró la solicitud.';
+  if (status === 409) return 'La solicitud ya fue procesada.';
+  return 'Ocurrió un error. Intentá nuevamente.';
 }
 
 async function updateSpecialistStatus(
