@@ -3,11 +3,10 @@ import { Tabs, useRouter } from 'expo-router';
 import { useEffect } from 'react';
 import { View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { FloatingActionMenu } from '@/components/FloatingActionMenu';
 import { colors } from '@/constants/colors';
 import { useProfile } from '@/hooks/useProfile';
 
-export const TAB_BAR_CONTENT_HEIGHT = 56;
+const TAB_BAR_CONTENT_HEIGHT = 58;
 
 type TabIconName = keyof typeof Ionicons.glyphMap;
 
@@ -19,7 +18,7 @@ function tabIcon(name: TabIconName, focusedName: TabIconName) {
   return TabBarIcon;
 }
 
-export default function TabsLayout() {
+export default function SpecialistTabsLayout() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { profile } = useProfile();
@@ -31,22 +30,22 @@ export default function TabsLayout() {
       return;
     }
 
-    if (profile?.role === 'specialist') {
-      router.replace('/specialist-status' as never);
+    if (profile && profile.role !== 'specialist') {
+      router.replace('/(tabs)/home');
     }
-  }, [profile?.role, router]);
+  }, [profile, router]);
 
   return (
     <View style={{ flex: 1 }}>
       <Tabs
-        initialRouteName="home"
+        initialRouteName="index"
         screenOptions={{
           headerShown: false,
-          tabBarActiveTintColor: colors.primary,
-          tabBarInactiveTintColor: colors.textMuted,
+          tabBarActiveTintColor: colors.textPrimary,
+          tabBarInactiveTintColor: colors.textSecondary,
           tabBarLabelStyle: {
             fontSize: 12,
-            fontWeight: '700'
+            fontWeight: '800'
           },
           tabBarStyle: {
             backgroundColor: colors.surface,
@@ -57,19 +56,24 @@ export default function TabsLayout() {
           }
         }}
       >
-        <Tabs.Screen name="home" options={{ title: 'Inicio', tabBarIcon: tabIcon('home-outline', 'home') }} />
-        <Tabs.Screen name="routine" options={{ title: 'Rutina', tabBarIcon: tabIcon('leaf-outline', 'leaf') }} />
+        <Tabs.Screen name="index" options={{ title: 'Inicio', tabBarIcon: tabIcon('home-outline', 'home') }} />
         <Tabs.Screen
-          name="products"
-          options={{ title: 'Productos', tabBarIcon: tabIcon('bag-outline', 'bag') }}
+          name="consultas"
+          options={{ title: 'Consultas', tabBarIcon: tabIcon('chatbubbles-outline', 'chatbubbles') }}
         />
         <Tabs.Screen
-          name="progress"
-          options={{ title: 'Progreso', tabBarIcon: tabIcon('bar-chart-outline', 'bar-chart') }}
+          name="pacientes"
+          options={{ title: 'Pacientes', tabBarIcon: tabIcon('people-outline', 'people') }}
         />
-        <Tabs.Screen name="profile" options={{ title: 'Perfil', tabBarIcon: tabIcon('person-outline', 'person') }} />
+        <Tabs.Screen
+          name="rutinas"
+          options={{ title: 'Rutinas', tabBarIcon: tabIcon('list-outline', 'list') }}
+        />
+        <Tabs.Screen
+          name="profile"
+          options={{ title: 'Perfil', tabBarIcon: tabIcon('person-outline', 'person') }}
+        />
       </Tabs>
-      <FloatingActionMenu tabBarHeight={tabBarHeight} />
     </View>
   );
 }

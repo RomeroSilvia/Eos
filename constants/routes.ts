@@ -8,7 +8,8 @@ export const routes = {
   progressHistory: '/progress/history',
   progressStats: '/progress/stats',
   progressDayDetail: '/progress/history/[date]',
-  profile: '/profile'
+  profile: '/profile',
+  specialistStatus: '/specialist-status'
 } as const;
 
 export type AppRoute = (typeof routes)[keyof typeof routes];
