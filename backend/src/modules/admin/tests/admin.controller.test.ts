@@ -99,8 +99,16 @@ describe('adminController', () => {
     const next = jest.fn();
 
     mockedService.getSpecialistDocuments.mockResolvedValue({
-      dniPhotoUrl: 'https://signed.example/dni',
-      titlePhotoUrl: 'https://signed.example/titulo',
+      dniPhoto: {
+        available: true,
+        url: 'https://signed.example/dni',
+        errorMessage: null
+      },
+      titlePhoto: {
+        available: true,
+        url: 'https://signed.example/titulo',
+        errorMessage: null
+      },
       expiresIn: 300
     });
 
@@ -114,8 +122,16 @@ describe('adminController', () => {
     expect(mockedService.getSpecialistDocuments).toHaveBeenCalledWith('specialist-profile-1');
     expect(res.json).toHaveBeenCalledWith({
       documents: {
-        dniPhotoUrl: 'https://signed.example/dni',
-        titlePhotoUrl: 'https://signed.example/titulo',
+        dniPhoto: {
+          available: true,
+          url: 'https://signed.example/dni',
+          errorMessage: null
+        },
+        titlePhoto: {
+          available: true,
+          url: 'https://signed.example/titulo',
+          errorMessage: null
+        },
         expiresIn: 300
       }
     });

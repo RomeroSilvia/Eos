@@ -28,11 +28,6 @@ export type SpecialistStatusUpdate = {
   rejection_reason: string | null;
 };
 
-export type SpecialistStatusRow = {
-  id: string;
-  license_status: string;
-};
-
 export const adminRepository = {
   findPendingSpecialists: async (): Promise<AdminSpecialistProfileRow[]> => {
     const { data, error } = await supabase
@@ -84,16 +79,5 @@ export const adminRepository = {
 
     if (error) throw error;
     return updated;
-  },
-
-  findSpecialistStatusById: async (specialistProfileId: string): Promise<SpecialistStatusRow | null> => {
-    const { data, error } = await supabase
-      .from(TABLE_NAMES.specialistProfiles)
-      .select('id, license_status')
-      .eq('id', specialistProfileId)
-      .maybeSingle();
-
-    if (error) throw error;
-    return data;
   }
 };

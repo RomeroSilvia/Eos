@@ -21,9 +21,15 @@ type UpdateSpecialistStatusResponse = {
 };
 
 export type SpecialistDocuments = {
-  dniPhotoUrl: string | null;
-  titlePhotoUrl: string | null;
+  dniPhoto: SpecialistDocument;
+  titlePhoto: SpecialistDocument;
   expiresIn: number;
+};
+
+export type SpecialistDocument = {
+  available: boolean;
+  url: string | null;
+  errorMessage: string | null;
 };
 
 type SpecialistDocumentsResponse = {
