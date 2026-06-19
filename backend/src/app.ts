@@ -1,6 +1,7 @@
-﻿import cors from 'cors';
+import cors from 'cors';
 import express from 'express';
 import { env } from './config/env';
+import { adminRouter } from './modules/admin/admin.routes';
 import { authRouter } from './modules/auth/auth.routes';
 import { productsRouter } from './modules/products/products.routes';
 import { profileRouter } from './modules/profile/profile.routes';
@@ -25,6 +26,7 @@ app.get('/api/health', (_req, res) => {
 });
 
 app.use('/api/auth', authRouter);
+app.use('/api/admin', adminRouter);
 app.use('/api/routines', routinesRouter);
 app.use('/api/products', productsRouter);
 app.use('/api/progress', progressRouter);
