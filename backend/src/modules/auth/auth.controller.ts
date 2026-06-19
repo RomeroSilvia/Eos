@@ -229,7 +229,8 @@ export const googleLogin: RequestHandler = async (req, res, next) => {
         .insert({
           id: data.user.id,
           email,
-          full_name: [firstName, lastName].filter(Boolean).join(' ').trim() || username
+          full_name: [firstName, lastName].filter(Boolean).join(' ').trim() || username,
+          role: 'user'
         });
 
       if (insertError) {
