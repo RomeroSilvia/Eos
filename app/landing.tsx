@@ -30,11 +30,11 @@ export default function LandingScreen() {
       </View>
 
       <View style={styles.buttons}>
-        <Pressable style={[styles.button, styles.outlineButton]} onPress={() => router.push('/register')}>
+        <Pressable style={[styles.button, styles.outlineButton]} onPress={() => router.push('/register?mode=user' as never)}>
           <Text style={[styles.buttonText, styles.outlineButtonText]}>Comenzar análisis de piel</Text>
         </Pressable>
 
-        <Pressable style={[styles.button, styles.primaryButton]}>
+        <Pressable style={[styles.button, styles.primaryButton]} onPress={() => router.push('/register?mode=specialist' as never)}>
           <Text style={[styles.buttonText, styles.primaryButtonText]}>Soy especialista</Text>
         </Pressable>
 
