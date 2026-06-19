@@ -7,17 +7,29 @@ export const authenticate: RequestHandler = async (req, _res, next) => {
     const token = getBearerToken(req.header('Authorization'));
 
     if (!token) {
-      throw new ApiError(401, 'Authorization token is required');
+      throw new ApiError(401, 'Token de autorización requerido.');
     }
 
     const { data, error } = await supabase.auth.getUser(token);
 
     if (error || !data.user) {
-      throw new ApiError(401, 'Invalid or expired token');
+      throw new ApiError(401, 'Token inválido o expirado.');
+    }
+
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', data.user.id)
+      .maybeSingle();
+
+    if (profileError) {
+      throw new ApiError(500, profileError.message);
     }
 
     req.user = {
-      id: data.user.id
+      id: data.user.id,
+      role: profile?.role ?? 'user',
+      accessToken: token
     };
 
     next();
