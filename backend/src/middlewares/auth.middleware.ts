@@ -28,7 +28,7 @@ export const authenticate: RequestHandler = async (req, _res, next) => {
 
     req.user = {
       id: data.user.id,
-      role: profile?.role ?? 'user',
+      role: normalizeRole(profile?.role),
       accessToken: token
     };
 
@@ -46,4 +46,12 @@ function getBearerToken(authorizationHeader?: string): string | null {
   }
 
   return token;
+}
+
+function normalizeRole(role?: string | null): 'user' | 'specialist' | 'center_admin' {
+  if (role === 'specialist' || role === 'center_admin') {
+    return role;
+  }
+
+  return 'user';
 }

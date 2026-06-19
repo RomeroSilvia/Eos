@@ -13,6 +13,7 @@ type RegisterPayload = {
   firstName?: string;
   lastName?: string;
   role?: string;
+  specialty?: string;
 };
 
 type LoginPayload = {
@@ -61,13 +62,14 @@ export function getAuthHealth() {
 
 export const authService = {
   register: async (payload: RegisterPayload): Promise<AuthResponseBody> => {
-    const { email, password, username, firstName, lastName, role } = payload;
+    const { email, password, username, firstName, lastName, role, specialty } = payload;
 
     if (!email || !password || !username || !firstName || !lastName || !role) {
       throw new ApiError(400, 'email, password, username, firstName, lastName and role are required');
     }
 
     const normalizedRole = normalizePublicRegistrationRole(role);
+    const normalizedSpecialty = normalizeSpecialty(specialty);
     const normalizedEmail = email.trim().toLowerCase();
     const fullName = [firstName, lastName].filter(Boolean).join(' ').trim();
 
@@ -80,7 +82,8 @@ export const authService = {
         first_name: firstName,
         last_name: lastName,
         full_name: fullName,
-        role: normalizedRole
+        role: normalizedRole,
+        specialty: normalizedRole === 'specialist' ? normalizedSpecialty : undefined
       }
     });
 
@@ -253,6 +256,18 @@ function normalizePublicRegistrationRole(role: string): PublicRegistrationRole {
   }
 
   return normalizedRole;
+}
+
+function normalizeSpecialty(specialty?: string): 'dermatologo' | 'cosmetologo' | null {
+  if (!specialty) {
+    return null;
+  }
+
+  if (specialty === 'dermatologo' || specialty === 'cosmetologo') {
+    return specialty;
+  }
+
+  throw new ApiError(400, 'specialty must be dermatologo or cosmetologo');
 }
 
 function getPasswordResetRedirectUrl(): string {

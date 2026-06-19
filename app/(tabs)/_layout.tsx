@@ -1,41 +1,23 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Tabs, useRouter } from 'expo-router';
-import { useEffect } from 'react';
+import { Tabs } from 'expo-router';
 import { View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FloatingActionMenu } from '@/components/FloatingActionMenu';
 import { colors } from '@/constants/colors';
-import { useProfile } from '@/hooks/useProfile';
-
-export const TAB_BAR_CONTENT_HEIGHT = 56;
 
 type TabIconName = keyof typeof Ionicons.glyphMap;
+const tabBarHeight = 76;
 
 function tabIcon(name: TabIconName, focusedName: TabIconName) {
-  function TabBarIcon({ color, focused, size }: { color: string; focused: boolean; size: number }) {
-    return <Ionicons color={color} name={focused ? focusedName : name} size={size} />;
-  }
+  const TabBarIcon = ({ color, focused, size }: { color: string; focused: boolean; size: number }) => (
+    <Ionicons color={color} name={focused ? focusedName : name} size={size} />
+  );
+
+  TabBarIcon.displayName = `TabIcon(${name})`;
 
   return TabBarIcon;
 }
 
 export default function TabsLayout() {
-  const insets = useSafeAreaInsets();
-  const router = useRouter();
-  const { profile } = useProfile();
-  const tabBarHeight = TAB_BAR_CONTENT_HEIGHT + insets.bottom;
-
-  useEffect(() => {
-    if (profile?.role === 'center_admin') {
-      router.replace('/(tabs-admin)' as never);
-      return;
-    }
-
-    if (profile?.role === 'specialist') {
-      router.replace('/specialist-status' as never);
-    }
-  }, [profile?.role, router]);
-
   return (
     <View style={{ flex: 1 }}>
       <Tabs
@@ -52,7 +34,7 @@ export default function TabsLayout() {
             backgroundColor: colors.surface,
             borderTopColor: colors.border,
             height: tabBarHeight,
-            paddingBottom: insets.bottom + 6,
+            paddingBottom: 10,
             paddingTop: 8
           }
         }}
@@ -63,6 +45,7 @@ export default function TabsLayout() {
           name="products"
           options={{ title: 'Productos', tabBarIcon: tabIcon('bag-outline', 'bag') }}
         />
+        <Tabs.Screen name="specialists" options={{ href: null }} />
         <Tabs.Screen
           name="progress"
           options={{ title: 'Progreso', tabBarIcon: tabIcon('bar-chart-outline', 'bar-chart') }}

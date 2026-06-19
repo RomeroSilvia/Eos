@@ -193,7 +193,8 @@ export default function RegisterScreen() {
           username: role === 'specialist' ? buildSpecialistUsername(fullName, email) : username.trim(),
           firstName: role === 'specialist' ? specialistName.firstName : firstName.trim(),
           lastName: role === 'specialist' ? specialistName.lastName : lastName.trim(),
-          role
+          role,
+          specialty: role === 'specialist' ? specialty : undefined
         });
       }
 

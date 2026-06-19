@@ -2,7 +2,7 @@ import type { ImagePickerAsset } from 'expo-image-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
 import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
-import { apiConfig, apiRequest, getFriendlyApiErrorMessage } from '@/services/api/client';
+import { apiConfig, apiRequest } from '@/services/api/client';
 
 export const SPECIALIST_DOCUMENT_MAX_SIZE_BYTES = 5 * 1024 * 1024;
 const SPECIALIST_DOCUMENT_ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp'] as const;
@@ -24,6 +24,29 @@ export type SpecialistStatus = {
   full_name: string | null;
 } | null;
 
+export type MySpecialist = {
+  id: string;
+  fullName: string;
+  email: string | null;
+  specialty: SpecialistSpecialty | null;
+};
+
+export type SpecialistDirectoryItem = {
+  id: string;
+  fullName: string;
+  email: string | null;
+  specialty: SpecialistSpecialty;
+};
+
+export type SpecialistPatient = {
+  relationId: string;
+  id: string;
+  fullName: string;
+  email: string | null;
+  skinType: string | null;
+  profileImageUrl?: string | null;
+};
+
 export type SpecialistDocumentImage = {
   uri: string;
   name: string;
@@ -37,6 +60,30 @@ type SpecialistStatusResponse = {
   specialistProfile?: RawSpecialistStatus | null;
   specialist_profile?: RawSpecialistStatus | null;
 } & RawSpecialistStatus;
+
+type SpecialistsSearchResponse = {
+  specialists: Array<{
+    id: string;
+    fullName: string;
+    email: string | null;
+    specialty: SpecialistSpecialty;
+  }>;
+};
+
+type MySpecialistResponse = {
+  relation: {
+    specialist: {
+      id: string;
+      fullName: string;
+      email: string | null;
+      specialty: SpecialistSpecialty;
+    };
+  } | null;
+};
+
+type MyPatientsResponse = {
+  patients: SpecialistPatient[];
+};
 
 type RawSpecialistStatus = {
   license_status?: unknown;
@@ -97,7 +144,7 @@ export async function registerSpecialist(payload: SpecialistRegisterPayload): Pr
 
   if (!response.ok) {
     await logBackendErrorInDevelopment(response);
-    throw new Error(getFriendlyApiErrorMessage(response.status));
+    throw new Error(getFriendlyErrorMessage(response.status));
   }
 
   const body = await response.json() as SpecialistStatusResponse;
@@ -105,8 +152,101 @@ export async function registerSpecialist(payload: SpecialistRegisterPayload): Pr
 }
 
 export async function getSpecialistStatus(): Promise<SpecialistStatus> {
-  const response = await apiRequest<SpecialistStatusResponse>({ path: '/specialist/status', method: 'GET' });
-  return normalizeSpecialistStatusResponse(response);
+  try {
+    const response = await apiRequest<SpecialistStatusResponse>({ path: '/specialist/status', method: 'GET' });
+    return normalizeSpecialistStatusResponse(response);
+  } catch (error) {
+    if (hasHttpStatus(error, 403)) {
+      return null;
+    }
+
+    throw error;
+  }
+}
+
+export async function getMySpecialist(): Promise<MySpecialist | null> {
+  try {
+    const response = await apiRequest<MySpecialistResponse>({
+      path: '/specialists/my-specialist',
+      method: 'GET'
+    });
+
+    const specialist = response.relation?.specialist;
+
+    if (!specialist) {
+      return null;
+    }
+
+    return {
+      id: specialist.id,
+      fullName: specialist.fullName,
+      email: specialist.email ?? null,
+      specialty: specialist.specialty
+    };
+  } catch (error) {
+    if (hasHttpStatus(error, 401) || hasHttpStatus(error, 403) || hasHttpStatus(error, 404)) {
+      return null;
+    }
+
+    throw error;
+  }
+}
+
+export async function getSpecialists(filters: {
+  specialty?: SpecialistSpecialty | 'all';
+  name?: string;
+} = {}): Promise<SpecialistDirectoryItem[]> {
+  const params = new URLSearchParams();
+
+  if (filters.name?.trim()) {
+    params.set('name', filters.name.trim());
+  }
+
+  if (filters.specialty && filters.specialty !== 'all') {
+    params.set('specialty', filters.specialty);
+  }
+
+  const query = params.toString();
+  const path = query ? `/specialists?${query}` : '/specialists';
+
+  const response = await apiRequest<SpecialistsSearchResponse>({
+    path,
+    method: 'GET'
+  });
+
+  return response.specialists;
+}
+
+export async function linkSpecialist(specialistId: string): Promise<void> {
+  await apiRequest({
+    path: '/specialists/link',
+    method: 'POST',
+    body: JSON.stringify({ specialistId })
+  });
+}
+
+export async function unlinkSpecialist(): Promise<void> {
+  await apiRequest({
+    path: '/specialists/link',
+    method: 'DELETE'
+  });
+}
+
+export async function getMyPatients(): Promise<SpecialistPatient[]> {
+  try {
+    const response = await apiRequest<MyPatientsResponse>({
+      path: '/specialists/my-patients',
+      method: 'GET'
+    });
+
+    return response.patients;
+  } catch (error) {
+    if (hasHttpStatus(error, 401) || hasHttpStatus(error, 403) || hasHttpStatus(error, 404)) {
+      return [];
+    }
+
+    throw error;
+  }
 }
 
 function normalizeSpecialistStatusResponse(response: SpecialistStatusResponse | null): SpecialistStatus {
@@ -280,4 +420,21 @@ function getExtensionFromMimeType(mimeType: SpecialistDocumentMimeType): string 
 
 function isAllowedDocumentMimeType(value: string): value is SpecialistDocumentMimeType {
   return SPECIALIST_DOCUMENT_ALLOWED_MIME_TYPES.includes(value as SpecialistDocumentMimeType);
+}
+
+function getFriendlyErrorMessage(status: number): string {
+  if (status === 400) return 'Datos invalidos. Revisa los campos e intenta de nuevo.';
+  if (status === 401) return 'Sesion vencida. Volve a iniciar sesion.';
+  if (status === 403) return 'No tenes permisos para realizar esta accion.';
+  if (status >= 500) return 'Ocurrio un error en el servidor. Intenta nuevamente en unos minutos.';
+  return 'No pudimos completar la solicitud.';
+}
+
+function hasHttpStatus(error: unknown, status: number): boolean {
+  if (!error || typeof error !== 'object') {
+    return false;
+  }
+
+  const candidate = error as { status?: unknown };
+  return candidate.status === status;
 }

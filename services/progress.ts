@@ -1,394 +1,135 @@
-import { apiRequest } from '@/services/api/client';
-import type {
-  CalendarDayProgress,
-  CalendarDayStatus,
-  DayProgressStatus,
-  ProgressHistoryDay,
-  ProgressHistoryItem,
-  ProgressSummary,
-  RoutineDayDetail,
-  RoutineDayProgress,
-  RoutineStats,
-  StreakProgress,
-  WeekProgressDay
-} from '@/types/progress';
-import { getProgressCTA } from '@/utils/progress';
+import { apiRequest, apiConfig } from '@/services/api/client';
+import type { ProgressSummary, RoutineDayProgress } from '@/types/progress';
 
-type BackendPeriodProgress = {
-  percent: number;
-  completedRoutines: number;
-  totalRoutines: number;
-};
+export const mockProgressSummary: ProgressSummary = {
+  weeklyProgress: {
+    percent: 78,
+    completedRoutines: 11,
+    totalRoutines: 14,
+    label: '11 de 14 rutinas completadas'
+  },
+  monthlyProgress: {
+    percent: 64,
+    completedRoutines: 18,
+    totalRoutines: 28,
+    label: '18 dias con rutina registrada'
+  },
+  streakProgress: {
+    currentDays: 5,
+    bestDays: 9,
+    subtitle: '¡Seguí así!',
+    weekProgress: [
+      { day: 'L', completed: true },
+      { day: 'M', completed: true },
+      { day: 'M', completed: true },
+      { day: 'J', completed: true },
+      { day: 'V', completed: true },
+      { day: 'S', completed: true },
+      { day: 'D', completed: false }
+    ]
+  },
+  progressCTA: {
+    label: 'Ver historial completo',
+    description: 'Revisa tu progreso diario y semanal',
+    target: 'progressHistory'
+  },
+  completedDays: 18,
+  calendarProgress: Array.from({ length: 31 }, (_, index) => {
+    const day = index + 1;
+    const today = new Date();
+    const todayDay = today.getDate();
+    const completedDays = new Set([1, 2, 4, 5, 6, 8, 9, 10, 13, 14, 16, 17, 18, 21, 22, 23, 24, 25]);
+    const partialDays = new Set([3, 7, 15, 20, 26]);
+    const pendingDays = new Set([11, 12, 19]);
+    const status = completedDays.has(day)
+      ? 'completed'
+      : partialDays.has(day)
+        ? 'partial'
+        : pendingDays.has(day)
+          ? 'pending'
+          : 'empty';
 
-type BackendStreakProgress = {
-  currentStreak: number;
-  longestStreak?: number;
-};
-
-type BackendCalendarDayProgress = {
-  date: string;
-  status: CalendarDayStatus;
-  dayStatus?: 'complete' | 'partial' | 'incomplete' | 'pending';
-  completedRoutines?: number;
-  totalRoutines?: number;
-  completionPercentage?: number;
-  isToday?: boolean;
-  isDayFinished?: boolean;
-};
-
-type BackendProgressSummary = {
-  userId?: string;
-  completedRoutines?: number;
-  totalRoutines?: number;
-  completedDays?: number;
-  currentStreak?: number;
-  bestStreak?: number;
-  completionRate?: number;
-  weeklyProgress?: BackendPeriodProgress;
-  monthlyProgress?: BackendPeriodProgress;
-  streakProgress?: BackendStreakProgress;
-  calendarProgress?: BackendCalendarDayProgress[];
-};
-
-type BackendRoutineLog = {
-  id: string;
-  user_id: string;
-  routine_id: string;
-  log_date: string;
-  completed_at: string | null;
-  completion_percentage: number;
-  created_at: string;
-  updated_at: string;
+    return {
+      date: `2026-05-${String(day).padStart(2, '0')}`,
+      day,
+      status,
+      completedRoutines: status === 'completed' ? 1 : status === 'partial' ? 1 : 0,
+      totalRoutines: status === 'empty' ? 0 : 1,
+      completionPercentage: status === 'completed' ? 100 : status === 'partial' ? 50 : 0,
+      isToday: day === todayDay,
+      isDayFinished: day < todayDay
+    };
+  }),
+  metrics: [
+    {
+      id: 'completed-days',
+      label: 'Dias completos',
+      value: '18',
+      detail: 'este mes'
+    },
+    {
+      id: 'best-streak',
+      label: 'Mejor racha',
+      value: '9',
+      detail: 'dias'
+    }
+  ],
+  historyPreview: [
+    {
+      id: 'history-1',
+      date: 'Hoy',
+      routineName: 'Rutina matutina',
+      completedSteps: 4,
+      totalSteps: 4,
+      status: 'completed'
+    },
+    {
+      id: 'history-2',
+      date: 'Ayer',
+      routineName: 'Rutina de noche',
+      completedSteps: 3,
+      totalSteps: 4,
+      status: 'partial'
+    },
+    {
+      id: 'history-3',
+      date: 'Domingo',
+      routineName: 'Proteccion solar',
+      completedSteps: 0,
+      totalSteps: 2,
+      status: 'pending'
+    }
+  ]
 };
 
 export async function getProgressSummary(): Promise<ProgressSummary> {
-  const [summary, stats, history] = await Promise.all([
-    apiRequest<BackendProgressSummary>({ path: '/progress/summary' }),
-    getProgressStats(),
-    getProgressHistory()
-  ]);
-
-  return mapBackendSummaryToProgressSummary(summary, history, stats);
-}
-
-export async function getProgressHistoryByDate(date: string): Promise<ProgressHistoryItem[]> {
-
-  const logs = await apiRequest<BackendRoutineLog[]>({
-    path: `/progress/history?date=${encodeURIComponent(date)}`
-  });
-
-  return logs.map(mapRoutineLogToHistoryItem);
-}
-
-export async function getProgressHistory(): Promise<ProgressHistoryDay[]> {
-
-  const history = await apiRequest<ProgressHistoryDay[]>({
-    path: '/progress/history/all'
-  });
-
-  return [...history].sort((a, b) => b.date.localeCompare(a.date));
-}
-
-export async function getProgressDayDetail(date: string): Promise<RoutineDayDetail> {
-
-  return apiRequest<RoutineDayDetail>({
-    path: `/progress/day/${encodeURIComponent(date)}`
-  });
-}
-
-export async function getProgressStats(): Promise<RoutineStats> {
-
-  return apiRequest<RoutineStats>({
-    path: '/progress/stats'
-  });
+  return mockProgressSummary;
 }
 
 export async function getWeeklyProgress() {
-  return (await getProgressSummary()).weeklyProgress;
+  return mockProgressSummary.weeklyProgress;
 }
 
 export async function getStreakProgress() {
-  return (await getProgressSummary()).streakProgress;
+  return mockProgressSummary.streakProgress;
 }
 
 export async function getCalendarProgress() {
-  return (await getProgressSummary()).calendarProgress;
+  return mockProgressSummary.calendarProgress;
 }
 
-function mapBackendSummaryToProgressSummary(
-  backendSummary: BackendProgressSummary,
-  history: ProgressHistoryDay[],
-  stats?: RoutineStats
-): ProgressSummary {
-  const weeklyProgress = stats ? {
-    percent: stats.weekly.completionPercentage,
-    completedRoutines: stats.weekly.completedRoutines,
-    totalRoutines: stats.weekly.totalExpectedRoutines
-  } : backendSummary.weeklyProgress ?? {
-    percent: backendSummary.completionRate ?? 0,
-    completedRoutines: backendSummary.completedRoutines ?? 0,
-    totalRoutines: backendSummary.completedRoutines ?? 0
-  };
-
-  const monthlyProgress = stats ? {
-    percent: stats.monthly.completionPercentage,
-    completedRoutines: stats.monthly.completedRoutines,
-    totalRoutines: stats.monthly.totalExpectedRoutines
-  } : backendSummary.monthlyProgress ?? weeklyProgress;
-  const calendarProgress = (backendSummary.calendarProgress ?? []).map(mapCalendarDay);
-  const streakProgress = mapStreakProgress(backendSummary, calendarProgress, stats);
-  const completedDays = stats?.monthly.completeDays ?? backendSummary.completedDays ?? calendarProgress.filter((day) => day.status === 'completed').length;
-  const progressCTA = getProgressCTA({
-    overallProgressPercentage: monthlyProgress.percent,
-    todayStatus: getTodayProgressStatus(calendarProgress, stats),
-    completedTodayRoutines: getTodayProgressDayFromStats(stats)?.completedRoutines ?? getTodayProgressDay(calendarProgress)?.completedRoutines ?? 0,
-    totalTodayRoutines: getTodayProgressDayFromStats(stats)?.totalExpectedRoutines ?? getTodayProgressDay(calendarProgress)?.totalRoutines ?? 0,
-    hasPreviousProgress: monthlyProgress.completedRoutines > 0 || completedDays > 0 || streakProgress.currentDays > 0,
-    streak: streakProgress.currentDays,
-    previousDayStatus: getPreviousDayProgressStatus(calendarProgress)
-  });
-
-  return {
-    weeklyProgress: {
-      ...weeklyProgress,
-      label: formatRoutineCompletionLabel(weeklyProgress.completedRoutines, weeklyProgress.totalRoutines)
-    },
-    monthlyProgress: {
-      ...monthlyProgress,
-      label: `${completedDays} dias con rutina registrada`
-    },
-    streakProgress,
-    progressCTA,
-    completedDays,
-    calendarProgress,
-    metrics: [
-      {
-        id: 'completed-days',
-        label: 'Dias completos',
-        value: String(completedDays),
-        detail: 'este mes'
-      },
-      {
-        id: 'best-streak',
-        label: 'Mejor racha',
-        value: String(stats?.weekly.bestStreak ?? streakProgress.bestDays ?? 0),
-        detail: 'dias'
-      }
-    ],
-    historyPreview: mapHistoryDaysToPreviewItems(history)
-  };
-}
-
-function getTodayProgressDay(calendarProgress: CalendarDayProgress[]): CalendarDayProgress | undefined {
-  return calendarProgress.find((day) => day.isToday);
-}
-
-function getTodayProgressStatus(calendarProgress: CalendarDayProgress[], stats?: RoutineStats): DayProgressStatus {
-  const todayStats = getTodayProgressDayFromStats(stats);
-
-  if (todayStats) {
-    return mapStatsWeekDayStatusToDayProgressStatus(todayStats.status);
-  }
-
-  const today = getTodayProgressDay(calendarProgress);
-  return today?.dayStatus ?? mapCalendarStatusToDayProgressStatus(today?.status);
-}
-
-function getTodayProgressDayFromStats(stats?: RoutineStats): RoutineStats['weekDays'][number] | undefined {
-  const today = getTodayIsoDate();
-  return stats?.weekDays.find((day) => day.date === today);
-}
-
-function getPreviousDayProgressStatus(calendarProgress: CalendarDayProgress[]): DayProgressStatus | undefined {
-  const today = getTodayProgressDay(calendarProgress);
-
-  if (!today) {
-    return undefined;
-  }
-
-  const previousDay = [...calendarProgress]
-    .filter((day) => day.date < today.date)
-    .sort((a, b) => b.date.localeCompare(a.date))[0];
-
-  return previousDay?.dayStatus ?? mapCalendarStatusToDayProgressStatus(previousDay?.status);
-}
-
-function mapCalendarStatusToDayProgressStatus(status?: CalendarDayStatus): DayProgressStatus {
-  if (status === 'completed') {
-    return 'complete';
-  }
-
-  if (status === 'partial') {
-    return 'partial';
-  }
-
-  if (status === 'pending') {
-    return 'pending';
-  }
-
-  return 'incomplete';
-}
-
-function mapStatsWeekDayStatusToDayProgressStatus(status: RoutineStats['weekDays'][number]['status']): DayProgressStatus {
-  if (status === 'complete') {
-    return 'complete';
-  }
-
-  if (status === 'partial') {
-    return 'partial';
-  }
-
-  if (status === 'pending' || status === 'no_routine') {
-    return 'pending';
-  }
-
-  return 'incomplete';
-}
-
-function formatRoutineCompletionLabel(completedRoutines: number, totalRoutines: number): string {
-  if (totalRoutines === 0) {
-    return 'Todavía no tenés rutinas configuradas para esta semana';
-  }
-
-  const routineText = completedRoutines === 1 ? 'rutina completada' : 'rutinas completadas';
-  return `${completedRoutines} de ${totalRoutines} ${routineText}`;
-}
-
-function mapCalendarDay(day: BackendCalendarDayProgress): CalendarDayProgress {
-  return {
-    date: day.date,
-    day: Number(day.date.slice(8, 10)),
-    status: day.status,
-    dayStatus: day.dayStatus,
-    completedRoutines: day.completedRoutines ?? (day.status === 'completed' ? 1 : 0),
-    totalRoutines: day.totalRoutines ?? (day.status === 'empty' ? 0 : 1),
-    completionPercentage: day.completionPercentage ?? (day.status === 'completed' ? 100 : 0),
-    isToday: day.isToday ?? day.date === getTodayIsoDate(),
-    isDayFinished: day.isDayFinished ?? day.date < getTodayIsoDate()
-  };
-}
-
-function mapStreakProgress(
-  backendSummary: BackendProgressSummary,
-  calendarProgress: CalendarDayProgress[],
-  stats?: RoutineStats
-): StreakProgress {
-  const currentDays = stats?.weekly.currentStreak ?? backendSummary.streakProgress?.currentStreak ?? backendSummary.currentStreak ?? 0;
-  const bestDays = stats?.weekly.bestStreak ?? backendSummary.streakProgress?.longestStreak ?? backendSummary.bestStreak ?? 0;
-
-  return {
-    currentDays,
-    bestDays,
-    subtitle: currentDays > 0 ? '¡Seguí así!' : 'Empezá tu racha',
-    weekProgress: stats ? buildStatsWeekProgress(stats.weekDays) : buildWeekProgress(calendarProgress)
-  };
-}
-
-function buildStatsWeekProgress(weekDays: RoutineStats['weekDays']): WeekProgressDay[] {
-  return weekDays.map((day) => ({
-    day: mapWeekdayLabelToShortLabel(day.dayLabel),
-    completed: day.status === 'complete'
-  }));
-}
-
-function mapWeekdayLabelToShortLabel(label: string): WeekProgressDay['day'] {
-  if (label.startsWith('L')) return 'L';
-  if (label.startsWith('J')) return 'J';
-  if (label.startsWith('V')) return 'V';
-  if (label.startsWith('S')) return 'S';
-  if (label.startsWith('D')) return 'D';
-  return 'M';
-}
-
-function buildWeekProgress(calendarProgress: CalendarDayProgress[]): WeekProgressDay[] {
-  const weekLabels: WeekProgressDay['day'][] = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
-  const today = new Date();
-  const monday = getMonday(today);
-
-  return weekLabels.map((day, index) => {
-    const date = addDays(monday, index);
-    const dateKey = toIsoDate(date);
-    const progressDay = calendarProgress.find((item) => item.date === dateKey);
-
-    return {
-      day,
-      completed: progressDay?.status === 'completed'
-    };
-  });
-}
-
-function mapRoutineLogToHistoryItem(log: BackendRoutineLog): ProgressHistoryItem {
-  const status = getStatusFromCompletion(log.completion_percentage);
-
-  return {
-    id: log.id,
-    date: log.log_date,
-    routineName: 'Rutina sin nombre',
-    completedSteps: Math.round(log.completion_percentage),
-    totalSteps: 100,
-    status
-  };
-}
-
-function mapHistoryDaysToPreviewItems(history: ProgressHistoryDay[]): ProgressHistoryItem[] {
-  return history.flatMap((day) =>
-    day.routines.map((routine) => ({
-      id: `${day.date}-${routine.routineId}`,
-      date: day.date,
-      routineName: routine.routineName || 'Rutina sin nombre',
-      completedSteps: routine.completedSteps,
-      totalSteps: routine.totalSteps,
-      status: mapDayRoutineStatusToCalendarStatus(routine.status)
-    }))
-  ).slice(0, 3);
-}
-
-function mapDayRoutineStatusToCalendarStatus(status: ProgressHistoryDay['routines'][number]['status']): CalendarDayStatus {
-  if (status === 'complete') {
-    return 'completed';
-  }
-
-  if (status === 'partial') {
-    return 'partial';
-  }
-
-  return 'pending';
-}
-
-function getStatusFromCompletion(completionPercentage: number): CalendarDayStatus {
-  if (completionPercentage >= 100) {
-    return 'completed';
-  }
-
-  if (completionPercentage > 0) {
-    return 'partial';
-  }
-
-  return 'pending';
-}
-
-function getTodayIsoDate(): string {
-  return toIsoDate(new Date());
-}
-
-function getMonday(date: Date): Date {
-  const day = date.getDay();
-  const diff = day === 0 ? -6 : 1 - day;
-  return addDays(date, diff);
-}
-
-function addDays(date: Date, days: number): Date {
-  const nextDate = new Date(date);
-  nextDate.setDate(nextDate.getDate() + days);
-  return nextDate;
-}
-
-function toIsoDate(date: Date): string {
-  return date.toISOString().slice(0, 10);
-}
+const mockRoutineDayProgress: RoutineDayProgress = {
+  routine_id: 'routine-1',
+  routine_log_id: 'routine-log-1',
+  log_date: new Date().toISOString().split('T')[0],
+  completed_step_ids: ['step-1', 'step-2'],
+  completion_percentage: 67
+};
 
 export async function getRoutineDayProgress(routineId: string): Promise<RoutineDayProgress> {
-
+  if (apiConfig.useMocks) {
+    return { ...mockRoutineDayProgress, routine_id: routineId };
+  }
   return apiRequest<RoutineDayProgress>({
     path: `/progress/routines/${routineId}/today`,
     method: 'GET'
@@ -400,7 +141,15 @@ export async function setRoutineStepCompletion(data: {
   stepId: string;
   isCompleted: boolean;
 }): Promise<RoutineDayProgress> {
-
+  if (apiConfig.useMocks) {
+    const progress = { ...mockRoutineDayProgress, routine_id: data.routineId };
+    if (data.isCompleted && !progress.completed_step_ids.includes(data.stepId)) {
+      progress.completed_step_ids.push(data.stepId);
+    } else if (!data.isCompleted) {
+      progress.completed_step_ids = progress.completed_step_ids.filter((id) => id !== data.stepId);
+    }
+    return progress;
+  }
   return apiRequest<RoutineDayProgress>({
     path: `/progress/routines/${data.routineId}/today/steps/${data.stepId}`,
     method: 'PATCH',

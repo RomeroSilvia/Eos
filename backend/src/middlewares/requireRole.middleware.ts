@@ -1,11 +1,16 @@
 import type { RequestHandler } from 'express';
 import { ApiError } from '../utils/ApiError';
 
-export const requireRole = (...roles: string[]): RequestHandler =>
-  (req, _res, next) => {
-    if (!req.user || !roles.includes(req.user.role)) {
-      throw new ApiError(403, 'No tenés permiso para acceder a este recurso.');
+type UserRole = 'user' | 'specialist' | 'center_admin';
+
+export const requireRole = (...roles: UserRole[]): RequestHandler => {
+  return (req, _res, next) => {
+    const currentRole = req.user?.role ?? 'user';
+
+    if (!roles.includes(currentRole)) {
+      throw new ApiError(403, 'No tenes permiso para acceder a este recurso.');
     }
 
     next();
   };
+};
