@@ -6,7 +6,7 @@ export function useProfile() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
 
   useEffect(() => {
-    void getCurrentProfile().then(setProfile);
+    void getCurrentProfile().then(setProfile).catch(() => setProfile(null));
   }, []);
 
   return { profile };

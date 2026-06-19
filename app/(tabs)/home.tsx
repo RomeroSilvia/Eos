@@ -27,12 +27,25 @@ export default function HomeScreen() {
   const progress = summary.totalSteps > 0
     ? Math.max(0, Math.min(1, summary.completedSteps / summary.totalSteps))
     : 0;
+  const hasActiveRoutine = Boolean(summary.activeRoutine);
   const routineTimeOfDay = summary.activeRoutine?.time_of_day;
   const isNightRoutine = routineTimeOfDay === 'night';
   const isCustomRoutine = routineTimeOfDay === 'custom';
 
-  const routineMomentLabel = isNightRoutine ? 'Noche' : isCustomRoutine ? 'Personalizada' : 'Mañana';
-  const routineMomentEmoji = isNightRoutine ? '🌑' : isCustomRoutine ? '✨' : '☀️';
+  const routineMomentLabel = hasActiveRoutine
+    ? isNightRoutine
+      ? 'Noche'
+      : isCustomRoutine
+        ? 'Personalizada'
+        : 'Mañana'
+    : 'Sin rutina';
+  const routineMomentEmoji = hasActiveRoutine
+    ? isNightRoutine
+      ? '🌑'
+      : isCustomRoutine
+        ? '✨'
+        : '☀️'
+    : '🧴';
 
   return (
     <SafeAreaView style={styles.screen}>
@@ -66,12 +79,16 @@ export default function HomeScreen() {
             </View>
           </View>
 
-          <Text style={styles.description}>{formatStepCount(summary.completedSteps, summary.totalSteps)}</Text>
+          <Text style={styles.description}>
+            {hasActiveRoutine
+              ? formatStepCount(summary.completedSteps, summary.totalSteps)
+              : 'Crea tu rutina para empezar tu seguimiento diario.'}
+          </Text>
           <View style={[styles.progressTrack, { backgroundColor: colors.border }]}>
             <View style={[styles.progressFill, { width: `${progress * 100}%`, backgroundColor: colors.primary }]} />
           </View>
           <Button variant="secondary" onPress={() => router.push('/routine')} style={styles.routineButton}>
-            Ver rutina
+            {hasActiveRoutine ? 'Ver rutina' : 'Crear rutina'}
           </Button>
         </Card>
 

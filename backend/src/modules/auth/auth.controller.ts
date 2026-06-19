@@ -11,13 +11,14 @@ export const authHealth: RequestHandler = (_req, res) => {
 };
 
 export const register = asyncHandler(async (req, res) => {
-  const { email, password, username, firstName, lastName, role } = req.body as {
+  const { email, password, username, firstName, lastName, role, specialty } = req.body as {
     email?: string;
     password?: string;
     username?: string;
     firstName?: string;
     lastName?: string;
     role?: string;
+    specialty?: string;
   };
 
   if (!email || !password || !username || !firstName || !lastName || !role) {
@@ -25,6 +26,7 @@ export const register = asyncHandler(async (req, res) => {
   }
 
   const normalizedRole = normalizePublicRegistrationRole(role);
+  const normalizedSpecialty = normalizeSpecialty(specialty);
   const normalizedEmail = email.trim().toLowerCase();
   const fullName = [firstName, lastName].filter(Boolean).join(' ').trim();
 
@@ -37,7 +39,8 @@ export const register = asyncHandler(async (req, res) => {
       first_name: firstName,
       last_name: lastName,
       full_name: fullName,
-      role: normalizedRole
+      role: normalizedRole,
+      specialty: normalizedRole === 'specialist' ? normalizedSpecialty : undefined
     }
   });
 
@@ -119,6 +122,18 @@ function normalizePublicRegistrationRole(role: string): 'user' | 'specialist' {
   }
 
   return normalizedRole;
+}
+
+function normalizeSpecialty(specialty?: string): 'dermatologo' | 'cosmetologo' | null {
+  if (!specialty) {
+    return null;
+  }
+
+  if (specialty === 'dermatologo' || specialty === 'cosmetologo') {
+    return specialty;
+  }
+
+  throw new ApiError(400, 'specialty must be dermatologo or cosmetologo');
 }
 
 export const login = asyncHandler(async (req, res) => {

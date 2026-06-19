@@ -3,19 +3,27 @@ import express from 'express';
 import { env } from './config/env';
 import { adminRouter } from './modules/admin/admin.routes';
 import { authRouter } from './modules/auth/auth.routes';
+import { chatRouter } from './modules/chat/chat.routes';
 import { productsRouter } from './modules/products/products.routes';
 import { profileRouter } from './modules/profile/profile.routes';
 import { progressRouter } from './modules/progress/progress.routes';
 import { quizRouter } from './modules/quiz/quiz.routes';
 import { routinesRouter } from './modules/routines/routines.routes';
 import { specialistRouter } from './modules/specialist/specialist.routes';
+import { specialistsRouter } from './modules/specialists/specialists.routes';
 import { errorMiddleware } from './middlewares/error.middleware';
 import { notFoundMiddleware } from './middlewares/notFound.middleware';
 
 export const app = express();
 
 app.use(cors({ origin: env.corsOrigin }));
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
+
+// Request logger
+app.use((req, _res, next) => {
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
+  next();
+});
 
 app.get('/api/health', (_req, res) => {
   return res.json({
@@ -30,9 +38,11 @@ app.use('/api/admin', adminRouter);
 app.use('/api/routines', routinesRouter);
 app.use('/api/products', productsRouter);
 app.use('/api/progress', progressRouter);
-app.use('/api/profile', profileRouter);
 app.use('/api/quiz', quizRouter);
+app.use('/api/profile', profileRouter);
 app.use('/api/specialist', specialistRouter);
+app.use('/api/specialists', specialistsRouter);
+app.use('/api/chat', chatRouter);
 
 app.use(notFoundMiddleware);
 app.use(errorMiddleware);

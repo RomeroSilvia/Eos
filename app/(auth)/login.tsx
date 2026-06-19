@@ -204,9 +204,6 @@ export default function LoginScreen() {
 async function saveSession(token: string, data: LoginResponse): Promise<{ role: string }> {
   const profile = mapLoginResponseToProfile(data);
   const serializedSession = JSON.stringify({
-    token,
-    session: data.session ?? null,
-    user: data.user ?? null,
     profile
   });
 

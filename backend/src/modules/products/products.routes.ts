@@ -1,17 +1,26 @@
 import { Router } from 'express';
-import multer from 'multer';
-import { createProduct, deleteProduct, getProductById, getProducts, productsHealth, updateProduct } from './products.controller';
 import { authenticate } from '../../middlewares/auth.middleware';
+import {
+	createProduct,
+	deleteProduct,
+	forceDeleteProduct,
+	getProductById,
+	getProducts,
+	productsHealth,
+	replaceProduct,
+	updateProduct
+} from './products.controller';
 
 export const productsRouter = Router();
 
-const upload = multer({ storage: multer.memoryStorage() });
-
 productsRouter.get('/health', productsHealth);
+
 productsRouter.use(authenticate);
 
 productsRouter.get('/', getProducts);
 productsRouter.get('/:id', getProductById);
-productsRouter.post('/', upload.single('image'), createProduct);
-productsRouter.patch('/:id', upload.single('image'), updateProduct);
+productsRouter.post('/', createProduct);
+productsRouter.patch('/:id', updateProduct);
 productsRouter.delete('/:id', deleteProduct);
+productsRouter.delete('/:id/force', forceDeleteProduct);
+productsRouter.put('/:id/replace', replaceProduct);

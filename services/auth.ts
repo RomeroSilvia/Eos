@@ -43,6 +43,15 @@ type RegisterPayload = LoginPayload & {
   firstName: string;
   lastName: string;
   role: 'user' | 'specialist';
+  specialty?: 'dermatologo' | 'cosmetologo';
+};
+
+export const mockUserProfile: UserProfile = {
+  id: 'mock-user-1',
+  name: 'Usuario EOS',
+  email: 'usuario@eos.app',
+  role: 'user',
+  skinType: 'mixed'
 };
 
 export async function login({ email, password }: LoginPayload): Promise<UserProfile> {
@@ -105,9 +114,6 @@ async function persistAuthSession(data: AuthResponse): Promise<void> {
   await setStoredItem(
     sessionKey,
     JSON.stringify({
-      token,
-      session: data.session ?? null,
-      user: data.user,
       profile
     })
   );
