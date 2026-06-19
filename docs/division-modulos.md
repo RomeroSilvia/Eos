@@ -1,8 +1,8 @@
-# Division por modulos verticales
+# División por módulos verticales
 
-La organizacion del equipo evita dividir por capas tecnicas. Cada integrante trabaja el flujo completo de su modulo: pantalla, componentes, tipos, hook, servicio mock, validaciones, documentacion y pruebas manuales.
+La organización del equipo evita dividir por capas técnicas. Cada integrante trabaja el flujo completo de su módulo: pantalla, componentes, tipos, hook, servicio, validaciones, documentación y pruebas.
 
-## Integrante 1 - Modulo Inicio / Home
+## Integrante 1 — Módulo Inicio / Home
 
 Responsabilidades:
 
@@ -11,60 +11,106 @@ Responsabilidades:
 - `components/HomeReminderItem.tsx`
 - `hooks/useHome.ts`
 - `types/home.ts`
-- mocks del resumen diario
+- Integración con rutina activa y progreso diario
 
-## Integrante 2 - Modulo Rutinas
+Estado actual:
+
+- Home muestra rutina activa del día con progreso, métricas y recordatorios con toggle.
+- Consume datos reales del backend a través de `useHome`.
+
+## Integrante 2 — Módulo Rutinas
 
 Responsabilidades:
 
 - `app/(tabs)/routine.tsx`
+- `app/routine/` (wizard Create → Step2–Step6 → success, Add-step, routine-edit)
 - `components/RoutineStepCard.tsx`
 - `components/RoutineProgressCard.tsx`
+- `components/RoutineSectionCard.tsx`
+- `components/RoutineStepItem.tsx`
 - `hooks/useRoutine.ts`
 - `types/routine.ts`
 - `services/routines.ts`
-- endpoints `backend/src/modules/routines/*`
-- integracion de check diario con `backend/src/modules/progress/*`
+- `backend/src/modules/routines/`
+- Integración del check diario con `backend/src/modules/progress/`
 
 Estado actual:
 
-- Rutinas y pasos usan API EOS/Supabase.
-- El listado de rutinas del usuario esta integrado en la tab Rutina.
-- El check de pasos queda persistido por dia para que Progreso pueda recuperarlo.
+- CRUD completo de rutinas y pasos integrado con Supabase.
+- Wizard de creación en 6 pasos implementado.
+- Edición de rutinas y agregar pasos disponibles.
+- El check de pasos persiste por día en `routine_logs` / `routine_step_logs`.
 
-## Integrante 3 - Modulo Productos
+## Integrante 3 — Módulo Productos
 
 Responsabilidades:
 
 - `app/(tabs)/products.tsx`
-- futuros `ProductCard` y `ProductSelector`
+- `app/products/` (index, [id], create, result)
+- `components/ProductCard.tsx`
+- `components/ProductSelector.tsx`
 - `hooks/useProducts.ts`
 - `types/product.ts`
 - `services/products.ts`
+- `backend/src/modules/products/`
 
-## Integrante 4 - Modulo Progreso / Historial
+Estado actual:
+
+- CRUD completo de productos con subida de imágenes a Supabase Storage.
+- Asociación de productos a pasos de rutina implementada.
+- Flujo `returnTo` para navegar de vuelta a Add-step al crear un producto desde el wizard.
+
+## Integrante 4 — Módulo Progreso / Historial
 
 Responsabilidades:
 
 - `app/(tabs)/progress.tsx`
-- `components/ProgressSummaryCard.tsx`
-- `components/StreakCard.tsx`
-- `components/MonthCalendarCard.tsx`
+- `app/progress/stats.tsx`
+- `app/progress/history/index.tsx`
+- `app/progress/history/[date].tsx`
+- `components/progress/` (ProgressBar, MonthCalendarCard, StreakCard, ProgressSummaryCard, etc.)
+- `components/progress/stats/` (StatCard, RoutineStatsSection, ProductStatsSection, etc.)
 - `hooks/useProgress.ts`
+- `hooks/useProgressHistory.ts`
+- `hooks/useProgressStats.ts`
 - `types/progress.ts`
 - `services/progress.ts`
+- `utils/progress.ts`
+- `utils/month-calendar.utils.ts`
+- `backend/src/modules/progress/`
 
-## Integrante 5 - Modulo Perfil / Autenticacion / Configuracion
+Estado actual:
+
+- Módulo implementado con datos reales de Supabase.
+- Resumen semanal/mensual, racha actual, calendario mensual, historial por fecha y estadísticas avanzadas.
+- Tests unitarios en `backend/src/modules/progress/tests/`.
+- Contrato técnico documentado en `docs/progress-module-contract.md`.
+
+## Integrante 5 — Módulo Perfil / Autenticación / Configuración
 
 Responsabilidades:
 
 - `app/(tabs)/profile.tsx`
-- `app/(auth)/login.tsx`
-- `app/(auth)/register.tsx`
+- `app/(auth)/` (login, register, forgot-password, update-password)
+- `app/landing.tsx`
+- `app/start-diagnosis.tsx`
+- `app/start-quiz.tsx`
+- `app/quiz.tsx`
+- `app/quiz-results.tsx`
+- `app/resultados.tsx`
 - `hooks/useProfile.ts`
 - `types/user.ts`
 - `services/auth.ts`
 - `services/notifications.ts`
+- `backend/src/modules/auth/`
+- `backend/src/modules/quiz/`
+
+Estado actual:
+
+- Autenticación real con Supabase Auth implementada (registro, login, Google, recuperación de contraseña).
+- Flujo de onboarding con quiz de diagnóstico de piel (5 preguntas → `skin_profiles`).
+- Sesión persistida con `expo-secure-store`.
+- Backend módulo quiz implementado con endpoints `/api/quiz/save` y `/api/quiz/profile`.
 
 ## Responsabilidad compartida
 
@@ -72,21 +118,10 @@ Responsabilidades:
 - `app/(tabs)/_layout.tsx`
 - `constants/colors.ts`
 - `constants/routes.ts`
+- `components/Button.tsx`, `components/Card.tsx`, `components/FloatingActionMenu.tsx`
 - `README.md`
-- `CHANGELOG.md`
+- `CLAUDE.md`
 - `docs/`
-- revision de pull requests
-- convenciones de nombres, carpetas y formato
-- integracion final antes de cada entrega
-
-## Ramas recomendadas
-
-```txt
-feature/home-module
-feature/routine-module
-feature/products-module
-feature/progress-module
-feature/profile-auth-module
-chore/navigation-layout
-docs/e1-documentation
-```
+- Revisión de pull requests
+- Convenciones de nombres, carpetas y formato
+- Integración final antes de cada entrega
