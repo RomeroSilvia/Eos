@@ -50,6 +50,21 @@ npm run android
 npm run ios
 ```
 
+## Migraciones Entrega 2 - Modulo 3
+
+Antes de probar el registro de especialistas, ejecutar en Supabase SQL Editor, en este orden:
+
+```sql
+-- 1
+-- database/e2_schema.sql
+
+-- 2
+-- database/specialist_docs_storage_policies.sql
+
+-- 3
+-- database/specialist_profiles_rls_policies.sql
+```
+
 ## Modulos verticales
 
 - Inicio / Home
