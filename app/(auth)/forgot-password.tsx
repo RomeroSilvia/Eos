@@ -2,11 +2,7 @@ import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Alert, Image, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { apiConfig } from '@/services/api/client';
-
-type ResetPasswordResponse = {
-  message?: string;
-};
+import { apiConfig, getFriendlyAuthErrorMessage } from '@/services/api/client';
 
 export default function ForgotPasswordScreen() {
   const router = useRouter();
@@ -31,23 +27,20 @@ export default function ForgotPasswordScreen() {
         body: JSON.stringify({ email: email.trim() })
       });
 
-      const data = (await response.json().catch(() => null)) as ResetPasswordResponse | null;
-
       if (!response.ok) {
-        const fallbackMessage =
-          response.status === 429
-            ? 'Ya pediste un restablecimiento hace poco. Espera unos minutos antes de intentarlo otra vez.'
-            : 'No pudimos enviar el correo.';
-
-        Alert.alert('Error del Servidor', data?.message ?? fallbackMessage);
+        await logAuthResponseInDevelopment(response, 'forgot-password');
+        Alert.alert('Error del Servidor', getFriendlyAuthErrorMessage(response.status));
         return;
       }
 
-      Alert.alert('Correo enviado', data?.message ?? 'Te enviamos un enlace para restablecer tu contrasena.');
+      Alert.alert(
+        'Correo enviado',
+        'Si el email está registrado, vas a recibir instrucciones para recuperar tu contraseña.'
+      );
       router.push('/login');
     } catch (error) {
-      console.error(error);
-      Alert.alert('Error de Conexion', 'No se pudo conectar con el backend. Revisa tu consola.');
+      logAuthErrorInDevelopment(error, 'forgot-password');
+      Alert.alert('Error de Conexion', 'Ocurrió un error. Intentá nuevamente.');
     } finally {
       setIsSubmitting(false);
     }
@@ -83,6 +76,24 @@ export default function ForgotPasswordScreen() {
       </Pressable>
     </SafeAreaView>
   );
+}
+
+async function logAuthResponseInDevelopment(response: Response, flow: string): Promise<void> {
+  if (process.env.NODE_ENV === 'production') {
+    return;
+  }
+
+  const body = await response.clone().json().catch(() => null);
+  console.warn(`[auth/${flow}]`, {
+    status: response.status,
+    body
+  });
+}
+
+function logAuthErrorInDevelopment(error: unknown, flow: string): void {
+  if (process.env.NODE_ENV !== 'production') {
+    console.warn(`[auth/${flow}]`, error);
+  }
 }
 
 const styles = StyleSheet.create({
