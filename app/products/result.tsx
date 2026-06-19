@@ -9,6 +9,8 @@ export default function ProductResultScreen() {
   const isSuccess = status === 'success';
   const isEdit = mode === 'edit';
   const fromAddStep = returnTo === 'add-step';
+  const fromSpecialistProducts = returnTo === 'specialist-products';
+  const productsRoute = fromSpecialistProducts ? '/products' : '/(tabs)/products';
 
   return (
     <SafeAreaView style={styles.screen}>
@@ -38,7 +40,7 @@ export default function ProductResultScreen() {
 
       <View style={styles.footer}>
         <Button
-          onPress={() => fromAddStep ? router.back() : router.replace('/(tabs)/products')}
+          onPress={() => fromAddStep ? router.back() : router.replace(productsRoute as never)}
           style={{ ...styles.button, ...(isSuccess ? styles.buttonSuccess : styles.buttonError) }}
         >
           {fromAddStep ? 'Volver al paso' : 'Ver mis productos'}

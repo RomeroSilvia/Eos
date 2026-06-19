@@ -3,11 +3,12 @@ import { Tabs, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { FloatingActionMenu } from '@/components/FloatingActionMenu';
 import { colors } from '@/constants/colors';
 import { useProfile } from '@/hooks/useProfile';
 import { getSpecialistStatus } from '@/services/specialist';
 
-const TAB_BAR_CONTENT_HEIGHT = 58;
+const TAB_BAR_CONTENT_HEIGHT = 56;
 
 type TabIconName = keyof typeof Ionicons.glyphMap;
 
@@ -89,11 +90,11 @@ export default function SpecialistTabsLayout() {
         initialRouteName="index"
         screenOptions={{
           headerShown: false,
-          tabBarActiveTintColor: colors.textPrimary,
-          tabBarInactiveTintColor: colors.textSecondary,
+          tabBarActiveTintColor: colors.primary,
+          tabBarInactiveTintColor: colors.textMuted,
           tabBarLabelStyle: {
             fontSize: 12,
-            fontWeight: '800'
+            fontWeight: '700'
           },
           tabBarStyle: {
             backgroundColor: colors.surface,
@@ -122,6 +123,14 @@ export default function SpecialistTabsLayout() {
           options={{ title: 'Perfil', tabBarIcon: tabIcon('person-outline', 'person') }}
         />
       </Tabs>
+      <FloatingActionMenu
+        productRoute={{
+          pathname: '/products/create',
+          params: { returnTo: 'specialist-products' }
+        }}
+        routineRoute="/routine/Create"
+        tabBarHeight={tabBarHeight}
+      />
     </View>
   );
 }
