@@ -275,7 +275,7 @@ export default function AdminHomeScreen() {
             {!documentsLoading && !documentsError && documents ? (
               <ScrollView contentContainerStyle={styles.documentsContent} showsVerticalScrollIndicator={false}>
                 <DocumentImageSection label="Foto del DNI" imageUrl={documents.dniPhotoUrl} />
-                <DocumentImageSection label="Foto del tÃ­tulo" imageUrl={documents.titlePhotoUrl} />
+                <DocumentImageSection label="Foto del título" imageUrl={documents.titlePhotoUrl} />
                 <Text style={styles.expirationText}>
                   Los enlaces temporales vencen en {documents.expiresIn} segundos.
                 </Text>
@@ -396,7 +396,7 @@ function getInitials(value: string | null | undefined): string {
 
 function getDocumentErrorMessage(error: unknown): string {
   if (error instanceof Error && 'status' in error && error.status === 403) {
-    return 'No tenÃ©s permisos para ver estos documentos.';
+    return 'No tenés permisos para ver estos documentos.';
   }
 
   return getAdminErrorMessage(error);
