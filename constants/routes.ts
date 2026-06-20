@@ -6,6 +6,8 @@ export const routes = {
   products: '/products',
   specialists: '/specialists',
   specialistDetail: '/specialists/[id]',
+  specialistPatients: '/(tabs-specialist)/pacientes',
+  specialistPatientDetail: '/patients/[id]',
   chat: '/chat',
   progress: '/progress',
   profile: '/profile'

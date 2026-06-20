@@ -43,8 +43,64 @@ export type SpecialistPatient = {
   id: string;
   fullName: string;
   email: string | null;
+  status: PatientRelationStatus;
   skinType: string | null;
+  skinProfile: PatientSkinProfile | null;
   profileImageUrl?: string | null;
+  lastActivityAt: string | null;
+};
+
+export type PatientRelationStatus = 'active' | 'inactive' | 'pending' | (string & {});
+
+export type PatientSkinProfile = {
+  ageRange: string | null;
+  mainGoal: string | null;
+  imperfections: string | null;
+  routineSteps: string | null;
+};
+
+export type SpecialistPatientDetail = SpecialistPatient & {
+  routines: PatientRoutine[];
+  history: PatientRoutineHistoryItem[];
+};
+
+export type PatientRoutine = {
+  id: string;
+  name: string;
+  description: string | null;
+  timeOfDay: string | null;
+  isActive: boolean;
+  steps: PatientRoutineStep[];
+};
+
+export type PatientRoutineStep = {
+  id: string;
+  name: string;
+  description?: string | null;
+  category?: string | null;
+  order?: number;
+  isCompleted?: boolean;
+  products: PatientProduct[];
+};
+
+export type PatientProduct = {
+  id: string;
+  name: string;
+  brand: string | null;
+  category: string | null;
+};
+
+export type PatientRoutineHistoryItem = {
+  id: string;
+  date: string;
+  completedAt: string | null;
+  completionPercentage: number;
+  routine: {
+    id: string;
+    name: string;
+    description: string | null;
+  } | null;
+  steps: PatientRoutineStep[];
 };
 
 export type SpecialistDocumentImage = {
@@ -62,12 +118,12 @@ type SpecialistStatusResponse = {
 } & RawSpecialistStatus;
 
 type SpecialistsSearchResponse = {
-  specialists: Array<{
+  specialists: {
     id: string;
     fullName: string;
     email: string | null;
     specialty: SpecialistSpecialty;
-  }>;
+  }[];
 };
 
 type MySpecialistResponse = {
@@ -83,6 +139,10 @@ type MySpecialistResponse = {
 
 type MyPatientsResponse = {
   patients: SpecialistPatient[];
+};
+
+type MyPatientDetailResponse = {
+  patient: SpecialistPatientDetail;
 };
 
 type RawSpecialistStatus = {
@@ -233,20 +293,21 @@ export async function unlinkSpecialist(): Promise<void> {
 }
 
 export async function getMyPatients(): Promise<SpecialistPatient[]> {
-  try {
-    const response = await apiRequest<MyPatientsResponse>({
-      path: '/specialists/my-patients',
-      method: 'GET'
-    });
+  const response = await apiRequest<MyPatientsResponse>({
+    path: '/specialists/my-patients',
+    method: 'GET'
+  });
 
-    return response.patients;
-  } catch (error) {
-    if (hasHttpStatus(error, 401) || hasHttpStatus(error, 403) || hasHttpStatus(error, 404)) {
-      return [];
-    }
+  return response.patients;
+}
 
-    throw error;
-  }
+export async function getMyPatientDetail(patientId: string): Promise<SpecialistPatientDetail> {
+  const response = await apiRequest<MyPatientDetailResponse>({
+    path: `/specialists/my-patients/${encodeURIComponent(patientId)}`,
+    method: 'GET'
+  });
+
+  return response.patient;
 }
 
 function normalizeSpecialistStatusResponse(response: SpecialistStatusResponse | null): SpecialistStatus {
