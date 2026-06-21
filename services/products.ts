@@ -1,7 +1,7 @@
 import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
 import type { Product, ProductCategory, ProductBrand } from '@/types/product';
-import { apiConfig, apiRequest } from '@/services/api/client';
+import { apiConfig, apiRequest, ApiClientError } from '@/services/api/client';
 
 export type ProductImagePayload = {
   imageUri?: string;
@@ -158,6 +158,50 @@ export async function deleteProduct(id: string): Promise<void> {
     await apiRequest<void>({ path: `/products/${id}`, method: 'DELETE' });
   } catch (error) {
     console.error('[deleteProduct]', error);
+    throw error instanceof Error ? error : new Error(`Error del servidor: ${String(error)}`);
+  }
+}
+
+type AffectedRoutine = { routineId: string; routineName: string; stepName: string };
+
+export type RemoveWithProtectionResult =
+  | { status: 'deleted' }
+  | { status: 'conflict'; conflict: { affectedRoutines: AffectedRoutine[] } };
+
+export async function deleteProductWithProtection(id: string): Promise<RemoveWithProtectionResult> {
+  try {
+    await apiRequest<void>({ path: `/products/${id}`, method: 'DELETE' });
+    return { status: 'deleted' };
+  } catch (error) {
+    if (error instanceof ApiClientError && error.status === 409) {
+      return {
+        status: 'conflict',
+        conflict: (error.details as { affectedRoutines: AffectedRoutine[] }) ?? { affectedRoutines: [] },
+      };
+    }
+    console.error('[deleteProductWithProtection]', error);
+    throw error instanceof Error ? error : new Error(`Error del servidor: ${String(error)}`);
+  }
+}
+
+export async function forceDeleteProduct(id: string): Promise<void> {
+  try {
+    await apiRequest<void>({ path: `/products/${id}/force`, method: 'DELETE' });
+  } catch (error) {
+    console.error('[forceDeleteProduct]', error);
+    throw error instanceof Error ? error : new Error(`Error del servidor: ${String(error)}`);
+  }
+}
+
+export async function replaceProductAndDelete(id: string, replacementProductId: string): Promise<void> {
+  try {
+    await apiRequest<void>({
+      path: `/products/${id}/replace`,
+      method: 'PUT',
+      body: JSON.stringify({ replacementProductId }),
+    });
+  } catch (error) {
+    console.error('[replaceProductAndDelete]', error);
     throw error instanceof Error ? error : new Error(`Error del servidor: ${String(error)}`);
   }
 }

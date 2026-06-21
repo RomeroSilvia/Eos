@@ -2,8 +2,12 @@ import { useCallback, useEffect, useState } from 'react';
 import {
   createProduct as createProductService,
   deleteProduct as deleteProductService,
+  deleteProductWithProtection,
+  forceDeleteProduct as forceDeleteProductService,
+  replaceProductAndDelete,
   getProducts,
   type ProductImagePayload,
+  type RemoveWithProtectionResult,
   updateProduct as updateProductService,
 } from '@/services/products';
 import type { Product, ProductBrand, ProductCategory } from '@/types/product';
@@ -55,5 +59,23 @@ export function useProducts() {
     setProducts((prev) => prev.filter((p) => p.id !== id));
   };
 
-  return { products, createProduct, updateProduct, removeProduct, isLoading, refreshProducts };
+  const removeWithProtection = async (id: string): Promise<RemoveWithProtectionResult> => {
+    const result = await deleteProductWithProtection(id);
+    if (result.status === 'deleted') {
+      setProducts((prev) => prev.filter((p) => p.id !== id));
+    }
+    return result;
+  };
+
+  const forceRemove = async (id: string) => {
+    await forceDeleteProductService(id);
+    setProducts((prev) => prev.filter((p) => p.id !== id));
+  };
+
+  const replaceAndRemove = async (id: string, replacementProductId: string) => {
+    await replaceProductAndDelete(id, replacementProductId);
+    setProducts((prev) => prev.filter((p) => p.id !== id));
+  };
+
+  return { products, createProduct, updateProduct, removeProduct, removeWithProtection, forceRemove, replaceAndRemove, isLoading, refreshProducts };
 }

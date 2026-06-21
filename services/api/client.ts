@@ -100,7 +100,7 @@ export async function apiRequest<TResponse>({ path, headers, ...options }: ApiRe
       parsed = undefined;
     }
 
-    if (response.status !== 401 && response.status !== 403) {
+    if (response.status !== 401 && response.status !== 403 && response.status !== 409) {
       console.error('RESPONSE ERROR:', text);
     }
     throw new ApiClientError(
