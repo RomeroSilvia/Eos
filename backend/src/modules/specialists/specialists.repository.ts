@@ -1,7 +1,13 @@
 import { supabase } from '../../config/supabase';
 import { TABLE_NAMES } from '../../database/tableNames';
 import type {
+  ProductRow,
   ProfileRow,
+  RoutineLogRow,
+  RoutineRow,
+  RoutineStepLogRow,
+  RoutineStepProductRow,
+  RoutineStepRow,
   SpecialistProfileRow
 } from '../../database/schema.types';
 
@@ -15,7 +21,8 @@ type ClientSpecialistRelationRow = {
   id: string;
   client_id: string;
   specialist_id: string;
-  status: 'active' | 'inactive';
+  status: string;
+  created_at?: string | null;
 };
 
 type SpecialistWithProfile = {
@@ -31,6 +38,26 @@ type ActiveRelationWithSpecialist = Pick<ClientSpecialistRelationRow, 'id' | 'cl
 type ActiveRelationWithClient = Pick<ClientSpecialistRelationRow, 'id' | 'client_id' | 'specialist_id' | 'status'>;
 
 type ClientProfileRow = Pick<ProfileRow, 'id' | 'full_name' | 'email' | 'skin_type'>;
+
+type PatientRelationRow = Pick<ClientSpecialistRelationRow, 'id' | 'client_id' | 'specialist_id' | 'status' | 'created_at'>;
+
+type SpecialistProfileIdentity = Pick<SpecialistProfileRow, 'id' | 'user_id'>;
+
+type PatientSkinProfileRow = {
+  user_id: string;
+  skin_type: string | null;
+  age_range: string | null;
+  main_goal: string | null;
+  imperfections: string | null;
+  routine_steps: string | null;
+  created_at: string;
+};
+
+type RoutineLogSummaryRow = Pick<RoutineLogRow, 'id' | 'user_id' | 'routine_id' | 'log_date' | 'completed_at' | 'completion_percentage' | 'created_at'>;
+
+type RoutineStepProductWithProduct = Pick<RoutineStepProductRow, 'step_id' | 'product_id'> & {
+  product: Pick<ProductRow, 'id' | 'name' | 'brand' | 'category'> | null;
+};
 
 export const specialistsRepository = {
   findVerifiedSpecialists: async (filters: { specialty?: string; name?: string }): Promise<SpecialistWithProfile[]> => {
@@ -112,7 +139,7 @@ export const specialistsRepository = {
     const db = supabase as any;
 
     const { data, error } = await db
-      .from('client_specialist_relations')
+      .from(TABLE_NAMES.clientSpecialistRelations)
       .select('id, client_id, specialist_id, status')
       .eq('client_id', clientId)
       .eq('status', 'active')
@@ -191,17 +218,69 @@ export const specialistsRepository = {
     return null;
   },
 
+  findSpecialistProfileIdentityByUserId: async (userId: string): Promise<SpecialistProfileIdentity | null> => {
+    const db = supabase as any;
+
+    const { data, error } = await db
+      .from(TABLE_NAMES.specialistProfiles)
+      .select('id, user_id')
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    if (error) throw error;
+    return data ?? null;
+  },
+
   findActiveRelationsBySpecialistId: async (specialistId: string): Promise<ActiveRelationWithClient[]> => {
     const db = supabase as any;
 
     const { data, error } = await db
-      .from('client_specialist_relations')
+      .from(TABLE_NAMES.clientSpecialistRelations)
       .select('id, client_id, specialist_id, status')
       .eq('specialist_id', specialistId)
       .eq('status', 'active');
 
     if (error) throw error;
     return data ?? [];
+  },
+
+  findRelationsBySpecialistIds: async (specialistIds: string[]): Promise<PatientRelationRow[]> => {
+    if (specialistIds.length === 0) {
+      return [];
+    }
+
+    const db = supabase as any;
+
+    const { data, error } = await db
+      .from(TABLE_NAMES.clientSpecialistRelations)
+      .select('id, client_id, specialist_id, status, created_at')
+      .in('specialist_id', specialistIds)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    return data ?? [];
+  },
+
+  findRelationBySpecialistAndClient: async (
+    specialistIds: string[],
+    clientId: string
+  ): Promise<PatientRelationRow | null> => {
+    if (specialistIds.length === 0) {
+      return null;
+    }
+
+    const db = supabase as any;
+
+    const { data, error } = await db
+      .from(TABLE_NAMES.clientSpecialistRelations)
+      .select('id, client_id, specialist_id, status, created_at')
+      .in('specialist_id', specialistIds)
+      .eq('client_id', clientId)
+      .order('created_at', { ascending: false })
+      .limit(1);
+
+    if (error) throw error;
+    return Array.isArray(data) ? data[0] ?? null : null;
   },
 
   findProfilesByIds: async (
@@ -221,6 +300,34 @@ export const specialistsRepository = {
 
     if (error) throw error;
     return data ?? [];
+  },
+
+  findLatestSkinProfilesByUserIds: async (userIds: string[]): Promise<Map<string, PatientSkinProfileRow>> => {
+    if (userIds.length === 0) {
+      return new Map<string, PatientSkinProfileRow>();
+    }
+
+    const db = supabase as any;
+
+    const { data, error } = await db
+      .from(TABLE_NAMES.skinProfiles)
+      .select('user_id, skin_type, age_range, main_goal, imperfections, routine_steps, created_at')
+      .in('user_id', userIds)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      return new Map<string, PatientSkinProfileRow>();
+    }
+
+    const profileByUserId = new Map<string, PatientSkinProfileRow>();
+
+    for (const row of data ?? []) {
+      if (!profileByUserId.has(row.user_id)) {
+        profileByUserId.set(row.user_id, row);
+      }
+    }
+
+    return profileByUserId;
   },
 
   findLatestSkinTypesByUserIds: async (userIds: string[]): Promise<Map<string, string>> => {
@@ -249,6 +356,123 @@ export const specialistsRepository = {
     }
 
     return skinTypeByUserId;
+  },
+
+  findLatestRoutineLogsByUserIds: async (userIds: string[]): Promise<Map<string, RoutineLogSummaryRow>> => {
+    if (userIds.length === 0) {
+      return new Map<string, RoutineLogSummaryRow>();
+    }
+
+    const db = supabase as any;
+
+    const { data, error } = await db
+      .from(TABLE_NAMES.routineLogs)
+      .select('id, user_id, routine_id, log_date, completed_at, completion_percentage, created_at')
+      .in('user_id', userIds)
+      .order('log_date', { ascending: false })
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      return new Map<string, RoutineLogSummaryRow>();
+    }
+
+    const latestLogByUserId = new Map<string, RoutineLogSummaryRow>();
+
+    for (const row of data ?? []) {
+      if (!latestLogByUserId.has(row.user_id)) {
+        latestLogByUserId.set(row.user_id, row);
+      }
+    }
+
+    return latestLogByUserId;
+  },
+
+  findRoutinesByUserId: async (userId: string): Promise<RoutineRow[]> => {
+    const { data, error } = await supabase
+      .from(TABLE_NAMES.routines)
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    return data ?? [];
+  },
+
+  findRecentRoutineLogsByUserId: async (userId: string, limit: number): Promise<RoutineLogRow[]> => {
+    const { data, error } = await supabase
+      .from(TABLE_NAMES.routineLogs)
+      .select('*')
+      .eq('user_id', userId)
+      .order('log_date', { ascending: false })
+      .order('created_at', { ascending: false })
+      .limit(limit);
+
+    if (error) throw error;
+    return data ?? [];
+  },
+
+  findRoutineStepsByRoutineIds: async (routineIds: string[]): Promise<RoutineStepRow[]> => {
+    if (routineIds.length === 0) {
+      return [];
+    }
+
+    const { data, error } = await supabase
+      .from(TABLE_NAMES.routineSteps)
+      .select('*')
+      .in('routine_id', routineIds)
+      .order('step_order', { ascending: true });
+
+    if (error) throw error;
+    return data ?? [];
+  },
+
+  findStepLogsByRoutineLogIds: async (routineLogIds: string[]): Promise<RoutineStepLogRow[]> => {
+    if (routineLogIds.length === 0) {
+      return [];
+    }
+
+    const { data, error } = await supabase
+      .from(TABLE_NAMES.routineStepLogs)
+      .select('*')
+      .in('routine_log_id', routineLogIds)
+      .order('created_at', { ascending: true });
+
+    if (error) throw error;
+    return data ?? [];
+  },
+
+  findStepProductsByStepIds: async (stepIds: string[]): Promise<RoutineStepProductWithProduct[]> => {
+    if (stepIds.length === 0) {
+      return [];
+    }
+
+    const db = supabase as any;
+
+    const { data, error } = await db
+      .from(TABLE_NAMES.routineStepProducts)
+      .select(
+        `
+        step_id,
+        product_id,
+        products(id, name, brand, category)
+      `
+      )
+      .in('step_id', stepIds);
+
+    if (error) throw error;
+
+    return (data ?? []).map((row: any) => ({
+      step_id: row.step_id,
+      product_id: row.product_id,
+      product: row.products
+        ? {
+            id: row.products.id,
+            name: row.products.name,
+            brand: row.products.brand,
+            category: row.products.category
+          }
+        : null
+    }));
   },
 
   findProfilePhotoById: async (userId: string): Promise<string | null> => {
@@ -284,7 +508,7 @@ export const specialistsRepository = {
     const db = supabase as any;
 
     const { error } = await db
-      .from('client_specialist_relations')
+      .from(TABLE_NAMES.clientSpecialistRelations)
       .update({ status: 'inactive' })
       .eq('client_id', clientId)
       .eq('status', 'active');
@@ -296,7 +520,7 @@ export const specialistsRepository = {
     const db = supabase as any;
 
     const { data, error } = await db
-      .from('client_specialist_relations')
+      .from(TABLE_NAMES.clientSpecialistRelations)
       .insert(payload)
       .select()
       .single();

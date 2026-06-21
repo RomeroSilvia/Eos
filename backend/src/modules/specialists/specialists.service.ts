@@ -100,15 +100,17 @@ export const specialistsService = {
   },
 
   getMyPatients: async (specialistId: string) => {
-    const relations = await specialistsRepository.findActiveRelationsBySpecialistId(specialistId);
+    const specialistIds = await getSpecialistRelationIds(specialistId);
+    const relations = await specialistsRepository.findRelationsBySpecialistIds(specialistIds);
 
     if (relations.length === 0) {
       return [];
     }
 
-    const clientIds = relations.map((relation) => relation.client_id);
+    const clientIds = [...new Set(relations.map((relation) => relation.client_id))];
     const clients = await specialistsRepository.findProfilesByIds(clientIds);
-    const latestSkinTypes = await specialistsRepository.findLatestSkinTypesByUserIds(clientIds);
+    const latestSkinProfiles = await specialistsRepository.findLatestSkinProfilesByUserIds(clientIds);
+    const latestRoutineLogs = await specialistsRepository.findLatestRoutineLogsByUserIds(clientIds);
     const photos = await Promise.all(
       clients.map(async (client) => ({
         clientId: client.id,
@@ -116,7 +118,13 @@ export const specialistsService = {
       }))
     );
     const photoByClientId = new Map(photos.map((photo) => [photo.clientId, photo.profileImageUrl]));
-    const relationByClientId = new Map(relations.map((relation) => [relation.client_id, relation]));
+    const relationByClientId = new Map<string, typeof relations[number]>();
+
+    for (const relation of relations) {
+      if (!relationByClientId.has(relation.client_id)) {
+        relationByClientId.set(relation.client_id, relation);
+      }
+    }
 
     return clients
       .filter((client) => relationByClientId.has(client.id))
@@ -125,11 +133,170 @@ export const specialistsService = {
         id: client.id,
         fullName: client.full_name,
         email: client.email,
-        skinType: client.skin_type ?? latestSkinTypes.get(client.id) ?? 'mixed',
-        profileImageUrl: photoByClientId.get(client.id) ?? null
+        status: relationByClientId.get(client.id)!.status,
+        skinType: normalizeSkinType(client.skin_type ?? latestSkinProfiles.get(client.id)?.skin_type),
+        skinProfile: latestSkinProfiles.get(client.id)
+          ? {
+              ageRange: latestSkinProfiles.get(client.id)!.age_range,
+              mainGoal: latestSkinProfiles.get(client.id)!.main_goal,
+              imperfections: latestSkinProfiles.get(client.id)!.imperfections,
+              routineSteps: latestSkinProfiles.get(client.id)!.routine_steps
+            }
+          : null,
+        profileImageUrl: photoByClientId.get(client.id) ?? null,
+        lastActivityAt: resolveLastActivityAt(relationByClientId.get(client.id)!, latestRoutineLogs.get(client.id))
       }));
+  },
+
+  getMyPatientDetail: async (specialistId: string, patientId: string) => {
+    const specialistIds = await getSpecialistRelationIds(specialistId);
+    const relation = await specialistsRepository.findRelationBySpecialistAndClient(specialistIds, patientId);
+
+    if (!relation) {
+      throw new ApiError(403, 'No tenes acceso a este paciente.');
+    }
+
+    const [client] = await specialistsRepository.findProfilesByIds([patientId]);
+
+    if (!client) {
+      throw new ApiError(404, 'Paciente no encontrado.');
+    }
+
+    const [latestSkinProfiles, photos, routines, routineLogs] = await Promise.all([
+      specialistsRepository.findLatestSkinProfilesByUserIds([patientId]),
+      specialistsRepository.findProfilePhotoById(patientId),
+      specialistsRepository.findRoutinesByUserId(patientId),
+      specialistsRepository.findRecentRoutineLogsByUserId(patientId, 20)
+    ]);
+
+    const latestSkinProfile = latestSkinProfiles.get(patientId) ?? null;
+    const routineIds = routines.map((routine) => routine.id);
+    const routineLogIds = routineLogs.map((log) => log.id);
+    const [steps, stepLogs] = await Promise.all([
+      specialistsRepository.findRoutineStepsByRoutineIds(routineIds),
+      specialistsRepository.findStepLogsByRoutineLogIds(routineLogIds)
+    ]);
+    const stepProducts = await specialistsRepository.findStepProductsByStepIds(steps.map((step) => step.id));
+
+    const routineById = new Map(routines.map((routine) => [routine.id, routine]));
+    const stepsByRoutineId = groupBy(steps, (step) => step.routine_id);
+    const stepLogsByRoutineLogId = groupBy(stepLogs, (stepLog) => stepLog.routine_log_id);
+    const productsByStepId = groupBy(stepProducts, (stepProduct) => stepProduct.step_id);
+    const latestRoutineLog = routineLogs[0] ?? null;
+
+    return {
+      relationId: relation.id,
+      id: client.id,
+      fullName: client.full_name,
+      email: client.email,
+      status: relation.status,
+      skinType: normalizeSkinType(client.skin_type ?? latestSkinProfile?.skin_type),
+      skinProfile: latestSkinProfile
+        ? {
+            ageRange: latestSkinProfile.age_range,
+            mainGoal: latestSkinProfile.main_goal,
+            imperfections: latestSkinProfile.imperfections,
+            routineSteps: latestSkinProfile.routine_steps
+          }
+        : null,
+      profileImageUrl: photos,
+      lastActivityAt: resolveLastActivityAt(relation, latestRoutineLog ?? undefined),
+      routines: routines.map((routine) => ({
+        id: routine.id,
+        name: routine.name,
+        description: routine.description,
+        timeOfDay: routine.time_of_day,
+        isActive: routine.is_active,
+        steps: (stepsByRoutineId.get(routine.id) ?? []).map((step) => ({
+          id: step.id,
+          name: step.name,
+          description: step.description,
+          category: step.category,
+          order: step.step_order,
+          products: (productsByStepId.get(step.id) ?? [])
+            .map((link) => link.product)
+            .filter(Boolean)
+            .map((product) => ({
+              id: product!.id,
+              name: product!.name,
+              brand: product!.brand,
+              category: product!.category
+            }))
+        }))
+      })),
+      history: routineLogs.map((log) => {
+        const routine = routineById.get(log.routine_id);
+        const routineSteps = stepsByRoutineId.get(log.routine_id) ?? [];
+        const completedStepIds = new Set(
+          (stepLogsByRoutineLogId.get(log.id) ?? [])
+            .filter((stepLog) => stepLog.is_completed)
+            .map((stepLog) => stepLog.step_id)
+        );
+
+        return {
+          id: log.id,
+          date: log.log_date,
+          completedAt: log.completed_at,
+          completionPercentage: Number(log.completion_percentage ?? 0),
+          routine: routine
+            ? {
+                id: routine.id,
+                name: routine.name,
+                description: routine.description
+              }
+            : null,
+          steps: routineSteps.map((step) => ({
+            id: step.id,
+            name: step.name,
+            isCompleted: completedStepIds.has(step.id),
+            products: (productsByStepId.get(step.id) ?? [])
+              .map((link) => link.product)
+              .filter(Boolean)
+              .map((product) => ({
+                id: product!.id,
+                name: product!.name,
+                brand: product!.brand,
+                category: product!.category
+              }))
+          }))
+        };
+      })
+    };
   }
 };
+
+function resolveLastActivityAt(
+  relation: { created_at?: string | null },
+  latestRoutineLog?: { log_date?: string | null; completed_at?: string | null; created_at?: string | null }
+): string | null {
+  return latestRoutineLog?.completed_at ?? latestRoutineLog?.log_date ?? latestRoutineLog?.created_at ?? relation.created_at ?? null;
+}
+
+function normalizeSkinType(value?: string | null): string | null {
+  if (!value || value === 'not_defined' || value === 'undefined' || value === 'unknown') {
+    return null;
+  }
+
+  return value;
+}
+
+async function getSpecialistRelationIds(userId: string): Promise<string[]> {
+  const specialistProfile = await specialistsRepository.findSpecialistProfileIdentityByUserId(userId);
+  return [...new Set([userId, specialistProfile?.id].filter((id): id is string => Boolean(id)))];
+}
+
+function groupBy<T>(items: T[], getKey: (item: T) => string): Map<string, T[]> {
+  const grouped = new Map<string, T[]>();
+
+  for (const item of items) {
+    const key = getKey(item);
+    const current = grouped.get(key) ?? [];
+    current.push(item);
+    grouped.set(key, current);
+  }
+
+  return grouped;
+}
 
 function normalizeOptionalString(value?: string): string | undefined {
   if (!value) return undefined;

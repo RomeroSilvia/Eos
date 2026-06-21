@@ -1,13 +1,14 @@
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter, type Href } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors } from '@/constants/colors';
 
 const quickActions = [
-  { icon: 'sparkles' as const, label: 'Consultas' },
-  { icon: 'people' as const, label: 'Pacientes' },
-  { icon: 'list' as const, label: 'Rutinas' },
-  { icon: 'calendar' as const, label: 'Agenda' }
+  { icon: 'sparkles' as const, label: 'Consultas', route: '/(tabs-specialist)/consultas' as Href },
+  { icon: 'people' as const, label: 'Pacientes', route: '/(tabs-specialist)/pacientes' as Href },
+  { icon: 'list' as const, label: 'Rutinas', route: '/(tabs-specialist)/rutinas' as Href },
+  { icon: 'calendar' as const, label: 'Agenda', route: '/(tabs-specialist)/consultas' as Href }
 ];
 
 const pendingConsultations = [
@@ -17,6 +18,8 @@ const pendingConsultations = [
 ];
 
 export default function SpecialistHomeScreen() {
+  const router = useRouter();
+
   return (
     <SafeAreaView style={styles.screen}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
@@ -46,7 +49,7 @@ export default function SpecialistHomeScreen() {
 
         <View style={styles.quickGrid}>
           {quickActions.map((action) => (
-            <Pressable key={action.label} style={styles.quickAction}>
+            <Pressable key={action.label} onPress={() => router.push(action.route)} style={styles.quickAction}>
               <Ionicons color={colors.primaryDark} name={action.icon} size={28} />
               <Text style={styles.quickLabel}>{action.label}</Text>
             </Pressable>
