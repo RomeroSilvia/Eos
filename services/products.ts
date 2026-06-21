@@ -7,9 +7,9 @@ export type ProductUsageConflict = {
   affectedRoutines: { routineId: string; routineName: string; stepName: string }[];
 };
 
-export type RemoveWithProtectionResult =
-  | { status: 'deleted' }
-  | { status: 'conflict'; conflict: ProductUsageConflict };
+export type RemoveWithProtectionResult = 
+| { status: 'deleted' }
+| { status: 'conflict'; conflict: ProductUsageConflict };
 
 export type ProductImagePayload = {
   imageUri?: string;

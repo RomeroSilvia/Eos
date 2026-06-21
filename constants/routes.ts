@@ -13,7 +13,8 @@ export const routes = {
   progressHistory: '/progress/history',
   progressDayDetail: '/progress/history/[date]',
   progressStats: '/progress/stats',
-  profile: '/profile'
+  profile: '/profile',
+  notifications: '/notifications'
 } as const;
 
 export type AppRoute = (typeof routes)[keyof typeof routes];

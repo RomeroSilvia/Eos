@@ -1,8 +1,10 @@
+import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { useCallback } from 'react';
 import { Image, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { BellButton } from '@/components/BellButton';
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
 import { HomeMetricCard } from '@/components/HomeMetricCard';
@@ -13,16 +15,24 @@ import { useHome } from '@/hooks/useHome';
 import { formatStepCount } from '@/utils/format';
 
 export default function HomeScreen() {
-  const { summary, refreshSummary, toggleReminder } = useHome();
+  const { summary, isLoading, refreshSummary, toggleReminder } = useHome();
 
   useFocusEffect(
     useCallback(() => {
-      void refreshSummary();
+      void refreshSummary(true);
     }, [refreshSummary])
   );
 
   if (!summary) {
-    return <SafeAreaView style={styles.screen} />;
+    return (
+      <SafeAreaView edges={['top', 'left', 'right']} style={styles.screen}>
+        <View style={styles.emptyState}>
+          <Ionicons color={colors.primary} name="hourglass-outline" size={34} />
+          <Text style={styles.emptyTitle}>Cargando tu información</Text>
+          <Text style={styles.emptyText}>En breve estarás actualizado</Text>
+        </View>
+      </SafeAreaView>
+    );
   }
 
   const progress = summary.totalSteps > 0
@@ -49,9 +59,10 @@ export default function HomeScreen() {
     : '🧴';
 
   return (
-    <SafeAreaView style={styles.screen}>
+    <SafeAreaView edges={['top', 'left', 'right']} style={styles.screen}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
+          <BellButton style={styles.bell} />
           <Text style={styles.greeting}>¡Hola, {summary.user.name}! 🌱</Text>
           <Text style={styles.subtitle}>Sentite bien con tu propia piel</Text>
         </View>
@@ -128,6 +139,9 @@ const styles = StyleSheet.create({
     gap: 6,
     paddingTop: 8
   },
+  bell: {
+    alignSelf: 'flex-end'
+  },
   greeting: {
     color: colors.textPrimary,
     fontSize: 30,
@@ -203,5 +217,24 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     fontSize: 20,
     fontWeight: '900'
+  },
+  emptyState: {
+    alignItems: 'center',
+    flex: 1,
+    justifyContent: 'center',
+    padding: 32
+  },
+  emptyTitle: {
+    color: colors.textPrimary,
+    fontSize: 22,
+    fontWeight: '900',
+    marginTop: 14
+  },
+  emptyText: {
+    color: colors.textSecondary,
+    fontSize: 15,
+    lineHeight: 22,
+    marginTop: 8,
+    textAlign: 'center'
   }
 });

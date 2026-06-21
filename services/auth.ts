@@ -1,6 +1,7 @@
 import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
 import { ApiRequestError, apiRequest } from '@/services/api/client';
+import { registerPushToken, unregisterPushToken } from '@/services/notifications';
 import { getSpecialistStatus } from '@/services/specialist';
 import type { UserProfile } from '@/types/user';
 
@@ -65,6 +66,7 @@ export async function login({ email, password }: LoginPayload): Promise<UserProf
   });
 
   await persistAuthSession(data);
+  registerPushToken().catch(() => {});
   return mapAuthResponseToProfile(data);
 }
 
@@ -117,6 +119,7 @@ export async function register(payload: RegisterPayload): Promise<UserProfile> {
   });
 
   await persistAuthSession(data);
+  registerPushToken().catch(() => {});
   return mapAuthResponseToProfile(data);
 }
 
@@ -137,6 +140,7 @@ export async function getCurrentProfile(): Promise<UserProfile> {
 }
 
 export async function logout(): Promise<void> {
+  await unregisterPushToken();
   await deleteStoredItem(sessionKey);
   await deleteStoredItem(accessTokenKey);
 }

@@ -22,4 +22,6 @@ supabase/.temp/
 expo-env.d.ts
 # @end expo-cli
 
+backend/.jest-temp/
+
 CLAUDE.md
