@@ -27,6 +27,13 @@ type ClientSpecialistRelationRow = {
 };
 
 type SpecialistWithProfile = {
+  profile: Pick<ProfileRow, 'id' | 'full_name' | 'role'>;
+  specialistProfile: Pick<SpecialistProfileRow, 'specialty' | 'license_status'>;
+};
+
+type VerifiedSpecialistProfile = SpecialistWithProfile;
+
+type SpecialistWithPrivateProfile = {
   profile: Pick<ProfileRow, 'id' | 'full_name' | 'email' | 'role'>;
   specialistProfile: Pick<SpecialistProfileRow, 'specialty' | 'license_status'>;
 };
@@ -61,7 +68,7 @@ type RoutineStepProductWithProduct = Pick<RoutineStepProductRow, 'step_id' | 'pr
 };
 
 export const specialistsDirectoryRepository = {
-  findVerifiedSpecialists: async (filters: { specialty?: string; name?: string }): Promise<SpecialistWithProfile[]> => {
+  findVerifiedSpecialists: async (filters: { specialty?: string; name?: string }): Promise<VerifiedSpecialistProfile[]> => {
     const db = supabase as any;
 
     let query = db
@@ -70,7 +77,7 @@ export const specialistsDirectoryRepository = {
         `
         specialty,
         license_status,
-        profiles!inner(id, full_name, email, role)
+        profiles!inner(id, full_name, role)
       `
       )
       .eq('license_status', 'verified')
@@ -92,7 +99,6 @@ export const specialistsDirectoryRepository = {
       profile: {
         id: row.profiles.id,
         full_name: row.profiles.full_name,
-        email: row.profiles.email,
         role: row.profiles.role
       },
       specialistProfile: {
@@ -102,7 +108,7 @@ export const specialistsDirectoryRepository = {
     }));
   },
 
-  findVerifiedSpecialistByUserId: async (userId: string): Promise<SpecialistWithProfile | null> => {
+  findVerifiedSpecialistByUserId: async (userId: string): Promise<SpecialistWithPrivateProfile | null> => {
     const db = supabase as any;
 
     const { data, error } = await db
@@ -238,6 +244,7 @@ export const specialistsDirectoryRepository = {
       .from(TABLE_NAMES.clientSpecialistRelations)
       .select('id, client_id, specialist_id, status, created_at')
       .in('specialist_id', specialistIds)
+      .eq('status', 'active')
       .order('created_at', { ascending: false });
 
     if (error) throw error;
@@ -259,6 +266,7 @@ export const specialistsDirectoryRepository = {
       .select('id, client_id, specialist_id, status, created_at')
       .in('specialist_id', specialistIds)
       .eq('client_id', clientId)
+      .eq('status', 'active')
       .order('created_at', { ascending: false })
       .limit(1);
 

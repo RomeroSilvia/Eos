@@ -24,7 +24,7 @@ const sections: {
 
 export default function Step6Confirm() {
   const router = useRouter();
-  const { routineId } = useLocalSearchParams<{ routineId: string }>();
+  const { routineId, assignClientId } = useLocalSearchParams<{ routineId: string; assignClientId?: string }>();
 
   const [routine, setRoutine] = useState<Routine | null>(null);
   const [expanded, setExpanded] = useState<Record<SectionKey, boolean>>({
@@ -142,7 +142,7 @@ export default function Step6Confirm() {
           onPress={() =>
             router.push({
               pathname: '/routine/Step4',
-              params: { routineId }
+              params: assignClientId ? { routineId, assignClientId } : { routineId }
             })
           }
         >
@@ -154,7 +154,7 @@ export default function Step6Confirm() {
           onPress={() =>
             router.push({
               pathname: '/routine/success',
-              params: { routineId }
+              params: assignClientId ? { routineId, assignClientId } : { routineId }
             })
           }
         >

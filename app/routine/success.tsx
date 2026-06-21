@@ -10,7 +10,7 @@ import type { Routine, RoutineTimeOfDay } from '@/types/routine';
 
 export default function SuccessScreen() {
   const router = useRouter();
-  const { routineId } = useLocalSearchParams<{ routineId: string }>();
+  const { routineId, assignClientId } = useLocalSearchParams<{ routineId: string; assignClientId?: string }>();
   const [routine, setRoutine] = useState<Routine | null>(null);
   const { profile } = useProfile();
 
@@ -59,7 +59,14 @@ export default function SuccessScreen() {
 
         <Pressable
           style={styles.button}
-          onPress={() => router.push((profile?.role === 'specialist' ? '/(tabs-specialist)/rutinas' : '/routine') as never)}
+          onPress={() => {
+            if (assignClientId) {
+              router.push(`/patients/${assignClientId}` as never);
+              return;
+            }
+
+            router.push((profile?.role === 'specialist' ? '/(tabs-specialist)/rutinas' : '/routine') as never);
+          }}
         >
           <Text style={styles.buttonText}>Ver mi rutina</Text>
         </Pressable>

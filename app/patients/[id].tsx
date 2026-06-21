@@ -84,6 +84,20 @@ export default function PatientDetailScreen() {
             </View>
           </Card>
 
+          <Pressable
+            accessibilityRole="button"
+            style={styles.assignButton}
+            onPress={() =>
+              router.push({
+                pathname: '/routine/Create',
+                params: { assignClientId: patient.id }
+              })
+            }
+          >
+            <Ionicons color={colors.surface} name="add-circle-outline" size={20} />
+            <Text style={styles.assignButtonText}>Asignar rutina</Text>
+          </Pressable>
+
           <SectionTitle title="Perfil de piel" />
           <Card style={styles.compactCard}>
             <InfoLine label="Tipo de piel" value={formatSkinType(patient.skinType)} />
@@ -536,5 +550,19 @@ const styles = StyleSheet.create({
     gap: 10,
     justifyContent: 'center',
     paddingHorizontal: 24
+  },
+  assignButton: {
+    alignItems: 'center',
+    backgroundColor: colors.secondary,
+    borderRadius: 12,
+    flexDirection: 'row',
+    gap: 8,
+    justifyContent: 'center',
+    padding: 14
+  },
+  assignButtonText: {
+    color: colors.surface,
+    fontSize: 15,
+    fontWeight: '900'
   }
 });

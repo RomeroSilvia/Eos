@@ -2,10 +2,11 @@ import { View, Text, StyleSheet, TextInput, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors } from '@/constants/colors';
 import { Stepper } from '@/components/Stepper';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { createRoutine } from '@/services/routines';
+import { assignRoutineToPatient } from '@/services/specialist';
 
 type IconName = keyof typeof MaterialCommunityIcons.glyphMap;
 
@@ -25,6 +26,7 @@ const goals: Goal[] = [
 
 export default function Step2() {
     const router = useRouter();
+    const { assignClientId } = useLocalSearchParams<{ assignClientId?: string }>();
     const [name, setName] = useState('');
     const [selected, setSelected] = useState<number | null>(null);
 
@@ -92,11 +94,15 @@ export default function Step2() {
                     onPress={async () => {
                         console.log('CLICK STEP2');
 
-                        const routine = await createRoutine({
+                        const payload = {
                             name,
                             description: goals.find(g => g.id === selected)?.label,
                             time_of_day: null
-                        });
+                        };
+
+                        const routine = assignClientId
+                            ? await assignRoutineToPatient(assignClientId, payload)
+                            : await createRoutine(payload);
 
                         console.log('RESPONSE:', routine);
 
@@ -105,7 +111,12 @@ export default function Step2() {
                             return;
                         }
 
-                        router.push(`/routine/Step3?routineId=${routine.id}`);
+                        router.push({
+                            pathname: '/routine/Step3',
+                            params: assignClientId
+                                ? { routineId: routine.id, assignClientId }
+                                : { routineId: routine.id }
+                        });
                     }}
                     style={[
                         styles.button,

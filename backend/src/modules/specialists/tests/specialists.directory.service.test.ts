@@ -36,7 +36,19 @@ jest.mock('../specialists.directory.repository', () => ({
   }
 }));
 
+jest.mock('../../routines/routines.service', () => ({
+  routinesService: {
+    createRoutine: jest.fn()
+  }
+}));
+
 const mockedRepository = jest.mocked(specialistsDirectoryRepository);
+
+const { routinesService } = jest.requireMock('../../routines/routines.service') as {
+  routinesService: {
+    createRoutine: jest.Mock;
+  };
+};
 
 function makeSpecialist(id = 'specialist-1'): MockedSpecialist {
   return {
@@ -76,6 +88,39 @@ describe('specialistsDirectoryService', () => {
       expect(result[0]).not.toHaveProperty('email');
       expect(result[0]).not.toHaveProperty('dni_photo_url');
       expect(result[0]).not.toHaveProperty('title_photo_url');
+    });
+
+    it('filtra especialistas por nombre normalizado', async () => {
+      mockedRepository.findVerifiedSpecialists.mockResolvedValue([]);
+
+      await specialistsDirectoryService.searchSpecialists({ name: '  ana  ' });
+
+      expect(mockedRepository.findVerifiedSpecialists).toHaveBeenCalledWith({
+        name: 'ana',
+        specialty: undefined
+      });
+    });
+
+    it('filtra especialistas por especialidad valida', async () => {
+      mockedRepository.findVerifiedSpecialists.mockResolvedValue([]);
+
+      await specialistsDirectoryService.searchSpecialists({ specialty: 'dermatologo' });
+
+      expect(mockedRepository.findVerifiedSpecialists).toHaveBeenCalledWith({
+        name: undefined,
+        specialty: 'dermatologo'
+      });
+    });
+
+    it('rechaza especialidad invalida con error controlado', async () => {
+      await expect(
+        specialistsDirectoryService.searchSpecialists({ specialty: 'cirujano' })
+      ).rejects.toMatchObject({
+        statusCode: 400,
+        message: 'specialty inválido.'
+      });
+
+      expect(mockedRepository.findVerifiedSpecialists).not.toHaveBeenCalled();
     });
   });
 
@@ -134,7 +179,7 @@ describe('specialistsDirectoryService', () => {
   });
 
   describe('getMyPatients', () => {
-    it('devuelve pacientes asociados activos e inactivos con piel y ultima actividad', async () => {
+    it('devuelve solo pacientes asociados activos con piel y ultima actividad', async () => {
       mockedRepository.findRelationsBySpecialistIds.mockResolvedValue([
         {
           id: 'relation-1',
@@ -189,13 +234,6 @@ describe('specialistsDirectoryService', () => {
           status: 'active',
           skinType: 'mixed',
           lastActivityAt: '2026-05-02'
-        }),
-        expect.objectContaining({
-          id: 'client-2',
-          relationId: 'relation-2',
-          status: 'inactive',
-          skinType: 'dry',
-          lastActivityAt: '2026-04-20T10:00:00.000Z'
         })
       ]);
     });
@@ -409,6 +447,80 @@ describe('specialistsDirectoryService', () => {
           }
         ]
       });
+    });
+  });
+
+  describe('assignRoutineToPatient', () => {
+    it('asigna una rutina a un paciente con relacion activa', async () => {
+      mockedRepository.findRelationBySpecialistAndClient.mockResolvedValue({
+        id: 'relation-1',
+        client_id: 'client-1',
+        specialist_id: 'specialist-1',
+        status: 'active',
+        created_at: '2026-05-01T10:00:00.000Z'
+      } as any);
+      routinesService.createRoutine.mockResolvedValue({
+        id: 'routine-1',
+        user_id: 'client-1',
+        assigned_by: 'specialist-1'
+      });
+
+      const result = await specialistsDirectoryService.assignRoutineToPatient('specialist-1', {
+        clientId: 'client-1',
+        name: 'Rutina indicada',
+        description: 'Hidratacion',
+        timeOfDay: 'morning'
+      });
+
+      expect(routinesService.createRoutine).toHaveBeenCalledWith({
+        user_id: 'client-1',
+        assigned_by: 'specialist-1',
+        name: 'Rutina indicada',
+        description: 'Hidratacion',
+        time_of_day: 'morning',
+        is_active: true
+      });
+      expect(result).toMatchObject({
+        id: 'routine-1',
+        user_id: 'client-1',
+        assigned_by: 'specialist-1'
+      });
+    });
+
+    it('rechaza asignar rutina a un paciente no vinculado', async () => {
+      mockedRepository.findRelationBySpecialistAndClient.mockResolvedValue(null);
+
+      await expect(
+        specialistsDirectoryService.assignRoutineToPatient('specialist-1', {
+          clientId: 'client-9',
+          name: 'Rutina indicada'
+        })
+      ).rejects.toMatchObject({
+        statusCode: 403
+      });
+
+      expect(routinesService.createRoutine).not.toHaveBeenCalled();
+    });
+
+    it('rechaza asignar rutina si la relacion esta inactiva', async () => {
+      mockedRepository.findRelationBySpecialistAndClient.mockResolvedValue({
+        id: 'relation-1',
+        client_id: 'client-1',
+        specialist_id: 'specialist-1',
+        status: 'inactive',
+        created_at: '2026-05-01T10:00:00.000Z'
+      } as any);
+
+      await expect(
+        specialistsDirectoryService.assignRoutineToPatient('specialist-1', {
+          clientId: 'client-1',
+          name: 'Rutina indicada'
+        })
+      ).rejects.toMatchObject({
+        statusCode: 403
+      });
+
+      expect(routinesService.createRoutine).not.toHaveBeenCalled();
     });
   });
 });

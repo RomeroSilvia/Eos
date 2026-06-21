@@ -24,7 +24,7 @@ type Sections = {
 
 export default function Step4() {
   const router = useRouter();
-  const { routineId } = useLocalSearchParams<{ routineId: string }>();
+  const { routineId, assignClientId } = useLocalSearchParams<{ routineId: string; assignClientId?: string }>();
 
   const [sections, setSections] = useState<Sections>({
     limpieza: [],
@@ -73,7 +73,7 @@ export default function Step4() {
   const goToAddStep = (section: string) => {
     router.push({
       pathname: '/routine/Add-step',
-      params: { section, routineId }
+      params: assignClientId ? { section, routineId, assignClientId } : { section, routineId }
     });
   };
 
@@ -144,7 +144,7 @@ export default function Step4() {
           onPress={() =>
             router.push({
               pathname: '/routine/Step6-confirm',
-              params: { routineId }
+              params: assignClientId ? { routineId, assignClientId } : { routineId }
             })
           }
         >

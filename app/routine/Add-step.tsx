@@ -17,6 +17,7 @@ export default function AddStep() {
     section: string;
     routineId: string;
     stepId?: string;
+    assignClientId?: string;
   }>();
 
   const [name, setName] = useState('');

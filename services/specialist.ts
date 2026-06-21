@@ -3,6 +3,7 @@ import * as ImageManipulator from 'expo-image-manipulator';
 import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
 import { apiConfig, apiRequest } from '@/services/api/client';
+import type { Routine } from '@/types/routine';
 
 export const SPECIALIST_DOCUMENT_MAX_SIZE_BYTES = 5 * 1024 * 1024;
 const SPECIALIST_DOCUMENT_ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp'] as const;
@@ -34,7 +35,6 @@ export type MySpecialist = {
 export type SpecialistDirectoryItem = {
   id: string;
   fullName: string;
-  email: string | null;
   specialty: SpecialistSpecialty;
 };
 
@@ -121,7 +121,6 @@ type SpecialistsSearchResponse = {
   specialists: {
     id: string;
     fullName: string;
-    email: string | null;
     specialty: SpecialistSpecialty;
   }[];
 };
@@ -256,6 +255,20 @@ export async function getSpecialists(filters: {
   specialty?: SpecialistSpecialty | 'all';
   name?: string;
 } = {}): Promise<SpecialistDirectoryItem[]> {
+  const path = buildSpecialistsPath(filters);
+
+  const response = await apiRequest<SpecialistsSearchResponse>({
+    path,
+    method: 'GET'
+  });
+
+  return response.specialists;
+}
+
+export function buildSpecialistsPath(filters: {
+  specialty?: SpecialistSpecialty | 'all';
+  name?: string;
+} = {}): string {
   const params = new URLSearchParams();
 
   if (filters.name?.trim()) {
@@ -267,14 +280,7 @@ export async function getSpecialists(filters: {
   }
 
   const query = params.toString();
-  const path = query ? `/specialists?${query}` : '/specialists';
-
-  const response = await apiRequest<SpecialistsSearchResponse>({
-    path,
-    method: 'GET'
-  });
-
-  return response.specialists;
+  return query ? `/specialists?${query}` : '/specialists';
 }
 
 export async function linkSpecialist(specialistId: string): Promise<void> {
@@ -308,6 +314,22 @@ export async function getMyPatientDetail(patientId: string): Promise<SpecialistP
   });
 
   return response.patient;
+}
+
+export async function assignRoutineToPatient(
+  patientId: string,
+  data: {
+    name: string;
+    description?: string | null;
+    time_of_day?: string | null;
+    is_active?: boolean;
+  }
+): Promise<Routine> {
+  return apiRequest<Routine>({
+    path: `/specialists/my-patients/${encodeURIComponent(patientId)}/routines`,
+    method: 'POST',
+    body: JSON.stringify(data)
+  });
 }
 
 function normalizeSpecialistStatusResponse(response: SpecialistStatusResponse | null): SpecialistStatus {

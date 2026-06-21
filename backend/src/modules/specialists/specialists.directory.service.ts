@@ -1,10 +1,19 @@
 import { ApiError } from '../../utils/ApiError';
 import { specialistsDirectoryRepository } from './specialists.directory.repository';
+import { routinesService } from '../routines/routines.service';
 import { ALLOWED_SPECIALTIES, type AllowedSpecialty } from './specialists.constants';
 
 type SearchFilters = {
   specialty?: string;
   name?: string;
+};
+
+type AssignRoutineInput = {
+  clientId: string;
+  name: string;
+  description?: string | null;
+  timeOfDay?: string | null;
+  isActive?: boolean;
 };
 
 export const specialistsDirectoryService = {
@@ -97,7 +106,8 @@ export const specialistsDirectoryService = {
 
   getMyPatients: async (specialistId: string) => {
     const specialistIds = await getSpecialistRelationIds(specialistId);
-    const relations = await specialistsDirectoryRepository.findRelationsBySpecialistIds(specialistIds);
+    const relations = (await specialistsDirectoryRepository.findRelationsBySpecialistIds(specialistIds))
+      .filter((relation) => relation.status === 'active');
 
     if (relations.length === 0) {
       return [];
@@ -148,7 +158,7 @@ export const specialistsDirectoryService = {
     const specialistIds = await getSpecialistRelationIds(specialistId);
     const relation = await specialistsDirectoryRepository.findRelationBySpecialistAndClient(specialistIds, patientId);
 
-    if (!relation) {
+    if (!relation || relation.status !== 'active') {
       throw new ApiError(403, 'No tenes acceso a este paciente.');
     }
 
@@ -258,8 +268,52 @@ export const specialistsDirectoryService = {
         };
       })
     };
+  },
+
+  assignRoutineToPatient: async (specialistId: string, input: AssignRoutineInput) => {
+    const specialistIds = await getSpecialistRelationIds(specialistId);
+    const relation = await specialistsDirectoryRepository.findRelationBySpecialistAndClient(
+      specialistIds,
+      input.clientId
+    );
+
+    if (!relation || relation.status !== 'active') {
+      throw new ApiError(403, 'No tenés una relación activa con este paciente.');
+    }
+
+    const name = normalizeRequiredRoutineName(input.name);
+    const timeOfDay = normalizeRoutineTimeOfDay(input.timeOfDay);
+
+    return routinesService.createRoutine({
+      user_id: input.clientId,
+      assigned_by: specialistId,
+      name,
+      description: input.description ?? null,
+      time_of_day: timeOfDay,
+      is_active: input.isActive ?? true
+    });
   }
 };
+
+function normalizeRequiredRoutineName(value: unknown): string {
+  if (typeof value !== 'string' || !value.trim()) {
+    throw new ApiError(400, 'El nombre de la rutina es obligatorio.');
+  }
+
+  return value.trim();
+}
+
+function normalizeRoutineTimeOfDay(value: unknown): 'morning' | 'night' | 'custom' | null {
+  if (value === undefined || value === null || value === '') {
+    return null;
+  }
+
+  if (value === 'morning' || value === 'night' || value === 'custom') {
+    return value;
+  }
+
+  throw new ApiError(400, 'Tipo de rutina inválido.');
+}
 
 function resolveLastActivityAt(
   relation: { created_at?: string | null },

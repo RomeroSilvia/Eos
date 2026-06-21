@@ -9,7 +9,7 @@ import { updateRoutine } from '@/services/routines';
 
 export default function Step3() {
   const router = useRouter();
-  const { routineId } = useLocalSearchParams<{ routineId: string }>();
+  const { routineId, assignClientId } = useLocalSearchParams<{ routineId: string; assignClientId?: string }>();
 
   const [type, setType] = useState<'mañana' | 'noche'>('mañana');
 
@@ -89,7 +89,12 @@ export default function Step3() {
               console.error(e);
             }
 
-            router.push(`/routine/Step4?routineId=${routineId}`);
+            router.push({
+              pathname: '/routine/Step4',
+              params: assignClientId
+                ? { routineId, assignClientId }
+                : { routineId }
+            });
           }}
         >
           <Text style={styles.buttonText}>Continuar</Text>

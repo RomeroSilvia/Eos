@@ -1,12 +1,13 @@
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors } from '@/constants/colors';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { RoutineIllustration } from '@/components/icons/RoutineIllustration';
 import { Stepper } from '@/components/Stepper';
 
 export default function CreateRoutineScreen() {
   const router = useRouter();
+  const { assignClientId } = useLocalSearchParams<{ assignClientId?: string }>();
 
   return (
     <SafeAreaView style={styles.screen}>
@@ -31,7 +32,12 @@ export default function CreateRoutineScreen() {
 
         <Pressable
           style={styles.button}
-          onPress={() => router.push('/routine/Step2')}
+          onPress={() =>
+            router.push({
+              pathname: '/routine/Step2',
+              params: assignClientId ? { assignClientId } : undefined
+            })
+          }
         >
           <Text style={styles.buttonText}>Comenzar</Text>
         </Pressable>
