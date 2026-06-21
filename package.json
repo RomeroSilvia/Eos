@@ -9,7 +9,10 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "doctor": "expo-doctor",
-    "lint": "expo lint"
+    "lint": "expo lint",
+    "supabase": "node scripts/supabase-local.js",
+    "supabase:db:push": "node scripts/supabase-local.js db push",
+    "supabase:types": "node scripts/supabase-local.js gen types typescript --schema public"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.3",
@@ -49,6 +52,7 @@
     "babel-preset-expo": "~54.0.10",
     "eslint": "^9.0.0",
     "eslint-config-expo": "~10.0.0",
+    "supabase": "^2.107.0",
     "typescript": "~5.9.2"
   }
 }

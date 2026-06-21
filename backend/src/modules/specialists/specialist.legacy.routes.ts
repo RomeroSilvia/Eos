@@ -3,12 +3,13 @@ import multer, { MulterError } from 'multer';
 import { authenticate } from '../../middlewares/auth.middleware';
 import { requireRole } from '../../middlewares/requireRole.middleware';
 import { ApiError } from '../../utils/ApiError';
-import { getSpecialistStatus, registerSpecialist, specialistHealth } from './specialist.controller';
+import { getSpecialistStatus, registerSpecialist, specialistHealth } from './specialists.registration.controller';
+import {
+  SPECIALIST_DOCUMENT_ALLOWED_MIME_TYPES,
+  SPECIALIST_DOCUMENT_MAX_SIZE_BYTES
+} from './specialists.constants';
 
 export const specialistRouter = Router();
-
-export const SPECIALIST_DOCUMENT_MAX_SIZE_BYTES = 5 * 1024 * 1024;
-export const SPECIALIST_DOCUMENT_ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 
 const upload = multer({
   storage: multer.memoryStorage(),

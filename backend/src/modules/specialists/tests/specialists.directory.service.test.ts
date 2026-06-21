@@ -1,5 +1,5 @@
-import { specialistsRepository } from '../specialists.repository';
-import { specialistsService } from '../specialists.service';
+import { specialistsDirectoryRepository } from '../specialists.directory.repository';
+import { specialistsDirectoryService } from '../specialists.directory.service';
 
 type MockedSpecialist = {
   profile: {
@@ -14,8 +14,8 @@ type MockedSpecialist = {
   };
 };
 
-jest.mock('../specialists.repository', () => ({
-  specialistsRepository: {
+jest.mock('../specialists.directory.repository', () => ({
+  specialistsDirectoryRepository: {
     findVerifiedSpecialists: jest.fn(),
     findVerifiedSpecialistByUserId: jest.fn(),
     findActiveRelationByClientId: jest.fn(),
@@ -36,7 +36,7 @@ jest.mock('../specialists.repository', () => ({
   }
 }));
 
-const mockedRepository = jest.mocked(specialistsRepository);
+const mockedRepository = jest.mocked(specialistsDirectoryRepository);
 
 function makeSpecialist(id = 'specialist-1'): MockedSpecialist {
   return {
@@ -53,10 +53,30 @@ function makeSpecialist(id = 'specialist-1'): MockedSpecialist {
   };
 }
 
-describe('specialistsService', () => {
+describe('specialistsDirectoryService', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockedRepository.findSpecialistProfileIdentityByUserId.mockResolvedValue(null);
+  });
+
+  describe('searchSpecialists', () => {
+    it('devuelve especialistas verificados sin email ni documentos privados', async () => {
+      mockedRepository.findVerifiedSpecialists.mockResolvedValue([makeSpecialist()] as any);
+
+      const result = await specialistsDirectoryService.searchSpecialists({});
+
+      expect(result).toEqual([
+        {
+          id: 'specialist-1',
+          fullName: 'Dra. Ana Perez',
+          specialty: 'dermatologo',
+          licenseStatus: 'verified'
+        }
+      ]);
+      expect(result[0]).not.toHaveProperty('email');
+      expect(result[0]).not.toHaveProperty('dni_photo_url');
+      expect(result[0]).not.toHaveProperty('title_photo_url');
+    });
   });
 
   describe('linkSpecialist', () => {
@@ -70,7 +90,7 @@ describe('specialistsService', () => {
         status: 'active'
       } as any);
 
-      const result = await specialistsService.linkSpecialist('user-1', 'specialist-1');
+      const result = await specialistsDirectoryService.linkSpecialist('user-1', 'specialist-1');
 
       expect(mockedRepository.deactivateActiveRelation).toHaveBeenCalledWith('user-1');
       expect(mockedRepository.createRelation).toHaveBeenCalledWith({
@@ -97,7 +117,7 @@ describe('specialistsService', () => {
         status: 'active'
       } as any);
 
-      const result = await specialistsService.linkSpecialist('user-1', 'specialist-1');
+      const result = await specialistsDirectoryService.linkSpecialist('user-1', 'specialist-1');
 
       expect(mockedRepository.createRelation).not.toHaveBeenCalled();
       expect(mockedRepository.deactivateActiveRelation).not.toHaveBeenCalled();
@@ -107,7 +127,7 @@ describe('specialistsService', () => {
 
   describe('unlinkSpecialist', () => {
     it('desactiva la relacion activa del cliente', async () => {
-      await specialistsService.unlinkSpecialist('user-55');
+      await specialistsDirectoryService.unlinkSpecialist('user-55');
 
       expect(mockedRepository.deactivateActiveRelation).toHaveBeenCalledWith('user-55');
     });
@@ -159,7 +179,7 @@ describe('specialistsService', () => {
       ] as any));
       mockedRepository.findProfilePhotoById.mockResolvedValue(null);
 
-      const result = await specialistsService.getMyPatients('specialist-1');
+      const result = await specialistsDirectoryService.getMyPatients('specialist-1');
 
       expect(mockedRepository.findRelationsBySpecialistIds).toHaveBeenCalledWith(['specialist-1']);
       expect(result).toEqual([
@@ -204,7 +224,7 @@ describe('specialistsService', () => {
       mockedRepository.findLatestRoutineLogsByUserIds.mockResolvedValue(new Map());
       mockedRepository.findProfilePhotoById.mockResolvedValue(null);
 
-      const result = await specialistsService.getMyPatients('specialist-1');
+      const result = await specialistsDirectoryService.getMyPatients('specialist-1');
 
       expect(mockedRepository.findProfilesByIds).toHaveBeenCalledWith(['client-1']);
       expect(result).toEqual([
@@ -237,7 +257,7 @@ describe('specialistsService', () => {
       mockedRepository.findLatestRoutineLogsByUserIds.mockResolvedValue(new Map());
       mockedRepository.findProfilePhotoById.mockResolvedValue(null);
 
-      const result = await specialistsService.getMyPatients('specialist-1');
+      const result = await specialistsDirectoryService.getMyPatients('specialist-1');
 
       expect(mockedRepository.findRelationsBySpecialistIds).toHaveBeenCalledWith([
         'specialist-1',
@@ -269,7 +289,7 @@ describe('specialistsService', () => {
       mockedRepository.findLatestRoutineLogsByUserIds.mockResolvedValue(new Map());
       mockedRepository.findProfilePhotoById.mockResolvedValue(null);
 
-      const result = await specialistsService.getMyPatients('specialist-1');
+      const result = await specialistsDirectoryService.getMyPatients('specialist-1');
 
       expect(result[0].skinType).toBeNull();
     });
@@ -279,7 +299,7 @@ describe('specialistsService', () => {
     it('bloquea el acceso cuando el paciente no esta asociado al especialista', async () => {
       mockedRepository.findRelationBySpecialistAndClient.mockResolvedValue(null);
 
-      await expect(specialistsService.getMyPatientDetail('specialist-1', 'client-9')).rejects.toMatchObject({
+      await expect(specialistsDirectoryService.getMyPatientDetail('specialist-1', 'client-9')).rejects.toMatchObject({
         statusCode: 403,
         message: 'No tenes acceso a este paciente.'
       });
@@ -364,7 +384,7 @@ describe('specialistsService', () => {
         }
       ] as any);
 
-      const result = await specialistsService.getMyPatientDetail('specialist-1', 'client-1');
+      const result = await specialistsDirectoryService.getMyPatientDetail('specialist-1', 'client-1');
 
       expect(result).toMatchObject({
         id: 'client-1',

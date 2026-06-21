@@ -8,7 +8,7 @@ export const requireRole = (...roles: UserRole[]): RequestHandler => {
     const currentRole = req.user?.role ?? 'user';
 
     if (!roles.includes(currentRole)) {
-      throw new ApiError(403, 'No tenes permiso para acceder a este recurso.');
+      throw new ApiError(403, 'No tenés permiso para acceder a este recurso.');
     }
 
     next();

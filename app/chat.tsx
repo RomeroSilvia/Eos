@@ -4,24 +4,34 @@ import { AppState, Alert, FlatList, Image, Linking, Pressable, StyleSheet, Text,
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import type { RealtimeChannel } from '@supabase/supabase-js';
-import * as DocumentPicker from 'expo-document-picker';
-import * as ImagePicker from 'expo-image-picker';
 import { useFocusEffect } from '@react-navigation/native';
+import * as ImagePicker from 'expo-image-picker';
 import { Button } from '@/components/Button';
 import { colors } from '@/constants/colors';
-import { ApiClientError } from '@/services/api/client';
+import { ApiClientError, getFriendlyErrorMessage } from '@/services/api/client';
 import { getCurrentProfile } from '@/services/auth';
 import {
   getChatMessages,
+  MAX_CHAT_IMAGE_SIZE_BYTES,
   markChatAsRead,
   parseChatMessage,
-  sendChatMedia,
+  sendChatImage,
   sendChatMessage,
   startChatVideoCall,
   type ChatParticipant,
   type ChatMessage
 } from '@/services/chat';
 import { prepareSupabaseRealtimeClient } from '@/services/supabase';
+
+const MAX_CHAT_MESSAGE_LENGTH = 1000;
+const ALLOWED_CHAT_IMAGE_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+
+type SelectedChatImage = {
+  uri: string;
+  name: string;
+  type: string;
+  size?: number | null;
+};
 
 export default function ChatScreen() {
   const params = useLocalSearchParams<{ relationId?: string | string[] }>();
@@ -37,6 +47,8 @@ export default function ChatScreen() {
   const [messageText, setMessageText] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<SelectedChatImage | null>(null);
+  const [failedImageIds, setFailedImageIds] = useState<Set<string>>(new Set());
   const [relationId, setRelationId] = useState<string | undefined>(relationIdFromParams);
   const [myUserId, setMyUserId] = useState<string | null>(null);
   const [participant, setParticipant] = useState<ChatParticipant | null>(null);
@@ -105,7 +117,7 @@ export default function ChatScreen() {
         }
       }
 
-      Alert.alert('Chat', error instanceof Error ? error.message : 'No pudimos cargar los mensajes.');
+      Alert.alert('Chat', getFriendlyErrorMessage(error, 'No pudimos cargar los mensajes.'));
     } finally {
       setIsLoading(false);
     }
@@ -205,6 +217,10 @@ export default function ChatScreen() {
             const nextMessage = payload.new as ChatMessage;
             appendMessage(nextMessage);
 
+            if (nextMessage.message_type === 'image') {
+              void syncMessagesSilently();
+            }
+
             if (nextMessage.sender_id !== myUserId) {
               void markChatAsRead(relationId).catch(() => undefined);
             }
@@ -220,32 +236,43 @@ export default function ChatScreen() {
         void channel.unsubscribe();
       }
     };
-  }, [appendMessage, myUserId, relationId]);
+  }, [appendMessage, myUserId, relationId, syncMessagesSilently]);
 
   async function handleSend() {
-    if (!messageText.trim() || isSending) {
+    if ((!messageText.trim() && !selectedImage) || isSending) {
       return;
     }
 
     setIsSending(true);
 
     try {
-      const response = await sendChatMessage({
-        content: messageText,
-        relationId
-      });
+      const response = selectedImage
+        ? await sendChatImage({
+          relationId,
+          content: messageText,
+          file: {
+            uri: selectedImage.uri,
+            name: selectedImage.name,
+            type: selectedImage.type
+          }
+        })
+        : await sendChatMessage({
+          content: messageText,
+          relationId
+        });
 
       setRelationId(response.relationId);
       appendMessage(response.message);
       setMessageText('');
+      setSelectedImage(null);
     } catch (error) {
-      Alert.alert('Chat', error instanceof Error ? error.message : 'No pudimos enviar el mensaje.');
+      Alert.alert('Chat', getFriendlyErrorMessage(error, 'No pudimos enviar el mensaje.'));
     } finally {
       setIsSending(false);
     }
   }
 
-  async function handlePickMedia(mediaType: 'image' | 'video') {
+  async function handlePickImage() {
     if (isSending) {
       return;
     }
@@ -253,14 +280,14 @@ export default function ChatScreen() {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
 
     if (!permission.granted) {
-      Alert.alert('Chat', 'Necesitamos permiso para acceder a tu galeria.');
+      Alert.alert('Chat', 'Necesitamos permiso para acceder a tus imagenes.');
       return;
     }
 
     const result = await ImagePicker.launchImageLibraryAsync({
       allowsEditing: false,
-      mediaTypes: mediaType === 'image' ? ['images'] : ['videos'],
-      quality: 0.8
+      mediaTypes: ['images'],
+      quality: 1
     });
 
     if (result.canceled || !result.assets?.[0]) {
@@ -268,68 +295,25 @@ export default function ChatScreen() {
     }
 
     const asset = result.assets[0];
-    const fileName = asset.fileName ?? `${mediaType}-${Date.now()}.${mediaType === 'image' ? 'jpg' : 'mp4'}`;
-    const mimeType = asset.mimeType ?? (mediaType === 'image' ? 'image/jpeg' : 'video/mp4');
+    const type = asset.mimeType ?? getImageMimeType(asset.uri);
+    const size = asset.fileSize ?? asset.file?.size ?? null;
 
-    setIsSending(true);
-
-    try {
-      const response = await sendChatMedia({
-        relationId,
-        file: {
-          uri: asset.uri,
-          name: fileName,
-          type: mimeType
-        }
-      });
-
-      setRelationId(response.relationId);
-      appendMessage(response.message);
-    } catch (error) {
-      Alert.alert('Chat', error instanceof Error ? error.message : 'No pudimos enviar el archivo.');
-    } finally {
-      setIsSending(false);
-    }
-  }
-
-  async function handlePickDocument() {
-    if (isSending) {
+    if (!ALLOWED_CHAT_IMAGE_MIME_TYPES.includes(type)) {
+      Alert.alert('Chat', 'Formato no permitido. Usa JPG, PNG o WEBP.');
       return;
     }
 
-    const result = await DocumentPicker.getDocumentAsync({
-      copyToCacheDirectory: true,
-      multiple: false,
-      type: '*/*'
+    if (size !== null && size > MAX_CHAT_IMAGE_SIZE_BYTES) {
+      Alert.alert('Chat', 'La imagen no puede superar los 15 MB.');
+      return;
+    }
+
+    setSelectedImage({
+      uri: asset.uri,
+      name: asset.fileName ?? `chat-image-${Date.now()}.${extensionFromMimeType(type)}`,
+      type,
+      size
     });
-
-    if (result.canceled || !result.assets?.[0]) {
-      return;
-    }
-
-    const asset = result.assets[0];
-    const fileName = asset.name ?? `archivo-${Date.now()}`;
-    const mimeType = asset.mimeType ?? 'application/octet-stream';
-
-    setIsSending(true);
-
-    try {
-      const response = await sendChatMedia({
-        relationId,
-        file: {
-          uri: asset.uri,
-          name: fileName,
-          type: mimeType
-        }
-      });
-
-      setRelationId(response.relationId);
-      appendMessage(response.message);
-    } catch (error) {
-      Alert.alert('Chat', error instanceof Error ? error.message : 'No pudimos enviar el archivo.');
-    } finally {
-      setIsSending(false);
-    }
   }
 
   async function handleStartVideoCall() {
@@ -349,7 +333,7 @@ export default function ChatScreen() {
       };
       await Linking.openURL(response.callUrl);
     } catch (error) {
-      Alert.alert('Chat', error instanceof Error ? error.message : 'No pudimos iniciar la videollamada.');
+      Alert.alert('Chat', getFriendlyErrorMessage(error, 'No pudimos iniciar la videollamada.'));
     } finally {
       setIsSending(false);
     }
@@ -434,6 +418,7 @@ export default function ChatScreen() {
           const message = item.message;
           const isMine = myUserId === message.sender_id;
           const parsed = parseChatMessage(message);
+          const imageFailed = failedImageIds.has(message.id);
 
           return (
             <View style={[styles.bubble, isMine ? styles.mine : styles.theirs]}>
@@ -441,52 +426,26 @@ export default function ChatScreen() {
                 <Text style={[styles.bubbleText, isMine ? styles.mineText : styles.theirsText]}>{parsed.text}</Text>
               ) : null}
 
-              {parsed.kind === 'image' && parsed.url ? (
-                <Pressable onPress={() => void Linking.openURL(parsed.url)} style={styles.attachmentCard}>
-                  <View style={styles.attachmentHeaderRow}>
-                    <Ionicons color={isMine ? colors.surface : colors.primaryDark} name="image-outline" size={16} />
-                    <Text style={[styles.attachmentTypeLabel, isMine ? styles.mineText : styles.theirsText]}>Imagen</Text>
-                  </View>
-                  <Image source={{ uri: parsed.url }} style={styles.mediaPreview} />
-                  <Text style={[styles.mediaCaption, isMine ? styles.mineTextSoft : styles.theirsTextSoft]}>
-                    Toca para abrir
-                  </Text>
-                </Pressable>
-              ) : null}
-
-              {parsed.kind === 'video' && parsed.url ? (
-                <Pressable onPress={() => void Linking.openURL(parsed.url)} style={styles.attachmentCard}>
-                  <View style={styles.attachmentHeaderRow}>
-                    <Ionicons color={isMine ? colors.surface : colors.primaryDark} name="film-outline" size={16} />
-                    <Text style={[styles.attachmentTypeLabel, isMine ? styles.mineText : styles.theirsText]}>Video</Text>
-                  </View>
-                  <View style={[styles.filePreviewBox, isMine ? styles.filePreviewMine : styles.filePreviewTheirs]}>
-                    <Ionicons color={isMine ? colors.surface : colors.primaryDark} name="play-circle-outline" size={28} />
-                    <Text style={[styles.filePreviewTitle, isMine ? styles.mineText : styles.theirsText]} numberOfLines={1}>
-                      {parsed.fileName ?? 'Video adjunto'}
-                    </Text>
-                    <Text style={[styles.filePreviewHint, isMine ? styles.mineTextSoft : styles.theirsTextSoft]}>
-                      Toca para reproducir
-                    </Text>
-                  </View>
-                </Pressable>
-              ) : null}
-
-              {parsed.kind === 'file' && parsed.url ? (
-                <Pressable onPress={() => void openFilePreview(parsed.url, parsed.mimeType)} style={styles.attachmentCard}>
-                  <View style={styles.attachmentHeaderRow}>
-                    <Ionicons color={isMine ? colors.surface : colors.primaryDark} name="document-attach-outline" size={16} />
-                    <Text style={[styles.attachmentTypeLabel, isMine ? styles.mineText : styles.theirsText]}>Archivo</Text>
-                  </View>
-                  <View style={[styles.filePreviewBox, isMine ? styles.filePreviewMine : styles.filePreviewTheirs]}>
-                    <Text style={[styles.filePreviewTitle, isMine ? styles.mineText : styles.theirsText]} numberOfLines={1}>
-                      {parsed.fileName ?? 'Archivo adjunto'}
-                    </Text>
-                    <Text style={[styles.filePreviewHint, isMine ? styles.mineTextSoft : styles.theirsTextSoft]} numberOfLines={1}>
-                      {getFileHint(parsed.mimeType)}
-                    </Text>
-                  </View>
-                </Pressable>
+              {parsed.kind === 'image' ? (
+                <View style={styles.imageMessageWrap}>
+                  {parsed.text ? (
+                    <Text style={[styles.bubbleText, isMine ? styles.mineText : styles.theirsText]}>{parsed.text}</Text>
+                  ) : null}
+                  {parsed.url && !imageFailed ? (
+                    <Image
+                      source={{ uri: parsed.url }}
+                      onError={() => setFailedImageIds((prev) => new Set(prev).add(message.id))}
+                      style={styles.chatImage}
+                    />
+                  ) : (
+                    <View style={[styles.imageFallback, isMine ? styles.imageFallbackMine : styles.imageFallbackTheirs]}>
+                      <Ionicons color={isMine ? colors.surface : colors.textMuted} name="image-outline" size={22} />
+                      <Text style={[styles.imageFallbackText, isMine ? styles.mineTextSoft : styles.theirsTextSoft]}>
+                        No se pudo cargar la imagen.
+                      </Text>
+                    </View>
+                  )}
+                </View>
               ) : null}
 
               {parsed.kind === 'call_invite' && parsed.url ? (
@@ -511,7 +470,7 @@ export default function ChatScreen() {
                     Toca el boton para unirte ahora.
                   </Text>
 
-                  <Button onPress={() => void Linking.openURL(parsed.url)} variant={isMine ? 'secondary' : 'primary'}>
+                  <Button onPress={() => parsed.url ? void Linking.openURL(parsed.url) : undefined} variant={isMine ? 'secondary' : 'primary'}>
                     Unirse a la videollamada
                   </Button>
                 </View>
@@ -534,47 +493,49 @@ export default function ChatScreen() {
       />
 
       <View style={styles.composer}>
-        <View style={styles.composerRow}>
-          <View style={styles.quickActionsRow}>
+        {selectedImage ? (
+          <View style={styles.previewCard}>
+            <Image source={{ uri: selectedImage.uri }} style={styles.previewImage} />
+            <View style={styles.previewTextBlock}>
+              <Text style={styles.previewTitle} numberOfLines={1}>Imagen seleccionada</Text>
+              <Text style={styles.previewMeta}>{formatImageSize(selectedImage.size)}</Text>
+            </View>
             <Pressable
-              accessibilityLabel="Enviar imagen"
+              accessibilityLabel="Quitar imagen"
               accessibilityRole="button"
               disabled={isSending}
-              onPress={() => void handlePickMedia('image')}
-              style={({ pressed }) => [styles.iconActionButton, pressed && styles.iconActionPressed, isSending && styles.iconActionDisabled]}
+              onPress={() => setSelectedImage(null)}
+              style={({ pressed }) => [styles.previewRemoveButton, pressed && styles.iconActionPressed]}
             >
-              <Ionicons color={colors.primaryDark} name="image-outline" size={20} />
-            </Pressable>
-            <Pressable
-              accessibilityLabel="Enviar archivo de video"
-              accessibilityRole="button"
-              disabled={isSending}
-              onPress={() => void handlePickMedia('video')}
-              style={({ pressed }) => [styles.iconActionButton, pressed && styles.iconActionPressed, isSending && styles.iconActionDisabled]}
-            >
-              <Ionicons color={colors.primaryDark} name="film-outline" size={20} />
-            </Pressable>
-            <Pressable
-              accessibilityLabel="Enviar archivo"
-              accessibilityRole="button"
-              disabled={isSending}
-              onPress={() => void handlePickDocument()}
-              style={({ pressed }) => [styles.iconActionButton, pressed && styles.iconActionPressed, isSending && styles.iconActionDisabled]}
-            >
-              <Ionicons color={colors.primaryDark} name="document-attach-outline" size={20} />
+              <Ionicons color={colors.textPrimary} name="close-outline" size={20} />
             </Pressable>
           </View>
-
+        ) : null}
+        <View style={styles.composerRow}>
+          <Pressable
+            accessibilityLabel="Adjuntar imagen"
+            accessibilityRole="button"
+            disabled={isSending}
+            onPress={() => void handlePickImage()}
+            style={({ pressed }) => [
+              styles.iconActionButton,
+              pressed && styles.iconActionPressed,
+              isSending && styles.iconActionDisabled
+            ]}
+          >
+            <Ionicons color={colors.primaryDark} name="image-outline" size={20} />
+          </Pressable>
           <TextInput
             value={messageText}
             onChangeText={setMessageText}
+            maxLength={MAX_CHAT_MESSAGE_LENGTH}
             placeholder="Escribi tu mensaje"
             placeholderTextColor={colors.textMuted}
             style={styles.input}
           />
         </View>
 
-        <Button onPress={handleSend} disabled={isSending || !messageText.trim()}>
+        <Button onPress={handleSend} disabled={isSending || (!messageText.trim() && !selectedImage)}>
           {isSending ? 'Enviando...' : 'Enviar'}
         </Button>
       </View>
@@ -711,24 +672,18 @@ const styles = StyleSheet.create({
   },
   composerRow: {
     alignItems: 'stretch',
-    flexDirection: 'column',
-    gap: 8
-  },
-  quickActionsRow: {
-    alignItems: 'center',
-    alignSelf: 'flex-end',
     flexDirection: 'row',
     gap: 8
   },
   iconActionButton: {
     alignItems: 'center',
-    backgroundColor: colors.surfaceSoft,
+    backgroundColor: colors.surface,
     borderColor: colors.border,
     borderRadius: 12,
     borderWidth: 1,
-    height: 40,
+    height: 44,
     justifyContent: 'center',
-    width: 40
+    width: 44
   },
   iconActionPressed: {
     opacity: 0.75
@@ -742,52 +697,71 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     color: colors.textPrimary,
+    flex: 1,
     minHeight: 44,
     paddingHorizontal: 12
   },
-  mediaPreview: {
+  imageMessageWrap: {
+    gap: 8
+  },
+  chatImage: {
     borderRadius: 10,
     height: 180,
-    width: 180
+    width: 220
   },
-  attachmentCard: {
-    gap: 8,
-    minWidth: 180
-  },
-  attachmentHeaderRow: {
+  imageFallback: {
     alignItems: 'center',
-    flexDirection: 'row',
-    gap: 6
-  },
-  attachmentTypeLabel: {
-    fontSize: 12,
-    fontWeight: '800',
-    textTransform: 'uppercase'
-  },
-  mediaCaption: {
-    fontSize: 12,
-    marginTop: 6
-  },
-  filePreviewBox: {
     borderRadius: 10,
     gap: 6,
-    paddingHorizontal: 10,
-    paddingVertical: 10
+    height: 140,
+    justifyContent: 'center',
+    padding: 12,
+    width: 220
   },
-  filePreviewMine: {
-    backgroundColor: 'rgba(255,255,255,0.12)'
+  imageFallbackMine: {
+    backgroundColor: 'rgba(255,255,255,0.14)'
   },
-  filePreviewTheirs: {
-    backgroundColor: colors.surfaceSoft,
+  imageFallbackTheirs: {
+    backgroundColor: colors.surfaceSoft
+  },
+  imageFallbackText: {
+    fontSize: 12,
+    fontWeight: '700',
+    textAlign: 'center'
+  },
+  previewCard: {
+    alignItems: 'center',
+    backgroundColor: colors.surface,
     borderColor: colors.border,
-    borderWidth: 1
+    borderRadius: 12,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: 10,
+    padding: 8
   },
-  filePreviewTitle: {
+  previewImage: {
+    borderRadius: 8,
+    height: 48,
+    width: 48
+  },
+  previewTextBlock: {
+    flex: 1,
+    gap: 2
+  },
+  previewTitle: {
+    color: colors.textPrimary,
     fontSize: 13,
-    fontWeight: '700'
+    fontWeight: '800'
   },
-  filePreviewHint: {
+  previewMeta: {
+    color: colors.textSecondary,
     fontSize: 12
+  },
+  previewRemoveButton: {
+    alignItems: 'center',
+    height: 36,
+    justifyContent: 'center',
+    width: 36
   },
   callInviteWrap: {
     borderRadius: 10,
@@ -846,42 +820,6 @@ function formatParticipantName(participant: ChatParticipant | null): string {
   return participant.fullName ?? participant.email ?? 'Usuario';
 }
 
-async function openFilePreview(url: string, mimeType?: string): Promise<void> {
-  const previewUrl = buildFilePreviewUrl(url, mimeType);
-
-  const canOpenPreview = await Linking.canOpenURL(previewUrl);
-
-  if (canOpenPreview) {
-    await Linking.openURL(previewUrl);
-    return;
-  }
-
-  await Linking.openURL(url);
-}
-
-function buildFilePreviewUrl(url: string, mimeType?: string): string {
-  if (isOfficeDocument(mimeType)) {
-    return `https://view.officeapps.live.com/op/view.aspx?src=${encodeURIComponent(url)}`;
-  }
-
-  return `https://docs.google.com/gview?embedded=1&url=${encodeURIComponent(url)}`;
-}
-
-function isOfficeDocument(mimeType?: string): boolean {
-  if (!mimeType) {
-    return false;
-  }
-
-  return (
-    mimeType === 'application/msword' ||
-    mimeType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
-    mimeType === 'application/vnd.ms-excel' ||
-    mimeType === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ||
-    mimeType === 'application/vnd.ms-powerpoint' ||
-    mimeType === 'application/vnd.openxmlformats-officedocument.presentationml.presentation'
-  );
-}
-
 function toDateKey(value: string): string {
   const date = new Date(value);
   const year = date.getFullYear();
@@ -909,26 +847,31 @@ function formatMessageTime(value: string): string {
   }).format(date);
 }
 
-function getFileHint(mimeType?: string): string {
-  if (!mimeType) {
-    return 'Toca para previsualizar';
-  }
+function getImageMimeType(uri: string): string {
+  const normalized = uri.toLowerCase();
 
-  if (mimeType.startsWith('application/pdf')) {
-    return 'Documento PDF';
-  }
-
-  if (mimeType.includes('word')) {
-    return 'Documento Word';
-  }
-
-  if (mimeType.includes('sheet') || mimeType.includes('excel')) {
-    return 'Planilla';
-  }
-
-  if (mimeType.includes('presentation') || mimeType.includes('powerpoint')) {
-    return 'Presentacion';
-  }
-
-  return 'Toca para previsualizar';
+  if (normalized.endsWith('.png')) return 'image/png';
+  if (normalized.endsWith('.webp')) return 'image/webp';
+  return 'image/jpeg';
 }
+
+function extensionFromMimeType(mimeType: string): string {
+  if (mimeType === 'image/png') return 'png';
+  if (mimeType === 'image/webp') return 'webp';
+  return 'jpg';
+}
+
+function formatImageSize(size?: number | null): string {
+  if (!size) {
+    return 'Lista para enviar';
+  }
+
+  const sizeInMb = size / (1024 * 1024);
+
+  if (sizeInMb >= 1) {
+    return `${sizeInMb.toFixed(1)} MB`;
+  }
+
+  return `${Math.ceil(size / 1024)} KB`;
+}
+

@@ -26,6 +26,20 @@ export const getMessages: RequestHandler = asyncHandler(async (req, res) => {
 export const sendMessage: RequestHandler = asyncHandler(async (req, res) => {
   const relationId = (req.body as { relationId?: unknown }).relationId;
   const content = (req.body as { content?: unknown }).content;
+  const file = req.file;
+
+  if (file) {
+    const result = await chatService.sendMediaMessage({
+      userId: req.user.id,
+      role: req.user.role ?? 'user',
+      relationId: typeof relationId === 'string' ? relationId : undefined,
+      content: typeof content === 'string' ? content : undefined,
+      file
+    });
+
+    res.status(201).json(result);
+    return;
+  }
 
   if (typeof content !== 'string') {
     throw new ApiError(400, 'content es requerido.');
@@ -65,20 +79,6 @@ export const markMessagesAsRead: RequestHandler = asyncHandler(async (req, res) 
   res.json(result);
 });
 
-export const uploadMediaMessage: RequestHandler = asyncHandler(async (req, res) => {
-  const relationId = (req.body as { relationId?: unknown }).relationId;
-  const file = req.file;
-
-  if (!file) {
-    throw new ApiError(400, 'El archivo es obligatorio.');
-  }
-
-  const result = await chatService.sendMediaMessage({
-    userId: req.user.id,
-    role: req.user.role ?? 'user',
-    relationId: typeof relationId === 'string' ? relationId : undefined,
-    file
-  });
-
-  res.status(201).json(result);
+export const uploadMediaMessage: RequestHandler = asyncHandler(async (_req, _res) => {
+  throw new ApiError(410, 'Usa POST /chat/messages para enviar imagenes.');
 });

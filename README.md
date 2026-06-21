@@ -168,3 +168,23 @@ Fuera del alcance de este módulo (pendiente en E2):
 | `docs/progress-module-contract.md` | Contrato técnico del módulo Progreso |
 | `docs/plan-tecnico.md` | Plan técnico de las tres entregas |
 | `CLAUDE.md` | Guía para Claude Code |
+
+## Supabase CLI
+
+No hace falta instalar Supabase CLI globalmente. El proyecto usa la CLI como dev dependency y la ejecuta con un wrapper local que guarda la configuracion/cache dentro del repo.
+
+```bash
+npm install
+npm run supabase -- --version
+```
+
+Comandos utiles:
+
+```bash
+npm run supabase -- login
+npm run supabase -- link --project-ref <PROJECT_REF>
+npm run supabase:db:push
+npm run supabase:types -- --project-id <PROJECT_ID> > backend/src/database/database.types.ts
+```
+
+Si aparece "Supabase CLI no esta instalado", no uses `npm install -g supabase`: ejecuta `npm install` en la raiz y volve a correr el comando con `npm run supabase -- ...` o `npx supabase ...`.

@@ -1,4 +1,5 @@
 import { progressRepository } from './progress.repository';
+import { ApiError } from '../../utils/ApiError';
 import type {
   CalendarDayProgress,
   CalendarDayStatus,
@@ -295,6 +296,18 @@ export async function setRoutineStepCompletion(
 ): Promise<RoutineDayProgress> {
   if (!isIsoDate(date)) {
     throw new Error('date must use YYYY-MM-DD format');
+  }
+
+  const routine = await progressRepository.findRoutineByIdAndUserId(routineId, userId);
+
+  if (!routine) {
+    throw new ApiError(404, 'Rutina no encontrada.');
+  }
+
+  const step = await progressRepository.findRoutineStepByIdAndRoutineId(stepId, routineId);
+
+  if (!step) {
+    throw new ApiError(404, 'Paso de rutina no encontrado.');
   }
 
   const now = new Date().toISOString();

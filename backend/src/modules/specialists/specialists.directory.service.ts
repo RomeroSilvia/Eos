@@ -1,16 +1,13 @@
 import { ApiError } from '../../utils/ApiError';
-import { specialistsRepository } from './specialists.repository';
+import { specialistsDirectoryRepository } from './specialists.directory.repository';
+import { ALLOWED_SPECIALTIES, type AllowedSpecialty } from './specialists.constants';
 
 type SearchFilters = {
   specialty?: string;
   name?: string;
 };
 
-const ALLOWED_SPECIALTIES = ['dermatologo', 'cosmetologo'] as const;
-
-type AllowedSpecialty = typeof ALLOWED_SPECIALTIES[number];
-
-export const specialistsService = {
+export const specialistsDirectoryService = {
   getHealth: () => ({
     module: 'specialists',
     status: 'ready'
@@ -20,12 +17,11 @@ export const specialistsService = {
     const specialty = normalizeSpecialty(filters.specialty);
     const name = normalizeOptionalString(filters.name);
 
-    const rows = await specialistsRepository.findVerifiedSpecialists({ specialty, name });
+    const rows = await specialistsDirectoryRepository.findVerifiedSpecialists({ specialty, name });
 
     return rows.map((row) => ({
       id: row.profile.id,
       fullName: row.profile.full_name,
-      email: row.profile.email,
       specialty: row.specialistProfile.specialty,
       licenseStatus: row.specialistProfile.license_status
     }));
@@ -40,13 +36,13 @@ export const specialistsService = {
       throw new ApiError(400, 'No podes vincularte con tu propio perfil.');
     }
 
-    const specialist = await specialistsRepository.findVerifiedSpecialistByUserId(specialistId);
+    const specialist = await specialistsDirectoryRepository.findVerifiedSpecialistByUserId(specialistId);
 
     if (!specialist) {
       throw new ApiError(404, 'Especialista no encontrado o no verificado.');
     }
 
-    const activeRelation = await specialistsRepository.findActiveRelationByClientId(clientId);
+    const activeRelation = await specialistsDirectoryRepository.findActiveRelationByClientId(clientId);
 
     if (activeRelation?.specialist_id === specialistId) {
       return {
@@ -59,9 +55,9 @@ export const specialistsService = {
       };
     }
 
-    await specialistsRepository.deactivateActiveRelation(clientId);
+    await specialistsDirectoryRepository.deactivateActiveRelation(clientId);
 
-    const relation = await specialistsRepository.createRelation({
+    const relation = await specialistsDirectoryRepository.createRelation({
       client_id: clientId,
       specialist_id: specialistId,
       status: 'active'
@@ -78,11 +74,11 @@ export const specialistsService = {
   },
 
   unlinkSpecialist: async (clientId: string) => {
-    await specialistsRepository.deactivateActiveRelation(clientId);
+    await specialistsDirectoryRepository.deactivateActiveRelation(clientId);
   },
 
   getMySpecialist: async (clientId: string) => {
-    const relation = await specialistsRepository.findActiveRelationByClientId(clientId);
+    const relation = await specialistsDirectoryRepository.findActiveRelationByClientId(clientId);
 
     if (!relation?.specialist) {
       return null;
@@ -101,20 +97,20 @@ export const specialistsService = {
 
   getMyPatients: async (specialistId: string) => {
     const specialistIds = await getSpecialistRelationIds(specialistId);
-    const relations = await specialistsRepository.findRelationsBySpecialistIds(specialistIds);
+    const relations = await specialistsDirectoryRepository.findRelationsBySpecialistIds(specialistIds);
 
     if (relations.length === 0) {
       return [];
     }
 
     const clientIds = [...new Set(relations.map((relation) => relation.client_id))];
-    const clients = await specialistsRepository.findProfilesByIds(clientIds);
-    const latestSkinProfiles = await specialistsRepository.findLatestSkinProfilesByUserIds(clientIds);
-    const latestRoutineLogs = await specialistsRepository.findLatestRoutineLogsByUserIds(clientIds);
+    const clients = await specialistsDirectoryRepository.findProfilesByIds(clientIds);
+    const latestSkinProfiles = await specialistsDirectoryRepository.findLatestSkinProfilesByUserIds(clientIds);
+    const latestRoutineLogs = await specialistsDirectoryRepository.findLatestRoutineLogsByUserIds(clientIds);
     const photos = await Promise.all(
       clients.map(async (client) => ({
         clientId: client.id,
-        profileImageUrl: await specialistsRepository.findProfilePhotoById(client.id)
+        profileImageUrl: await specialistsDirectoryRepository.findProfilePhotoById(client.id)
       }))
     );
     const photoByClientId = new Map(photos.map((photo) => [photo.clientId, photo.profileImageUrl]));
@@ -150,33 +146,33 @@ export const specialistsService = {
 
   getMyPatientDetail: async (specialistId: string, patientId: string) => {
     const specialistIds = await getSpecialistRelationIds(specialistId);
-    const relation = await specialistsRepository.findRelationBySpecialistAndClient(specialistIds, patientId);
+    const relation = await specialistsDirectoryRepository.findRelationBySpecialistAndClient(specialistIds, patientId);
 
     if (!relation) {
       throw new ApiError(403, 'No tenes acceso a este paciente.');
     }
 
-    const [client] = await specialistsRepository.findProfilesByIds([patientId]);
+    const [client] = await specialistsDirectoryRepository.findProfilesByIds([patientId]);
 
     if (!client) {
       throw new ApiError(404, 'Paciente no encontrado.');
     }
 
     const [latestSkinProfiles, photos, routines, routineLogs] = await Promise.all([
-      specialistsRepository.findLatestSkinProfilesByUserIds([patientId]),
-      specialistsRepository.findProfilePhotoById(patientId),
-      specialistsRepository.findRoutinesByUserId(patientId),
-      specialistsRepository.findRecentRoutineLogsByUserId(patientId, 20)
+      specialistsDirectoryRepository.findLatestSkinProfilesByUserIds([patientId]),
+      specialistsDirectoryRepository.findProfilePhotoById(patientId),
+      specialistsDirectoryRepository.findRoutinesByUserId(patientId),
+      specialistsDirectoryRepository.findRecentRoutineLogsByUserId(patientId, 20)
     ]);
 
     const latestSkinProfile = latestSkinProfiles.get(patientId) ?? null;
     const routineIds = routines.map((routine) => routine.id);
     const routineLogIds = routineLogs.map((log) => log.id);
     const [steps, stepLogs] = await Promise.all([
-      specialistsRepository.findRoutineStepsByRoutineIds(routineIds),
-      specialistsRepository.findStepLogsByRoutineLogIds(routineLogIds)
+      specialistsDirectoryRepository.findRoutineStepsByRoutineIds(routineIds),
+      specialistsDirectoryRepository.findStepLogsByRoutineLogIds(routineLogIds)
     ]);
-    const stepProducts = await specialistsRepository.findStepProductsByStepIds(steps.map((step) => step.id));
+    const stepProducts = await specialistsDirectoryRepository.findStepProductsByStepIds(steps.map((step) => step.id));
 
     const routineById = new Map(routines.map((routine) => [routine.id, routine]));
     const stepsByRoutineId = groupBy(steps, (step) => step.routine_id);
@@ -281,7 +277,7 @@ function normalizeSkinType(value?: string | null): string | null {
 }
 
 async function getSpecialistRelationIds(userId: string): Promise<string[]> {
-  const specialistProfile = await specialistsRepository.findSpecialistProfileIdentityByUserId(userId);
+  const specialistProfile = await specialistsDirectoryRepository.findSpecialistProfileIdentityByUserId(userId);
   return [...new Set([userId, specialistProfile?.id].filter((id): id is string => Boolean(id)))];
 }
 

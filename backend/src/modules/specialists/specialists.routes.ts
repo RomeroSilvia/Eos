@@ -9,7 +9,7 @@ import {
   linkSpecialist,
   specialistsHealth,
   unlinkSpecialist
-} from './specialists.controller';
+} from './specialists.directory.controller';
 
 export const specialistsRouter = Router();
 

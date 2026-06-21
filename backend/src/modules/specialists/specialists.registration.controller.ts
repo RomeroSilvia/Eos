@@ -1,18 +1,18 @@
 import type { Request, RequestHandler, Response } from 'express';
 import { env } from '../../config/env';
 import { asyncHandler } from '../../utils/asyncHandler';
-import { specialistService } from './specialist.service';
+import { specialistsRegistrationService } from './specialists.registration.service';
 
 type SpecialistFiles = Partial<Record<'dniPhoto' | 'titlePhoto', Express.Multer.File[]>>;
 
 export const specialistHealth: RequestHandler = (_req, res) => {
-  res.json(specialistService.getHealth());
+  res.json(specialistsRegistrationService.getHealth());
 };
 
 export const registerSpecialist = asyncHandler(async (req: Request, res: Response) => {
   logRegisterRequest(req);
 
-  const profile = await specialistService.register(
+  const profile = await specialistsRegistrationService.register(
     req.user.id,
     req.user.accessToken,
     req.body,
@@ -28,7 +28,7 @@ export const registerSpecialist = asyncHandler(async (req: Request, res: Respons
 });
 
 export const getSpecialistStatus = asyncHandler(async (req: Request, res: Response) => {
-  const status = await specialistService.getStatus(req.user.id);
+  const status = await specialistsRegistrationService.getStatus(req.user.id);
   res.json({ specialistProfile: status });
 });
 

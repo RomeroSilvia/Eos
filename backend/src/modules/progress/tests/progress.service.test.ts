@@ -1,5 +1,12 @@
 import { progressRepository } from '../progress.repository';
-import { getDayDetailByDate, getFullHistoryByUserId, getStatsByUserId, getSummaryByUserId } from '../progress.service';
+import { ApiError } from '../../../utils/ApiError';
+import {
+  getDayDetailByDate,
+  getFullHistoryByUserId,
+  getStatsByUserId,
+  getSummaryByUserId,
+  setRoutineStepCompletion
+} from '../progress.service';
 import type {
   ProductForProgress,
   RoutineForProgress,
@@ -12,15 +19,24 @@ import type {
 jest.mock('../progress.repository', () => ({
   progressRepository: {
     findActiveRoutinesByUserId: jest.fn(),
+    findRoutineByIdAndUserId: jest.fn(),
     findRoutineLogsByUserId: jest.fn(),
     findRoutineLogsByUserIdBetweenDates: jest.fn(),
     findRoutineLogsByUserIdAndDate: jest.fn(),
+    findRoutineLogByRoutineIdAndDate: jest.fn(),
     findRoutinesByIds: jest.fn(),
     findRoutineStepsByRoutineIds: jest.fn(),
+    findRoutineStepByIdAndRoutineId: jest.fn(),
     findProductsByUserId: jest.fn(),
     findRoutineStepProductsByStepIds: jest.fn(),
     findStepLogsByRoutineLogId: jest.fn(),
-    findStepLogsByRoutineLogIds: jest.fn()
+    findStepLogsByRoutineLogIds: jest.fn(),
+    findStepLogByRoutineLogIdAndStepId: jest.fn(),
+    createRoutineLog: jest.fn(),
+    createStepLog: jest.fn(),
+    updateStepLog: jest.fn(),
+    updateRoutineLog: jest.fn(),
+    countRoutineSteps: jest.fn()
   }
 }));
 
@@ -1104,6 +1120,89 @@ describe('progress.service getStatsByUserId', () => {
       categoryStats: [],
       routineProductUsage: [],
       unusedProducts: []
+    });
+  });
+});
+
+describe('progress.service setRoutineStepCompletion', () => {
+  beforeEach(() => {
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date('2026-05-04T12:00:00.000Z'));
+    jest.clearAllMocks();
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
+  it('rechaza rutina ajena o inexistente antes de crear logs', async () => {
+    mockedProgressRepository.findRoutineByIdAndUserId.mockResolvedValue(null);
+
+    await expect(
+      setRoutineStepCompletion('user-1', 'routine-other', 'step-1', true)
+    ).rejects.toMatchObject({
+      statusCode: 404
+    } as Partial<ApiError>);
+
+    expect(mockedProgressRepository.findRoutineByIdAndUserId).toHaveBeenCalledWith('routine-other', 'user-1');
+    expect(mockedProgressRepository.createRoutineLog).not.toHaveBeenCalled();
+  });
+
+  it('rechaza step que no pertenece a la rutina antes de crear logs', async () => {
+    mockedProgressRepository.findRoutineByIdAndUserId.mockResolvedValue(activeRoutine('routine-1'));
+    mockedProgressRepository.findRoutineStepByIdAndRoutineId.mockResolvedValue(null);
+
+    await expect(
+      setRoutineStepCompletion('user-1', 'routine-1', 'step-other', true)
+    ).rejects.toMatchObject({
+      statusCode: 404
+    } as Partial<ApiError>);
+
+    expect(mockedProgressRepository.findRoutineStepByIdAndRoutineId).toHaveBeenCalledWith('step-other', 'routine-1');
+    expect(mockedProgressRepository.createRoutineLog).not.toHaveBeenCalled();
+  });
+
+  it('permite marcar step propio valido', async () => {
+    const routine = activeRoutine('routine-1');
+    const step = routineStep('routine-1', 'step-1');
+    const routineLog = createRoutineLog({
+      id: 'routine-log-1',
+      routine_id: 'routine-1',
+      log_date: '2026-05-04',
+      completion_percentage: 0
+    });
+    const completedStepLog = stepLog('routine-log-1', 'step-1', true);
+
+    mockedProgressRepository.findRoutineByIdAndUserId.mockResolvedValue(routine);
+    mockedProgressRepository.findRoutineStepByIdAndRoutineId.mockResolvedValue(step);
+    mockedProgressRepository.findRoutineLogByRoutineIdAndDate.mockResolvedValue(routineLog);
+    mockedProgressRepository.findStepLogByRoutineLogIdAndStepId.mockResolvedValue(null);
+    mockedProgressRepository.createStepLog.mockResolvedValue(completedStepLog);
+    mockedProgressRepository.findStepLogsByRoutineLogId.mockResolvedValue([completedStepLog]);
+    mockedProgressRepository.countRoutineSteps.mockResolvedValue(1);
+    mockedProgressRepository.updateRoutineLog.mockResolvedValue({
+      ...routineLog,
+      completion_percentage: 100,
+      completed_at: '2026-05-04T12:00:00.000Z'
+    });
+
+    const result = await setRoutineStepCompletion('user-1', 'routine-1', 'step-1', true);
+
+    expect(mockedProgressRepository.findRoutineByIdAndUserId).toHaveBeenCalledWith('routine-1', 'user-1');
+    expect(mockedProgressRepository.findRoutineStepByIdAndRoutineId).toHaveBeenCalledWith('step-1', 'routine-1');
+    expect(mockedProgressRepository.createStepLog).toHaveBeenCalledWith(
+      expect.objectContaining({
+        routine_log_id: 'routine-log-1',
+        step_id: 'step-1',
+        is_completed: true
+      })
+    );
+    expect(result).toEqual({
+      routine_id: 'routine-1',
+      log_date: '2026-05-04',
+      routine_log_id: 'routine-log-1',
+      completed_step_ids: ['step-1'],
+      completion_percentage: 100
     });
   });
 });

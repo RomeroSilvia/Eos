@@ -2,10 +2,10 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   createProduct as createProductService,
   deleteProduct as deleteProductService,
-  deleteProductWithProtection,
-  forceDeleteProduct as forceDeleteProductService,
-  replaceProductAndDelete,
+  forceRemove as forceRemoveService,
   getProducts,
+  removeWithProtection as removeWithProtectionService,
+  replaceAndRemove as replaceAndRemoveService,
   type ProductImagePayload,
   type RemoveWithProtectionResult,
   updateProduct as updateProductService,
@@ -64,23 +64,35 @@ export function useProducts() {
     setProducts((prev) => prev.filter((p) => p.id !== id));
   };
 
-  const removeWithProtection = async (id: string): Promise<RemoveWithProtectionResult> => {
-    const result = await deleteProductWithProtection(id);
+  const removeWithProtection = async (id: string) => {
+    const result = await removeWithProtectionService(id);
+
     if (result.status === 'deleted') {
       setProducts((prev) => prev.filter((p) => p.id !== id));
     }
+
     return result;
   };
 
   const forceRemove = async (id: string) => {
-    await forceDeleteProductService(id);
+    await forceRemoveService(id);
     setProducts((prev) => prev.filter((p) => p.id !== id));
   };
 
   const replaceAndRemove = async (id: string, replacementProductId: string) => {
-    await replaceProductAndDelete(id, replacementProductId);
+    await replaceAndRemoveService(id, replacementProductId);
     setProducts((prev) => prev.filter((p) => p.id !== id));
   };
 
-  return { products, createProduct, updateProduct, removeProduct, removeWithProtection, forceRemove, replaceAndRemove, isLoading, refreshProducts };
+  return {
+    products,
+    createProduct,
+    updateProduct,
+    removeProduct,
+    removeWithProtection,
+    forceRemove,
+    replaceAndRemove,
+    isLoading,
+    refreshProducts
+  };
 }

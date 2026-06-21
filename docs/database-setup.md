@@ -49,3 +49,34 @@ Los aliases de conveniencia (`RoutineRow`, `ProductInsert`, etc.) están en `bac
 - **Índices:** Crear índices en columnas de búsqueda frecuente como `user_id`, `routine_id` y `log_date` (comentados en el schema; confirmar patrones de acceso primero).
 - **Enums o constraints:** Definir constraints más estrictos para categorías de productos, roles y estados si se requiere integridad a nivel de base de datos.
 - **Seeds de desarrollo:** Considerar datos de prueba si el equipo necesita un estado inicial reproducible.
+
+## Supabase CLI local
+
+No hace falta instalar Supabase CLI globalmente. La raiz del proyecto tiene `supabase` como dev dependency y scripts npm que ejecutan la CLI local.
+
+```bash
+npm install
+npm run supabase -- --version
+```
+
+Para vincular el proyecto y correr migraciones:
+
+```bash
+npm run supabase -- login
+npm run supabase -- link --project-ref <PROJECT_REF>
+npm run supabase:db:push
+```
+
+Para regenerar tipos:
+
+```bash
+npm run supabase:types -- --project-id <PROJECT_ID> > backend/src/database/database.types.ts
+```
+
+Tambien se puede usar `npx` directamente:
+
+```bash
+npx supabase gen types typescript --project-id <PROJECT_ID> --schema public > backend/src/database/database.types.ts
+```
+
+Si aparece "Supabase CLI no esta instalado", no uses `npm install -g supabase`. Ejecuta `npm install` en la raiz y volve a correr el comando con `npm run supabase -- ...` o `npx supabase ...`.
