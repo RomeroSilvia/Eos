@@ -284,16 +284,53 @@ export const specialistsDirectoryService = {
     const name = normalizeRequiredRoutineName(input.name);
     const timeOfDay = normalizeRoutineTimeOfDay(input.timeOfDay);
 
-    return routinesService.createRoutine({
-      user_id: input.clientId,
-      assigned_by: specialistId,
-      name,
-      description: input.description ?? null,
-      time_of_day: timeOfDay,
-      is_active: input.isActive ?? true
-    });
+    try {
+      return await routinesService.createRoutine({
+        user_id: input.clientId,
+        assigned_by: specialistId,
+        name,
+        description: input.description ?? null,
+        time_of_day: timeOfDay,
+        is_active: input.isActive ?? true
+      });
+    } catch (error) {
+      if (isMissingAssignedByColumnError(error)) {
+        console.error('[specialists.assignRoutineToPatient] Missing DB column routines.assigned_by. Apply migration database/e2_m4_assigned_routines.sql', {
+          specialistId,
+          clientId: input.clientId,
+          error
+        });
+
+        throw new ApiError(500, 'No pudimos asignar la rutina en este momento.');
+      }
+
+      throw error;
+    }
   }
 };
+
+function isMissingAssignedByColumnError(error: unknown): boolean {
+  if (!error || typeof error !== 'object') {
+    return false;
+  }
+
+  const normalized = error as {
+    code?: string;
+    message?: string;
+    details?: string;
+  };
+
+  const combinedText = [normalized.message, normalized.details]
+    .filter((value): value is string => typeof value === 'string')
+    .join(' ')
+    .toLowerCase();
+
+  if (!combinedText.includes('assigned_by')) {
+    return false;
+  }
+
+  return normalized.code === '42703' || normalized.code === 'PGRST204';
+}
 
 function normalizeRequiredRoutineName(value: unknown): string {
   if (typeof value !== 'string' || !value.trim()) {

@@ -10,6 +10,13 @@ import type {
   RoutineUpdate
 } from '../../database/schema.types';
 
+type SupabaseLikeError = {
+  message?: string;
+  code?: string;
+  details?: string;
+  hint?: string;
+};
+
 export const routinesRepository = {
   findAllByUserId: async (userId: string): Promise<RoutineRow[]> => {
     const { data, error } = await supabase
@@ -123,12 +130,15 @@ export const routinesRepository = {
   },
 
   create: async (data: RoutineInsert): Promise<RoutineRow | null> => {
-    const { data: created, error } = await supabase
+    const { data: created, error, status, statusText } = await supabase
       .from('routines')
       .insert([data as any])
       .select();
 
-    if (error) throw error;
+    if (error) {
+      logSupabaseInsertError('routines', data, error, status, statusText);
+      throw error;
+    }
 
     return created?.[0] ?? null;
   },
@@ -169,13 +179,16 @@ export const routinesRepository = {
   },
 
   createStep: async (data: RoutineStepInsert): Promise<RoutineStepRow | null> => {
-    const { data: created, error } = await supabase
+    const { data: created, error, status, statusText } = await supabase
       .from('routine_steps')
       .insert([data as any])
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      logSupabaseInsertError('routine_steps', data, error, status, statusText);
+      throw error;
+    }
     return created;
   },
 
@@ -271,3 +284,26 @@ export const routinesRepository = {
     return !error;
   }
 };
+
+function logSupabaseInsertError(
+  table: 'routines' | 'routine_steps',
+  payload: unknown,
+  error: unknown,
+  status?: number,
+  statusText?: string
+): void {
+  const normalized = error as SupabaseLikeError;
+
+  console.error('[supabase-insert-error]', {
+    table,
+    payload,
+    status: status ?? null,
+    statusText: statusText ?? null,
+    error: {
+      message: normalized?.message ?? String(error),
+      code: normalized?.code ?? null,
+      details: normalized?.details ?? null,
+      hint: normalized?.hint ?? null
+    }
+  });
+}

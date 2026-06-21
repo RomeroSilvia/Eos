@@ -522,5 +522,32 @@ describe('specialistsDirectoryService', () => {
 
       expect(routinesService.createRoutine).not.toHaveBeenCalled();
     });
+
+    it('convierte error de columna assigned_by faltante en error 500 controlado', async () => {
+      mockedRepository.findRelationBySpecialistAndClient.mockResolvedValue({
+        id: 'relation-1',
+        client_id: 'client-1',
+        specialist_id: 'specialist-1',
+        status: 'active',
+        created_at: '2026-05-01T10:00:00.000Z'
+      } as any);
+
+      routinesService.createRoutine.mockRejectedValue({
+        code: 'PGRST204',
+        message: "Could not find the 'assigned_by' column of 'routines' in the schema cache",
+        details: null,
+        hint: null
+      });
+
+      await expect(
+        specialistsDirectoryService.assignRoutineToPatient('specialist-1', {
+          clientId: 'client-1',
+          name: 'Rutina indicada'
+        })
+      ).rejects.toMatchObject({
+        statusCode: 500,
+        message: 'No pudimos asignar la rutina en este momento.'
+      });
+    });
   });
 });

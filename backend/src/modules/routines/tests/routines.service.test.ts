@@ -162,6 +162,41 @@ describe('routinesService - ownership de rutinas y pasos', () => {
 
     expect(mockedRepo.setStepProducts).not.toHaveBeenCalled();
   });
+
+  it('crea steps correctamente en rutina asignada por el mismo especialista', async () => {
+    mockedRepo.findRawById.mockResolvedValue(makeRoutine({
+      id: 'routine-assign-1',
+      user_id: 'client-1',
+      assigned_by: 'specialist-1'
+    }));
+    mockedRepo.findStepsByRoutineId.mockResolvedValue([]);
+    mockedRepo.createStep.mockResolvedValue({
+      id: 'step-1',
+      routine_id: 'routine-assign-1',
+      name: 'Limpieza inicial',
+      description: null,
+      category: 'limpieza',
+      step_order: 1,
+      is_required: false,
+      created_at: '2026-01-01T00:00:00.000Z',
+      updated_at: '2026-01-01T00:00:00.000Z'
+    });
+
+    const result = await routinesService.createStep('routine-assign-1', 'specialist-1', 'specialist', {
+      name: 'Limpieza inicial',
+      description: null,
+      category: 'limpieza',
+      is_required: false
+    });
+
+    expect(mockedRepo.createStep).toHaveBeenCalledWith(expect.objectContaining({
+      routine_id: 'routine-assign-1',
+      step_order: 1,
+      name: 'Limpieza inicial',
+      category: 'limpieza'
+    }));
+    expect(result?.routine_id).toBe('routine-assign-1');
+  });
 });
 
 describe('routinesService - productos de pasos', () => {

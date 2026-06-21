@@ -28,8 +28,12 @@ const goals: Goal[] = [
 
 export default function Step2() {
     const router = useRouter();
-    const { assignClientId } = useLocalSearchParams<{ assignClientId?: string }>();
+    const routeParams = useLocalSearchParams<{ assignClientId?: string; patientId?: string; clientId?: string }>();
+    const { assignClientId, patientId, clientId } = routeParams;
     const assignClientIdParam = getSingleParam(assignClientId);
+    const patientIdParam = getSingleParam(patientId);
+    const clientIdParam = getSingleParam(clientId);
+    const effectiveClientId = assignClientIdParam ?? patientIdParam ?? clientIdParam;
     const [name, setName] = useState('');
     const [selected, setSelected] = useState<number | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -47,11 +51,37 @@ export default function Step2() {
             time_of_day: null
         };
 
+        if (process.env.NODE_ENV !== 'production') {
+            console.warn('[routine/Step2:request]', {
+                endpoint: effectiveClientId
+                    ? `/specialists/my-patients/${effectiveClientId}/routines`
+                    : '/routines',
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: 'Bearer <redacted>'
+                },
+                payload,
+                navigationParams: {
+                    assignClientId,
+                    patientId,
+                    clientId
+                },
+                ids: {
+                    assignClientId: assignClientIdParam ?? null,
+                    patientId: patientIdParam ?? null,
+                    clientId: clientIdParam ?? null,
+                    effectiveClientId: effectiveClientId ?? null
+                },
+                flowMode: effectiveClientId ? 'assigned-routine' : 'own-routine'
+            });
+        }
+
         try {
             setIsSubmitting(true);
 
-            const routine = assignClientIdParam
-                ? await assignRoutineToPatient(assignClientIdParam, payload)
+            const routine = effectiveClientId
+                ? await assignRoutineToPatient(effectiveClientId, payload)
                 : await createRoutine(payload);
 
             if (!routine?.id) {
@@ -61,15 +91,15 @@ export default function Step2() {
 
             router.push({
                 pathname: '/routine/Step3',
-                params: assignClientIdParam
-                    ? { routineId: routine.id, assignClientId: assignClientIdParam }
+                params: effectiveClientId
+                    ? { routineId: routine.id, assignClientId: effectiveClientId }
                     : { routineId: routine.id }
             });
         } catch (error) {
             if (process.env.NODE_ENV !== 'production') {
                 console.warn('[routine/Step2:create]', {
-                    assigningToPatient: Boolean(assignClientIdParam),
-                    patientId: assignClientIdParam,
+                    assigningToPatient: Boolean(effectiveClientId),
+                    patientId: effectiveClientId,
                     error
                 });
             }
@@ -85,7 +115,7 @@ export default function Step2() {
 
     return (
         <SafeAreaView style={styles.screen}>
-            <AppHeader breadcrumb={assignClientIdParam ? 'Pacientes / Rutinas' : 'Rutinas'} title="Nueva rutina" />
+            <AppHeader breadcrumb={effectiveClientId ? 'Pacientes / Rutinas' : 'Rutinas'} title="Nueva rutina" />
             <View style={styles.container}>
                 <View style={{ alignItems: 'center' }}>
                     <Stepper current={2} />
