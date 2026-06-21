@@ -1,89 +1,257 @@
 import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
 import { useRouter, type Href } from 'expo-router';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useMemo, useState } from 'react';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors } from '@/constants/colors';
+import {
+  getMyPatients,
+  getSpecialistStatus,
+  type SpecialistPatient,
+  type SpecialistStatus
+} from '@/services/specialist';
 
 const quickActions = [
   { icon: 'sparkles' as const, label: 'Consultas', route: '/(tabs-specialist)/consultas' as Href },
   { icon: 'people' as const, label: 'Pacientes', route: '/(tabs-specialist)/pacientes' as Href },
-  { icon: 'list' as const, label: 'Rutinas', route: '/(tabs-specialist)/rutinas' as Href },
-  { icon: 'calendar' as const, label: 'Agenda', route: '/(tabs-specialist)/consultas' as Href }
+  { icon: 'list' as const, label: 'Rutinas', route: '/(tabs-specialist)/rutinas' as Href }
 ];
 
-const pendingConsultations = [
-  { initials: 'CR', name: 'Camila Rodriguez', reason: 'Consulta de rutina', time: '10:30 hs' },
-  { initials: 'AP', name: 'Agustin Perez', reason: 'Primera consulta', time: '12:00 hs' },
-  { initials: 'AP', name: 'Agustin Perez', reason: 'Primera consulta', time: '13:00 hs' }
-];
+type HomeState = {
+  patients: SpecialistPatient[];
+  status: SpecialistStatus;
+};
 
 export default function SpecialistHomeScreen() {
   const router = useRouter();
+  const [homeState, setHomeState] = useState<HomeState>({ patients: [], status: null });
+  const [isLoading, setIsLoading] = useState(true);
+  const [hasError, setHasError] = useState(false);
+
+  const loadHome = useCallback(async () => {
+    setIsLoading(true);
+    setHasError(false);
+
+    try {
+      const [status, patients] = await Promise.all([
+        getSpecialistStatus(),
+        getMyPatients()
+      ]);
+
+      setHomeState({
+        status,
+        patients: patients.filter((patient) => patient.status === 'active')
+      });
+    } catch {
+      setHomeState({ patients: [], status: null });
+      setHasError(true);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      void loadHome();
+    }, [loadHome])
+  );
+
+  const activePatients = homeState.patients;
+  const recentConsultations = useMemo(() => {
+    return [...activePatients]
+      .sort((a, b) => getDateTime(b.lastActivityAt) - getDateTime(a.lastActivityAt))
+      .slice(0, 3);
+  }, [activePatients]);
+  const specialistName = getDisplayName(homeState.status?.full_name);
 
   return (
     <SafeAreaView style={styles.screen}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
           <View>
-            <Text style={styles.greeting}>¡Hola, Dra. Marta!</Text>
+            <Text style={styles.greeting}>Hola{specialistName ? `, ${specialistName}` : ''}</Text>
             <Text style={styles.subtitle}>Lista para cuidar la piel de tus pacientes</Text>
           </View>
-          <Pressable accessibilityLabel="Notificaciones" style={styles.notificationButton}>
-            <Ionicons color={colors.textSecondary} name="notifications-outline" size={24} />
-          </Pressable>
         </View>
 
-        <View style={styles.heroCard}>
-          <View style={styles.heroCopy}>
-            <Text style={styles.heroEyebrow}>Atende desde donde estes</Text>
-            <Text style={styles.heroTitle}>Consultas</Text>
-            <Text style={styles.heroDescription}>Conectate, escucha y guia a tus pacientes en tiempo real</Text>
-            <Pressable style={styles.primaryButton}>
-              <Text style={styles.primaryButtonText}>Atender ahora</Text>
-            </Pressable>
-          </View>
-          <View style={styles.heroIcon}>
-            <Ionicons color={colors.primaryDark} name="medkit-outline" size={58} />
-          </View>
-        </View>
-
-        <View style={styles.quickGrid}>
-          {quickActions.map((action) => (
-            <Pressable key={action.label} onPress={() => router.push(action.route)} style={styles.quickAction}>
-              <Ionicons color={colors.primaryDark} name={action.icon} size={28} />
-              <Text style={styles.quickLabel}>{action.label}</Text>
-            </Pressable>
-          ))}
-        </View>
-
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Consultas pendientes</Text>
-          <Text style={styles.viewAll}>Ver todas</Text>
-        </View>
-
-        <View style={styles.consultationList}>
-          {pendingConsultations.map((consultation, index) => (
-            <View
-              key={`${consultation.name}-${consultation.time}`}
-              style={[styles.consultationItem, index === pendingConsultations.length - 1 && styles.lastItem]}
-            >
-              <View style={styles.avatar}>
-                <Text style={styles.avatarText}>{consultation.initials}</Text>
+        {isLoading ? (
+          <StateCard icon="hourglass-outline" message="Cargando tu información..." showSpinner />
+        ) : hasError ? (
+          <StateCard icon="alert-circle-outline" message="No pudimos cargar tu información. Intentá nuevamente." />
+        ) : (
+          <>
+            <View style={styles.heroCard}>
+              <View style={styles.heroCopy}>
+                <Text style={styles.heroEyebrow}>Panel de especialista</Text>
+                <Text style={styles.heroTitle}>Consultas</Text>
+                <Text style={styles.heroDescription}>
+                  {activePatients.length === 0
+                    ? 'Todavía no tenés consultas activas.'
+                    : 'Accedé a tus consultas activas con pacientes vinculados.'}
+                </Text>
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={() => router.push('/(tabs-specialist)/consultas')}
+                  style={styles.primaryButton}
+                >
+                  <Text style={styles.primaryButtonText}>Ver consultas</Text>
+                </Pressable>
               </View>
-              <View style={styles.consultationCopy}>
-                <Text style={styles.consultationName}>{consultation.name}</Text>
-                <Text style={styles.consultationReason}>{consultation.reason}</Text>
-              </View>
-              <View style={styles.timePill}>
-                <Text style={styles.timeText}>{consultation.time}</Text>
+              <View style={styles.heroIcon}>
+                <Ionicons color={colors.primaryDark} name="medkit-outline" size={58} />
               </View>
             </View>
-          ))}
-        </View>
-      </ScrollView>
 
+            <View style={styles.quickGrid}>
+              {quickActions.map((action) => (
+                <Pressable key={action.label} onPress={() => router.push(action.route)} style={styles.quickAction}>
+                  <Ionicons color={colors.primaryDark} name={action.icon} size={28} />
+                  <Text style={styles.quickLabel}>{action.label}</Text>
+                </Pressable>
+              ))}
+            </View>
+
+            <View style={styles.metricsRow}>
+              <MetricCard label="Pacientes activos" value={String(activePatients.length)} />
+              <MetricCard label="Consultas activas" value={String(activePatients.length)} />
+            </View>
+
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Consultas activas</Text>
+              <Pressable accessibilityRole="button" onPress={() => router.push('/(tabs-specialist)/consultas')}>
+                <Text style={styles.viewAll}>Ver todas</Text>
+              </Pressable>
+            </View>
+
+            {recentConsultations.length === 0 ? (
+              <View style={styles.emptyBox}>
+                <Ionicons color={colors.textMuted} name="chatbubbles-outline" size={26} />
+                <Text style={styles.emptyText}>Todavía no tenés consultas activas.</Text>
+              </View>
+            ) : (
+              <View style={styles.consultationList}>
+                {recentConsultations.map((consultation, index) => (
+                  <Pressable
+                    key={consultation.relationId}
+                    onPress={() =>
+                      router.push({
+                        pathname: '/chat',
+                        params: { relationId: consultation.relationId }
+                      })
+                    }
+                    style={[styles.consultationItem, index === recentConsultations.length - 1 && styles.lastItem]}
+                  >
+                    <View style={styles.avatar}>
+                      <Text style={styles.avatarText}>{getInitials(consultation.fullName)}</Text>
+                    </View>
+                    <View style={styles.consultationCopy}>
+                      <Text style={styles.consultationName}>{consultation.fullName}</Text>
+                      <Text style={styles.consultationReason}>{formatSkinType(consultation.skinType)}</Text>
+                    </View>
+                    <View style={styles.timePill}>
+                      <Text style={styles.timeText}>{formatLastActivity(consultation.lastActivityAt)}</Text>
+                    </View>
+                  </Pressable>
+                ))}
+              </View>
+            )}
+          </>
+        )}
+      </ScrollView>
     </SafeAreaView>
   );
+}
+
+function MetricCard({ label, value }: { label: string; value: string }) {
+  return (
+    <View style={styles.metricCard}>
+      <Text style={styles.metricValue}>{value}</Text>
+      <Text style={styles.metricLabel}>{label}</Text>
+    </View>
+  );
+}
+
+function StateCard({
+  icon,
+  message,
+  showSpinner = false
+}: {
+  icon: keyof typeof Ionicons.glyphMap;
+  message: string;
+  showSpinner?: boolean;
+}) {
+  return (
+    <View style={styles.stateCard}>
+      {showSpinner ? <ActivityIndicator color={colors.primary} /> : <Ionicons color={colors.primaryDark} name={icon} size={30} />}
+      <Text style={styles.emptyText}>{message}</Text>
+    </View>
+  );
+}
+
+function getDisplayName(fullName?: string | null): string {
+  if (!fullName?.trim()) {
+    return '';
+  }
+
+  return fullName.trim().split(/\s+/).slice(0, 2).join(' ');
+}
+
+function getInitials(fullName: string): string {
+  const parts = fullName.trim().split(/\s+/).slice(0, 2);
+  return parts.map((part) => part[0]?.toUpperCase()).join('') || 'P';
+}
+
+function formatSkinType(skinType: string | null): string {
+  if (!skinType || skinType === 'not_defined' || skinType === 'undefined' || skinType === 'unknown') {
+    return 'Piel no registrada';
+  }
+
+  const labels: Record<string, string> = {
+    normal: 'Piel normal',
+    dry: 'Piel seca',
+    oily: 'Piel grasa',
+    mixed: 'Piel mixta',
+    sensitive: 'Piel sensible'
+  };
+
+  return labels[skinType] ?? skinType;
+}
+
+function formatLastActivity(value: string | null): string {
+  if (!value) {
+    return 'Sin actividad';
+  }
+
+  const date = parseDate(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return 'Sin actividad';
+  }
+
+  return new Intl.DateTimeFormat('es-AR', {
+    day: '2-digit',
+    month: '2-digit'
+  }).format(date);
+}
+
+function getDateTime(value: string | null): number {
+  if (!value) {
+    return 0;
+  }
+
+  const date = parseDate(value);
+  return Number.isNaN(date.getTime()) ? 0 : date.getTime();
+}
+
+function parseDate(value: string): Date {
+  const dateOnlyMatch = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+
+  if (dateOnlyMatch) {
+    return new Date(Number(dateOnlyMatch[1]), Number(dateOnlyMatch[2]) - 1, Number(dateOnlyMatch[3]));
+  }
+
+  return new Date(value);
 }
 
 const styles = StyleSheet.create({
@@ -112,12 +280,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     lineHeight: 22,
     marginTop: 4
-  },
-  notificationButton: {
-    alignItems: 'center',
-    height: 44,
-    justifyContent: 'center',
-    width: 44
   },
   heroCard: {
     alignItems: 'center',
@@ -190,6 +352,30 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '900',
     textAlign: 'center'
+  },
+  metricsRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 18
+  },
+  metricCard: {
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderRadius: 16,
+    borderWidth: 1,
+    flex: 1,
+    gap: 4,
+    padding: 14
+  },
+  metricValue: {
+    color: colors.primaryDark,
+    fontSize: 26,
+    fontWeight: '900'
+  },
+  metricLabel: {
+    color: colors.textSecondary,
+    fontSize: 13,
+    fontWeight: '700'
   },
   sectionHeader: {
     alignItems: 'center',
@@ -264,7 +450,33 @@ const styles = StyleSheet.create({
   },
   timeText: {
     color: colors.textSecondary,
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '800'
+  },
+  emptyBox: {
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderRadius: 18,
+    borderWidth: 1,
+    gap: 8,
+    marginTop: 16,
+    padding: 18
+  },
+  emptyText: {
+    color: colors.textSecondary,
+    fontSize: 14,
+    lineHeight: 20,
+    textAlign: 'center'
+  },
+  stateCard: {
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderRadius: 18,
+    borderWidth: 1,
+    gap: 10,
+    marginTop: 18,
+    padding: 24
   }
 });
