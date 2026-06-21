@@ -4,16 +4,15 @@ import { colors } from '@/constants/colors';
 import { Stepper } from '@/components/Stepper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { AppHeader } from '@/components/navigation/AppHeader';
 
 export default function Step5Products() {
     const router = useRouter();
     const { routineId } = useLocalSearchParams();
     return (
         <SafeAreaView style={styles.screen}>
+            <AppHeader breadcrumb="Rutinas" title="Nueva rutina" />
             <View style={styles.container}>
-
-                <Text style={styles.title}>Nueva Rutina</Text>
-
                 <View style={{ alignItems: 'center' }}>
                     <Stepper current={4} />
                 </View>

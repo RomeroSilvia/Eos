@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Card } from '@/components/Card';
+import { AppHeader } from '@/components/navigation/AppHeader';
 import { colors } from '@/constants/colors';
 import {
   getMyPatientDetail,
@@ -46,13 +47,7 @@ export default function PatientDetailScreen() {
 
   return (
     <SafeAreaView style={styles.screen}>
-      <View style={styles.topBar}>
-        <Pressable accessibilityLabel="Volver" onPress={() => router.back()} style={styles.iconButton}>
-          <Ionicons color={colors.textPrimary} name="chevron-back" size={24} />
-        </Pressable>
-        <Text style={styles.topBarTitle}>Detalle del paciente</Text>
-        <View style={styles.iconButton} />
-      </View>
+      <AppHeader breadcrumb="Pacientes" fallbackRoute="/(tabs-specialist)" title="Detalle del paciente" />
 
       {loading ? (
         <StateMessage icon="hourglass-outline" message="Cargando paciente..." showSpinner />
@@ -83,6 +78,20 @@ export default function PatientDetailScreen() {
               <SummaryItem icon="sparkles-outline" label="Objetivo" value={patient.skinProfile?.mainGoal ?? 'No registrado'} />
             </View>
           </Card>
+
+          <Pressable
+            accessibilityRole="button"
+            style={styles.assignButton}
+            onPress={() =>
+              router.push({
+                pathname: '/routine/Create',
+                params: { assignClientId: patient.id }
+              })
+            }
+          >
+            <Ionicons color={colors.surface} name="add-circle-outline" size={20} />
+            <Text style={styles.assignButtonText}>Asignar rutina</Text>
+          </Pressable>
 
           <SectionTitle title="Perfil de piel" />
           <Card style={styles.compactCard}>
@@ -321,24 +330,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
     flex: 1
   },
-  topBar: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    minHeight: 52,
-    paddingHorizontal: 12
-  },
-  topBarTitle: {
-    color: colors.textPrimary,
-    fontSize: 17,
-    fontWeight: '900'
-  },
-  iconButton: {
-    alignItems: 'center',
-    height: 44,
-    justifyContent: 'center',
-    width: 44
-  },
   content: {
     gap: 12,
     paddingBottom: 28,
@@ -536,5 +527,19 @@ const styles = StyleSheet.create({
     gap: 10,
     justifyContent: 'center',
     paddingHorizontal: 24
+  },
+  assignButton: {
+    alignItems: 'center',
+    backgroundColor: colors.secondary,
+    borderRadius: 12,
+    flexDirection: 'row',
+    gap: 8,
+    justifyContent: 'center',
+    padding: 14
+  },
+  assignButtonText: {
+    color: colors.surface,
+    fontSize: 15,
+    fontWeight: '900'
   }
 });

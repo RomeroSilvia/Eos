@@ -6,18 +6,18 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { updateRoutine } from '@/services/routines';
+import { AppHeader } from '@/components/navigation/AppHeader';
 
 export default function Step3() {
   const router = useRouter();
-  const { routineId } = useLocalSearchParams<{ routineId: string }>();
+  const { routineId, assignClientId } = useLocalSearchParams<{ routineId: string; assignClientId?: string }>();
 
   const [type, setType] = useState<'mañana' | 'noche'>('mañana');
 
   return (
     <SafeAreaView style={styles.screen}>
+      <AppHeader breadcrumb={assignClientId ? 'Pacientes / Rutinas' : 'Rutinas'} title="Nueva rutina" />
       <View style={styles.container}>
-        <Text style={styles.title}>Nueva Rutina</Text>
-
         <View style={{ alignItems: 'center' }}>
           <Stepper current={3} />
         </View>
@@ -89,7 +89,12 @@ export default function Step3() {
               console.error(e);
             }
 
-            router.push(`/routine/Step4?routineId=${routineId}`);
+            router.push({
+              pathname: '/routine/Step4',
+              params: assignClientId
+                ? { routineId, assignClientId }
+                : { routineId }
+            });
           }}
         >
           <Text style={styles.buttonText}>Continuar</Text>

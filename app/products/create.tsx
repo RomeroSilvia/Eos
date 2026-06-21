@@ -1,10 +1,10 @@
 import * as ImagePicker from 'expo-image-picker';
-import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from '@/components/Button';
+import { AppHeader } from '@/components/navigation/AppHeader';
 import { colors } from '@/constants/colors';
 import { useProducts } from '@/hooks/useProducts';
 import type { ProductCategory, ProductBrand } from '@/types/product';
@@ -122,22 +122,13 @@ export default function NewProductScreen() {
 
   return (
       <SafeAreaView style={styles.screen}>
+        <AppHeader breadcrumb="Productos" title={isEditMode ? 'Editar producto' : 'Nuevo producto'} />
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           style={{ flex: 1 }}
         >
           <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-            <View style={styles.header}>
-              <Pressable onPress={() => router.back()} style={styles.backBtn}>
-                <Ionicons color={colors.textPrimary} name="chevron-back" size={18} />
-                <Text style={styles.backText}>Volver atras</Text>
-              </Pressable>
-              <Ionicons color={colors.textSecondary} name="notifications-outline" size={24} />
-            </View>
-
-            <View style={styles.header}>
-              <Text style={styles.title}>{isEditMode ? 'Editar Producto' : 'Nuevo producto'}</Text>
-            </View>
+            <Text style={styles.title}>{isEditMode ? 'Editar Producto' : 'Nuevo producto'}</Text>
 
             <Text style={styles.label}>Nombre del producto</Text>
             <TextInput
@@ -306,32 +297,6 @@ const styles = StyleSheet.create({
     paddingVertical: 16
   },
   header: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
     marginBottom: 16
-  },
-  closeButton: {
-    alignItems: 'center',
-    backgroundColor: colors.background,
-    borderRadius: 999,
-    height: 36,
-    justifyContent: 'center',
-    width: 36
-  },
-  closeIcon: {
-    color: colors.textSecondary,
-    fontSize: 16,
-    fontWeight: '600'
-  },
-  backText: {
-    color: colors.textPrimary,
-    fontSize: 15,
-    fontWeight: '600'
-  },
-  backBtn: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: 4
   }
 });

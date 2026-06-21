@@ -9,6 +9,7 @@ import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
 import { HomeMetricCard } from '@/components/HomeMetricCard';
 import { HomeReminderItem } from '@/components/HomeReminderItem';
+import { SpecialistHomeCard } from '@/components/home/SpecialistHomeCard';
 import { colors } from '@/constants/colors';
 import { useHome } from '@/hooks/useHome';
 import { formatStepCount } from '@/utils/format';
@@ -108,6 +109,8 @@ export default function HomeScreen() {
             <HomeMetricCard metricId={metric.id} key={metric.id} label={metric.label} value={metric.value} />
           ))}
         </View>
+
+        <SpecialistHomeCard />
 
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Recordatorios</Text>

@@ -1205,4 +1205,35 @@ describe('progress.service setRoutineStepCompletion', () => {
       completion_percentage: 100
     });
   });
+
+  it('permite marcar step de una rutina asignada al usuario', async () => {
+    const routine = activeRoutine('assigned-routine-1');
+    const step = routineStep('assigned-routine-1', 'step-1');
+    const routineLog = createRoutineLog({
+      id: 'routine-log-1',
+      routine_id: 'assigned-routine-1',
+      log_date: '2026-05-04',
+      completion_percentage: 0
+    });
+    const completedStepLog = stepLog('routine-log-1', 'step-1', true);
+
+    mockedProgressRepository.findRoutineByIdAndUserId.mockResolvedValue(routine);
+    mockedProgressRepository.findRoutineStepByIdAndRoutineId.mockResolvedValue(step);
+    mockedProgressRepository.findRoutineLogByRoutineIdAndDate.mockResolvedValue(routineLog);
+    mockedProgressRepository.findStepLogByRoutineLogIdAndStepId.mockResolvedValue(null);
+    mockedProgressRepository.createStepLog.mockResolvedValue(completedStepLog);
+    mockedProgressRepository.findStepLogsByRoutineLogId.mockResolvedValue([completedStepLog]);
+    mockedProgressRepository.countRoutineSteps.mockResolvedValue(1);
+    mockedProgressRepository.updateRoutineLog.mockResolvedValue({
+      ...routineLog,
+      completion_percentage: 100,
+      completed_at: '2026-05-04T12:00:00.000Z'
+    });
+
+    const result = await setRoutineStepCompletion('user-1', 'assigned-routine-1', 'step-1', true);
+
+    expect(mockedProgressRepository.findRoutineByIdAndUserId).toHaveBeenCalledWith('assigned-routine-1', 'user-1');
+    expect(result.completed_step_ids).toEqual(['step-1']);
+    expect(result.completion_percentage).toBe(100);
+  });
 });

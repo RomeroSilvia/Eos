@@ -11,6 +11,7 @@ type RoutineStepCardProps = {
   onToggle: (id: string) => void;
   onEdit: (step: RoutineStep) => void;
   onDelete: (step: RoutineStep) => void;
+  readonly?: boolean;
 };
 
 const getIcon = (step: RoutineStep) => {
@@ -30,7 +31,8 @@ export function RoutineStepCard({
   completed,
   onToggle,
   onEdit,
-  onDelete
+  onDelete,
+  readonly = false
 }: RoutineStepCardProps) {
   return (
     <Card style={styles.card}>
@@ -77,25 +79,27 @@ export function RoutineStepCard({
         </Text>
       </View>
 
-      <View style={styles.actions}>
-        <Pressable
-          onPress={() => onEdit(step)}
-          accessibilityLabel="Editar paso"
-          accessibilityRole="button"
-          hitSlop={8}
-        >
-          <MaterialCommunityIcons name="pencil-outline" size={22} color={colors.textSecondary} />
-        </Pressable>
+      {!readonly && (
+        <View style={styles.actions}>
+          <Pressable
+            onPress={() => onEdit(step)}
+            accessibilityLabel="Editar paso"
+            accessibilityRole="button"
+            hitSlop={8}
+          >
+            <MaterialCommunityIcons name="pencil-outline" size={22} color={colors.textSecondary} />
+          </Pressable>
 
-        <Pressable
-          onPress={() => onDelete(step)}
-          accessibilityLabel="Eliminar paso"
-          accessibilityRole="button"
-          hitSlop={8}
-        >
-          <MaterialCommunityIcons name="trash-can-outline" size={22} color={colors.error} />
-        </Pressable>
-      </View>
+          <Pressable
+            onPress={() => onDelete(step)}
+            accessibilityLabel="Eliminar paso"
+            accessibilityRole="button"
+            hitSlop={8}
+          >
+            <MaterialCommunityIcons name="trash-can-outline" size={22} color={colors.error} />
+          </Pressable>
+        </View>
+      )}
     </Card>
   );
 }

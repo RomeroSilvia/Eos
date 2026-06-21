@@ -1,19 +1,19 @@
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors } from '@/constants/colors';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { RoutineIllustration } from '@/components/icons/RoutineIllustration';
+import { AppHeader } from '@/components/navigation/AppHeader';
 import { Stepper } from '@/components/Stepper';
 
 export default function CreateRoutineScreen() {
   const router = useRouter();
+  const { assignClientId } = useLocalSearchParams<{ assignClientId?: string }>();
 
   return (
     <SafeAreaView style={styles.screen}>
+      <AppHeader breadcrumb={assignClientId ? 'Pacientes / Rutinas' : 'Rutinas'} title="Nueva rutina" />
       <View style={styles.container}>
-
-        <Text style={styles.title}>Nueva Rutina</Text>
-
         <Stepper current={1} />
 
         <Text style={styles.subtitle}>
@@ -31,7 +31,12 @@ export default function CreateRoutineScreen() {
 
         <Pressable
           style={styles.button}
-          onPress={() => router.push('/routine/Step2')}
+          onPress={() =>
+            router.push({
+              pathname: '/routine/Step2',
+              params: assignClientId ? { assignClientId } : undefined
+            })
+          }
         >
           <Text style={styles.buttonText}>Comenzar</Text>
         </Pressable>
@@ -51,13 +56,6 @@ const styles = StyleSheet.create({
     padding: 20,
     alignItems: 'center'
   },
-  title: {
-    fontSize: 22,
-    fontWeight: '800',
-    color: colors.textPrimary,
-    alignSelf: 'flex-start'
-  },
-
   stepper: {
     flexDirection: 'row',
     alignItems: 'center',

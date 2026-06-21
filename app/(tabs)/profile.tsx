@@ -73,6 +73,14 @@ export default function ProfileScreen() {
           </View>
         </Card>
         <Card style={styles.settings}>
+          <Text style={styles.sectionTitle}>Configuracion</Text>
+          <Text style={styles.description}>Edita tu perfil, contrasena y notificaciones.</Text>
+          <Button onPress={() => router.push('/settings' as Href)} variant="ghost" style={styles.actionButton}>
+            Abrir configuracion
+          </Button>
+        </Card>
+
+        <Card style={styles.settings}>
           <Text style={styles.sectionTitle}>Acompanamiento profesional</Text>
           <Text style={styles.description}>
             Gestiona tu especialista y entra al chat desde un solo lugar.

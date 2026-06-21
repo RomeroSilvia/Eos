@@ -1,8 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { AppHeader } from '@/components/navigation/AppHeader';
 import { ProgressStateCard } from '@/components/progress/ProgressStateCard';
 import { colors } from '@/constants/colors';
 import { getProgressDayDetail } from '@/services/progress';
@@ -16,7 +17,6 @@ import {
 } from '@/utils/progress';
 
 export default function ProgressDayDetailScreen() {
-  const router = useRouter();
   const { date } = useLocalSearchParams<{ date?: string }>();
   const selectedDate = Array.isArray(date) ? date[0] : date;
   const [detail, setDetail] = useState<RoutineDayDetail | null>(null);
@@ -61,17 +61,9 @@ export default function ProgressDayDetailScreen() {
 
   return (
     <SafeAreaView style={styles.screen}>
+      <AppHeader breadcrumb="Progreso / Historial" title="Detalle del día" />
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <View style={styles.header}>
-          <Pressable accessibilityLabel="Volver" onPress={() => router.back()} style={styles.backButton}>
-            <Ionicons color={colors.primaryDark} name="chevron-back" size={22} />
-          </Pressable>
-
-          <View style={styles.headerText}>
-            <Text style={styles.eyebrow}>Detalle del día</Text>
-            <Text style={styles.title}>{formattedDate}</Text>
-          </View>
-        </View>
+        <Text style={styles.title}>{formattedDate}</Text>
 
         {isLoading ? (
           <ProgressStateCard icon="hourglass-outline" title="Cargando detalle" text="Estamos buscando tus rutinas de ese día." />
@@ -156,31 +148,6 @@ const styles = StyleSheet.create({
     gap: 16,
     padding: 20,
     paddingBottom: 116
-  },
-  header: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: 12,
-    paddingTop: 8
-  },
-  backButton: {
-    alignItems: 'center',
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderRadius: 18,
-    borderWidth: 1,
-    height: 40,
-    justifyContent: 'center',
-    width: 40
-  },
-  headerText: {
-    flex: 1,
-    minWidth: 0
-  },
-  eyebrow: {
-    color: colors.textSecondary,
-    fontSize: 13,
-    fontWeight: '800'
   },
   title: {
     color: colors.textPrimary,

@@ -7,6 +7,7 @@ import type { RealtimeChannel } from '@supabase/supabase-js';
 import { useFocusEffect } from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
 import { Button } from '@/components/Button';
+import { AppHeader } from '@/components/navigation/AppHeader';
 import { colors } from '@/constants/colors';
 import { ApiClientError, getFriendlyErrorMessage } from '@/services/api/client';
 import { getCurrentProfile } from '@/services/auth';
@@ -33,6 +34,10 @@ type SelectedChatImage = {
   size?: number | null;
 };
 
+type ChatListItem =
+  | { type: 'date'; id: string; label: string }
+  | { type: 'message'; id: string; message: ChatMessage };
+
 export default function ChatScreen() {
   const params = useLocalSearchParams<{ relationId?: string | string[] }>();
   const relationIdFromParams = useMemo(() => {
@@ -52,6 +57,8 @@ export default function ChatScreen() {
   const [relationId, setRelationId] = useState<string | undefined>(relationIdFromParams);
   const [myUserId, setMyUserId] = useState<string | null>(null);
   const [participant, setParticipant] = useState<ChatParticipant | null>(null);
+  const listRef = useRef<FlatList<ChatListItem> | null>(null);
+  const shouldScrollToEndRef = useRef(false);
   const pendingCallEndRef = useRef<{ relationId?: string; startedAt: string } | null>(null);
   const appStateRef = useRef(AppState.currentState);
 
@@ -123,9 +130,9 @@ export default function ChatScreen() {
     }
   }, [mergeMessages, relationId, relationIdFromParams]);
 
-  const syncMessagesSilently = useCallback(async () => {
+  const syncMessagesSilently = useCallback(async (nextRelationId = relationId) => {
     try {
-      const response = await getChatMessages({ relationId, limit: 50 });
+      const response = await getChatMessages({ relationId: nextRelationId, limit: 50 });
       setRelationId(response.relationId);
       setParticipant(response.participant ?? null);
       mergeMessages(response.messages);
@@ -265,6 +272,8 @@ export default function ChatScreen() {
       appendMessage(response.message);
       setMessageText('');
       setSelectedImage(null);
+      shouldScrollToEndRef.current = true;
+      await syncMessagesSilently(response.relationId);
     } catch (error) {
       Alert.alert('Chat', getFriendlyErrorMessage(error, 'No pudimos enviar el mensaje.'));
     } finally {
@@ -344,10 +353,7 @@ export default function ChatScreen() {
   }, [messages]);
 
   const chatItems = useMemo(() => {
-    const items: (
-      | { type: 'date'; id: string; label: string }
-      | { type: 'message'; id: string; message: ChatMessage }
-    )[] = [];
+    const items: ChatListItem[] = [];
 
     let currentDateKey: string | null = null;
 
@@ -375,7 +381,7 @@ export default function ChatScreen() {
 
   return (
     <SafeAreaView style={styles.screen}>
-      <Text style={styles.title}>Consultas</Text>
+      <AppHeader breadcrumb="Consultas" style={styles.header} title="Chat" />
       <View style={styles.participantCard}>
         <View style={styles.participantIconWrap}>
           <Ionicons color={colors.primaryDark} name="person-circle-outline" size={22} />
@@ -403,9 +409,18 @@ export default function ChatScreen() {
       {isLoading ? <Text style={styles.info}>Cargando mensajes...</Text> : null}
 
       <FlatList
+        ref={listRef}
         contentContainerStyle={styles.list}
         data={chatItems}
         keyExtractor={(item) => item.id}
+        onContentSizeChange={() => {
+          if (!shouldScrollToEndRef.current) {
+            return;
+          }
+
+          shouldScrollToEndRef.current = false;
+          listRef.current?.scrollToEnd({ animated: true });
+        }}
         renderItem={({ item }) => {
           if (item.type === 'date') {
             return (
@@ -549,11 +564,9 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 16
   },
-  title: {
-    color: colors.textPrimary,
-    fontSize: 28,
-    fontWeight: '900',
-    marginBottom: 10
+  header: {
+    paddingHorizontal: 0,
+    paddingTop: 0
   },
   info: {
     color: colors.textSecondary,

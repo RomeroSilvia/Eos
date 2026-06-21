@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { colors } from '@/constants/colors';
+import { AppHeader } from '@/components/navigation/AppHeader';
 import { getRoutineById, updateRoutine } from '@/services/routines';
 import type { RoutineTimeOfDay } from '@/types/routine';
 
@@ -67,9 +68,8 @@ export default function RoutineEdit() {
 
   return (
     <SafeAreaView style={styles.screen}>
+      <AppHeader breadcrumb="Rutinas" title="Editar rutina" />
       <View style={styles.container}>
-        <Text style={styles.title}>Editar rutina</Text>
-
         <Text style={styles.label}>Nombre</Text>
         <TextInput
           value={name}
