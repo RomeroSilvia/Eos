@@ -6,13 +6,23 @@ type ButtonProps = PropsWithChildren<{
   onPress?: () => void;
   variant?: 'primary' | 'secondary' | 'ghost';
   disabled?: boolean;
+  accessibilityLabel?: string;
   style?: ViewStyle;
-  textStyle?: TextStyle; 
+  textStyle?: TextStyle;
 }>;
 
-export function Button({ children, onPress, variant = 'primary', disabled = false, style, textStyle }: ButtonProps) {
+export function Button({
+  accessibilityLabel,
+  children,
+  onPress,
+  variant = 'primary',
+  disabled = false,
+  style,
+  textStyle
+}: ButtonProps) {
   return (
     <Pressable
+      accessibilityLabel={accessibilityLabel}
       accessibilityRole="button"
       accessibilityState={{ disabled }}
       disabled={disabled}

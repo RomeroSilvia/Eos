@@ -41,3 +41,14 @@ export const getMyPatients: RequestHandler = asyncHandler(async (req, res) => {
   const patients = await specialistsDirectoryService.getMyPatients(req.user.id);
   res.json({ patients });
 });
+
+export const getMyPatientDetail: RequestHandler = asyncHandler(async (req, res) => {
+  const patientId = req.params.patientId;
+
+  if (typeof patientId !== 'string') {
+    throw new ApiError(400, 'patientId es requerido.');
+  }
+
+  const patient = await specialistsDirectoryService.getMyPatientDetail(req.user.id, patientId);
+  res.json({ patient });
+});
