@@ -22,6 +22,10 @@ El proyecto tiene implementados los módulos principales con integración real a
 14. Push notifications con cron job (08:00 y 21:00), mensajes personalizados por rutina, historial persistido en `notification_history` y pantalla in-app con agrupación por día.
 15. Roles diferenciados (`user`, `specialist`, `center_admin`) con navegación y middleware por rol.
 16. `RemindersSection` — sección de recordatorios en home y perfil derivada de las rutinas activas del usuario, con navegación a la tab de rutinas.
+17. Asignación de rutinas por especialista: columna `assigned_by` en `routines` con RLS por relación activa especialista-paciente.
+18. Pantalla de configuración (`app/settings.tsx`): edición de perfil, cambio de contraseña, toggle de notificaciones y re-test de piel.
+19. `SpecialistHomeCard` en home con especialista vinculado, estados de loading/error y CTA de búsqueda.
+20. Tests de controllers para routines y specialists.directory (20 suites, 186 tests en total).
 
 ## Tareas pendientes recomendadas
 
@@ -34,6 +38,7 @@ El proyecto tiene implementados los módulos principales con integración real a
 7. **Refresh de token** — No hay lógica de refresh automático del JWT cuando expira.
 8. **Índices en base de datos** — El schema inicial tiene índices comentados; confirmar los patrones de acceso y crearlos.
 9. **Buscador de especialistas** — El endpoint de búsqueda existe pero el filtro por rol en Supabase PostgREST sobre tablas embebidas puede no funcionar correctamente; requiere revisión.
+10. **Tabs del especialista con datos reales** — Las tabs de consultas, pacientes y rutinas del especialista aún no consumen datos reales del backend.
 
 ## No hacer todavía
 

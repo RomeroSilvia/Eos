@@ -98,6 +98,12 @@ Ejecutar en Supabase SQL Editor en el siguiente orden antes de levantar el backe
 -- database/e2_profiles_rls_policies.sql
 ```
 
+### 6. Rutinas asignadas por especialista (Módulo 4)
+
+```sql
+-- database/e2_m4_assigned_routines.sql
+```
+
 ### 5. Historial de notificaciones (Módulo 2)
 
 ```sql
@@ -150,12 +156,16 @@ Implementado:
 - Storage privado para documentos con signed URLs temporales.
 - Navegación diferenciada por rol y `license_status`.
 
-Fuera del alcance de este módulo (pendiente en E2):
+### Módulo 4 — Asignación de Rutinas por Especialista (rama: `feature/modulo-5`)
 
-- Gestión real de clientes desde el panel del especialista.
-- Chat y buscador de especialistas.
-- Asignación de rutinas por especialista.
-- Tabs del especialista con datos reales de clientes.
+Implementado:
+
+- Columna `assigned_by` en `routines` que referencia al especialista que asignó la rutina.
+- RLS en Supabase: los especialistas solo pueden crear/editar/eliminar rutinas de sus pacientes activos (`client_specialist_relations.status = 'active'`).
+- Migración idempotente en `database/e2_m4_assigned_routines.sql`.
+- `SpecialistHomeCard` en home: muestra especialista vinculado o CTA para buscar uno, con loading y error state.
+- `AppHeader` — componente de navegación reutilizable con breadcrumb.
+- Pantalla `app/settings.tsx` — configuración de perfil (nombre), contraseña, toggle de notificaciones y re-test de piel (solo para `user`).
 
 ## Documentación adicional
 

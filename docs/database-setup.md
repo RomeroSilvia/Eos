@@ -15,7 +15,7 @@ Eos usa Supabase PostgreSQL como base de datos.
 |---|---|
 | `profiles` | Perfil del usuario (nombre, email, skin_type, role) |
 | `skin_profiles` | Resultado del quiz de diagnóstico de piel por usuario |
-| `routines` | Rutinas del usuario (mañana / noche / personalizada) |
+| `routines` | Rutinas del usuario (mañana / noche / personalizada); columna `assigned_by` referencia al especialista que la asignó |
 | `routine_steps` | Pasos de cada rutina con orden y categoría |
 | `products` | Productos de skincare del usuario con imagen |
 | `routine_step_products` | Asociación N:M entre pasos y productos |
