@@ -28,8 +28,10 @@ function routineToReminder(routine: Routine): Reminder {
 export function RemindersSection() {
   const router = useRouter();
   const [reminders, setReminders] = useState<Reminder[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    setIsLoading(true);
     getRoutines()
       .then((routines) => {
         const active = routines
@@ -37,15 +39,17 @@ export function RemindersSection() {
           .map(routineToReminder);
         setReminders(active);
       })
-      .catch(() => setReminders([]));
+      .catch(() => setReminders([]))
+      .finally(() => setIsLoading(false));
   }, []);
 
   return (
     <View>
-      
       <Card style={styles.card}>
         <Text style={styles.title}>Recordatorios</Text>
-        {reminders.length === 0 ? (
+        {isLoading ? (
+          <Text style={styles.empty}>Cargando recordatorios...</Text>
+        ) : reminders.length === 0 ? (
           <Text style={styles.empty}>No tenés rutinas activas.</Text>
         ) : (
           reminders.map((reminder, index) => (
