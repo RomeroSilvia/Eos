@@ -32,5 +32,13 @@ for select
 to authenticated
 using (
   bucket_id = 'specialist-docs'
-  and auth.uid()::text = (storage.foldername(name))[1]
+  and (
+    auth.uid()::text = (storage.foldername(name))[1]
+    or exists (
+      select 1
+      from public.profiles
+      where id = auth.uid()
+      and role = 'center_admin'
+    )
+  )
 );
