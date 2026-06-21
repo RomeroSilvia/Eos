@@ -26,6 +26,21 @@ export type ChatMessage = {
   created_at: string;
 };
 
+type RawChatMessage = Partial<ChatMessage> & {
+  relationId?: string;
+  senderId?: string;
+  messageType?: 'text' | 'image';
+  media_url?: string | null;
+  mediaUrl?: string | null;
+  mediaAvailable?: boolean;
+  media_mime_type?: string | null;
+  mediaMimeType?: string | null;
+  media_size?: number | null;
+  mediaSize?: number | null;
+  readAt?: string | null;
+  createdAt?: string;
+};
+
 export type ChatParticipant = {
   id: string;
   fullName: string | null;
@@ -38,9 +53,27 @@ type ChatMessagesResponse = {
   messages: ChatMessage[];
 };
 
+type RawChatParticipant = Partial<ChatParticipant> & {
+  full_name?: string | null;
+  fullName?: string | null;
+};
+
+type RawChatMessagesResponse = {
+  relationId?: string;
+  relation_id?: string;
+  participant?: RawChatParticipant | null;
+  messages?: RawChatMessage[];
+};
+
 type ChatSendResponse = {
   relationId: string;
   message: ChatMessage;
+};
+
+type RawChatSendResponse = {
+  relationId?: string;
+  relation_id?: string;
+  message?: RawChatMessage;
 };
 
 type ChatVideoCallResponse = ChatSendResponse & {
@@ -61,18 +94,21 @@ export async function getChatMessages(params: {
   const queryString = query.toString();
   const path = queryString ? `/chat/messages?${queryString}` : '/chat/messages';
 
-  return apiRequest<ChatMessagesResponse>({ path, method: 'GET' });
+  const response = await apiRequest<RawChatMessagesResponse>({ path, method: 'GET' });
+  return normalizeChatMessagesResponse(response);
 }
 
 export async function sendChatMessage(payload: {
   content: string;
   relationId?: string;
 }): Promise<ChatSendResponse> {
-  return apiRequest<ChatSendResponse>({
+  const response = await apiRequest<RawChatSendResponse>({
     path: '/chat/messages',
     method: 'POST',
     body: JSON.stringify(payload)
   });
+
+  return normalizeChatSendResponse(response);
 }
 
 export async function sendChatImage(payload: {
@@ -92,11 +128,13 @@ export async function sendChatImage(payload: {
 
   formData.append('image', payload.file as unknown as Blob);
 
-  return apiRequest<ChatSendResponse>({
+  const response = await apiRequest<RawChatSendResponse>({
     path: '/chat/messages',
     method: 'POST',
     body: formData
   });
+
+  return normalizeChatSendResponse(response);
 }
 
 export async function markChatAsRead(relationId?: string): Promise<void> {
@@ -118,7 +156,7 @@ export async function startChatVideoCall(payload: {
 }
 
 export function parseChatMessage(message: ChatMessage): ChatParsedPayload {
-  if (message.message_type === 'image') {
+  if (message.message_type === 'image' || Boolean(message.mediaUrl)) {
     return {
       kind: 'image',
       text: message.content || undefined,
@@ -163,4 +201,89 @@ export function parseChatMessage(message: ChatMessage): ChatParsedPayload {
     kind: 'text',
     text: message.content
   };
+}
+
+export function normalizeChatMessage(message: RawChatMessage): ChatMessage {
+  const createdAt = toStringValue(message.created_at ?? message.createdAt);
+  const relationId = toStringValue(message.relation_id ?? message.relationId);
+  const senderId = toStringValue(message.sender_id ?? message.senderId);
+  const content = toStringValue(message.content);
+  const id = toStringValue(message.id) || `${relationId}:${senderId}:${createdAt}:${content.slice(0, 24)}`;
+
+  return {
+    id,
+    relation_id: relationId,
+    sender_id: senderId,
+    content,
+    message_type: normalizeMessageType(message.message_type ?? message.messageType, message.media_url ?? message.mediaUrl),
+    mediaUrl: normalizeNullableString(message.mediaUrl ?? message.media_url),
+    mediaAvailable: typeof message.mediaAvailable === 'boolean' ? message.mediaAvailable : undefined,
+    media_mime_type: normalizeNullableString(message.media_mime_type ?? message.mediaMimeType),
+    media_size: normalizeNullableNumber(message.media_size ?? message.mediaSize),
+    read_at: normalizeNullableString(message.read_at ?? message.readAt),
+    created_at: createdAt
+  };
+}
+
+function normalizeChatMessagesResponse(response: RawChatMessagesResponse): ChatMessagesResponse {
+  return {
+    relationId: toStringValue(response.relationId ?? response.relation_id),
+    participant: normalizeParticipant(response.participant),
+    messages: (response.messages ?? []).map(normalizeChatMessage)
+  };
+}
+
+function normalizeChatSendResponse(response: RawChatSendResponse): ChatSendResponse {
+  return {
+    relationId: toStringValue(response.relationId ?? response.relation_id),
+    message: normalizeChatMessage(response.message ?? {})
+  };
+}
+
+function normalizeParticipant(participant?: RawChatParticipant | null): ChatParticipant | null {
+  if (!participant?.id) {
+    return null;
+  }
+
+  return {
+    id: participant.id,
+    fullName: normalizeNullableString(participant.fullName ?? participant.full_name),
+    email: normalizeNullableString(participant.email)
+  };
+}
+
+function normalizeMessageType(type: unknown, mediaUrl: unknown): 'text' | 'image' | undefined {
+  if (type === 'text' || type === 'image') {
+    return type;
+  }
+
+  if (typeof mediaUrl === 'string' && mediaUrl.trim()) {
+    return 'image';
+  }
+
+  return 'text';
+}
+
+function toStringValue(value: unknown): string {
+  if (typeof value === 'string') {
+    return value;
+  }
+
+  return '';
+}
+
+function normalizeNullableString(value: unknown): string | null {
+  if (typeof value === 'string') {
+    return value;
+  }
+
+  return null;
+}
+
+function normalizeNullableNumber(value: unknown): number | null {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value;
+  }
+
+  return null;
 }
