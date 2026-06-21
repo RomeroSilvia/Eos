@@ -15,6 +15,7 @@ import {
   getChatMessages,
   MAX_CHAT_IMAGE_SIZE_BYTES,
   markChatAsRead,
+  normalizeChatMessage,
   parseChatMessage,
   sendChatImage,
   sendChatMessage,
@@ -72,26 +73,22 @@ export default function ChatScreen() {
         return prev;
       }
 
-      return [...prev, nextMessage];
+      return [...prev, nextMessage].sort(
+        (a, b) => getTimeValue(a.created_at) - getTimeValue(b.created_at)
+      );
     });
   }, []);
 
-  const mergeMessages = useCallback((incoming: ChatMessage[]) => {
-    setMessages((prev) => {
-      if (incoming.length === 0) {
-        return prev;
-      }
+  const replaceMessages = useCallback((incoming: ChatMessage[]) => {
+    const byId = new Map<string, ChatMessage>();
 
-      const byId = new Map(prev.map((message) => [message.id, message]));
+    for (const message of incoming) {
+      byId.set(message.id, message);
+    }
 
-      for (const message of incoming) {
-        byId.set(message.id, message);
-      }
-
-      return [...byId.values()].sort(
-        (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
-      );
-    });
+    setMessages(
+      [...byId.values()].sort((a, b) => getTimeValue(a.created_at) - getTimeValue(b.created_at))
+    );
   }, []);
 
   useEffect(() => {
@@ -112,7 +109,7 @@ export default function ChatScreen() {
       const response = await getChatMessages({ relationId, limit: 50 });
       setRelationId(response.relationId);
       setParticipant(response.participant ?? null);
-      mergeMessages(response.messages);
+      replaceMessages(response.messages);
       await markChatAsRead(response.relationId);
     } catch (error) {
       if (error instanceof ApiClientError && (error.status === 401 || error.status === 403 || error.status === 404)) {
@@ -128,14 +125,14 @@ export default function ChatScreen() {
     } finally {
       setIsLoading(false);
     }
-  }, [mergeMessages, relationId, relationIdFromParams]);
+  }, [relationId, relationIdFromParams, replaceMessages]);
 
   const syncMessagesSilently = useCallback(async (nextRelationId = relationId) => {
     try {
       const response = await getChatMessages({ relationId: nextRelationId, limit: 50 });
       setRelationId(response.relationId);
       setParticipant(response.participant ?? null);
-      mergeMessages(response.messages);
+      replaceMessages(response.messages);
       await markChatAsRead(response.relationId);
     } catch (error) {
       if (error instanceof ApiClientError && error.status === 404 && !relationIdFromParams) {
@@ -146,7 +143,7 @@ export default function ChatScreen() {
 
       // Fallback silencioso para no romper la UX del chat.
     }
-  }, [mergeMessages, relationId, relationIdFromParams]);
+  }, [relationId, relationIdFromParams, replaceMessages]);
 
   useEffect(() => {
     void loadMessages();
@@ -221,7 +218,7 @@ export default function ChatScreen() {
             filter: `relation_id=eq.${relationId}`
           },
           (payload) => {
-            const nextMessage = payload.new as ChatMessage;
+            const nextMessage = normalizeChatMessage(payload.new as Partial<ChatMessage>);
             appendMessage(nextMessage);
 
             if (nextMessage.message_type === 'image') {
@@ -349,7 +346,7 @@ export default function ChatScreen() {
   }
 
   const orderedMessages = useMemo(() => {
-    return [...messages].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+    return [...messages].sort((a, b) => getTimeValue(a.created_at) - getTimeValue(b.created_at));
   }, [messages]);
 
   const chatItems = useMemo(() => {
@@ -886,5 +883,15 @@ function formatImageSize(size?: number | null): string {
   }
 
   return `${Math.ceil(size / 1024)} KB`;
+}
+
+function getTimeValue(value: string): number {
+  const parsed = new Date(value).getTime();
+
+  if (Number.isNaN(parsed)) {
+    return 0;
+  }
+
+  return parsed;
 }
 
