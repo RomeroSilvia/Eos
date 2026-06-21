@@ -1,9 +1,9 @@
-import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { useCallback } from 'react';
-import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Image, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { BellButton } from '@/components/BellButton';
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
 import { HomeMetricCard } from '@/components/HomeMetricCard';
@@ -49,13 +49,10 @@ export default function HomeScreen() {
     : '🧴';
 
   return (
-    <SafeAreaView style={styles.screen}>
+    <SafeAreaView edges={['top', 'left', 'right']} style={styles.screen}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
-          <Pressable onPress={() => router.push('/notifications')} style={styles.bellButton}>
-            <Ionicons color={colors.textPrimary} name="notifications-outline" size={26} />
-            <View style={styles.bellDot} />
-          </Pressable>
+          <BellButton style={styles.bell} />
           <Text style={styles.greeting}>¡Hola, {summary.user.name}! 🌱</Text>
           <Text style={styles.subtitle}>Sentite bien con tu propia piel</Text>
         </View>
@@ -130,19 +127,8 @@ const styles = StyleSheet.create({
     gap: 6,
     paddingTop: 8
   },
-  bellButton: {
-    alignSelf: 'flex-end',
-    padding: 4,
-    position: 'relative'
-  },
-  bellDot: {
-    backgroundColor: colors.secondaryDark,
-    borderRadius: 5,
-    height: 10,
-    position: 'absolute',
-    right: 2,
-    top: 2,
-    width: 10
+  bell: {
+    alignSelf: 'flex-end'
   },
   greeting: {
     color: colors.textPrimary,

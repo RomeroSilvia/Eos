@@ -72,7 +72,13 @@ function groupByDay(notifications: AppNotification[]): { label: string; items: A
 export default function NotificationsScreen() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<NotificationTab>('all');
-  const [notifications] = useState<AppNotification[]>(MOCK_NOTIFICATIONS);
+  const [notifications, setNotifications] = useState<AppNotification[]>(MOCK_NOTIFICATIONS);
+
+  const markAsRead = (id: string) => {
+    setNotifications((prev) =>
+      prev.map((n) => (n.id === id ? { ...n, isRead: true } : n))
+    );
+  };
 
   const unreadCount = useMemo(() => notifications.filter((item) => !item.isRead).length, [notifications]);
 
@@ -116,7 +122,11 @@ export default function NotificationsScreen() {
           <View key={group.label} style={styles.group}>
             <Text style={styles.groupLabel}>{group.label}</Text>
             {group.items.map((notification) => (
-              <NotificationListItem key={notification.id} notification={notification} />
+              <NotificationListItem
+                key={notification.id}
+                notification={notification}
+                onPress={() => markAsRead(notification.id)}
+              />
             ))}
           </View>
         ))}

@@ -4,6 +4,7 @@ import { useCallback } from 'react';
 import { Image, ScrollView, StyleSheet, Text, View, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
+import { BellButton } from '@/components/BellButton';
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
 import { colors } from '@/constants/colors';
@@ -20,7 +21,7 @@ export default function ProductsScreen() {
 
   if (isLoading) {
     return (
-      <SafeAreaView style={styles.screen}>
+      <SafeAreaView edges={['top', 'left', 'right']} style={styles.screen}>
         <View style={styles.center}>
           <Text style={styles.emptyText}>Cargando productos...</Text>
         </View>
@@ -30,10 +31,10 @@ export default function ProductsScreen() {
 
   if (products.length === 0) {
     return (
-      <SafeAreaView style={styles.screen}>
+      <SafeAreaView edges={['top', 'left', 'right']} style={styles.screen}>
         <View style={styles.header}>
           <Text style={styles.title}>Nuevo Producto</Text>
-          <Ionicons color={colors.textSecondary} name="notifications-outline" size={24} />
+          <BellButton />
         </View>
         <Text style={styles.subtitle}>Cuidar tu piel cada día hace la diferencia</Text>
 
@@ -57,11 +58,11 @@ export default function ProductsScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.screen}>
+    <SafeAreaView edges={['top', 'left', 'right']} style={styles.screen}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
           <Text style={styles.title}>Mis Productos</Text>
-          <Ionicons color={colors.textSecondary} name="notifications-outline" size={24} />
+          <BellButton />
         </View>
         {products.map((product) => (
           <Pressable

@@ -1,9 +1,10 @@
 import { Alert, ScrollView, StyleSheet, Text, View, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { useCallback } from 'react';
+import { BellButton } from '@/components/BellButton';
 import { RoutineStepCard } from '@/components/RoutineStepCard';
 import { colors } from '@/constants/colors';
 import { useRoutine } from '@/hooks/useRoutine';
@@ -81,7 +82,7 @@ export default function RoutineScreen() {
 
   if (isLoading) {
     return (
-      <SafeAreaView style={styles.screen}>
+      <SafeAreaView edges={['top', 'left', 'right']} style={styles.screen}>
         <View style={styles.center}>
           <Text style={styles.emptyText}>Cargando rutina...</Text>
         </View>
@@ -91,7 +92,7 @@ export default function RoutineScreen() {
 
   if (error || routines.length === 0) {
     return (
-      <SafeAreaView style={styles.screen}>
+      <SafeAreaView edges={['top', 'left', 'right']} style={styles.screen}>
         <View style={styles.center}>
           <Text style={styles.emptyTitle}>Todavia no hay rutinas guardadas</Text>
           <Text style={styles.emptyText}>
@@ -109,11 +110,11 @@ export default function RoutineScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.screen}>
+    <SafeAreaView edges={['top', 'left', 'right']} style={styles.screen}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
           <Text style={styles.title}>Rutina</Text>
-          <Ionicons name="notifications-outline" size={20} color={colors.textSecondary} />
+          <BellButton />
         </View>
 
         <Text style={styles.subtitle}>

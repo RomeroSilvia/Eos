@@ -4,6 +4,7 @@ import { useRouter } from "expo-router";
 import { useCallback } from "react";
 import { ScrollView, StyleSheet, Text, View, Pressable } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { BellButton } from "@/components/BellButton";
 import { MonthCalendarCard } from "@/components/progress/MonthCalendarCard";
 import { ProgressHistoryPreview } from "@/components/progress/ProgressHistoryPreview";
 import { ProgressMetricCard } from "@/components/progress/ProgressMetricCard";
@@ -42,7 +43,7 @@ export default function ProgressScreen() {
 
   if (isLoading) {
     return (
-      <SafeAreaView style={styles.screen}>
+      <SafeAreaView edges={['top', 'left', 'right']} style={styles.screen}>
         <View style={styles.emptyState}>
           <Ionicons color={colors.primary} name="hourglass-outline" size={34} />
           <Text style={styles.emptyTitle}>Cargando progreso</Text>
@@ -54,7 +55,7 @@ export default function ProgressScreen() {
 
   if (error) {
     return (
-      <SafeAreaView style={styles.screen}>
+      <SafeAreaView edges={['top', 'left', 'right']} style={styles.screen}>
         <View style={styles.emptyState}>
           <Ionicons color={colors.error} name="alert-circle-outline" size={34} />
           <Text style={styles.emptyTitle}>No pudimos cargar tu progreso</Text>
@@ -66,7 +67,7 @@ export default function ProgressScreen() {
 
   if (!summary) {
     return (
-      <SafeAreaView style={styles.screen}>
+      <SafeAreaView edges={['top', 'left', 'right']} style={styles.screen}>
         <View style={styles.emptyState}>
           <Ionicons color={colors.primary} name="bar-chart-outline" size={34} />
           <Text style={styles.emptyTitle}>Sin progreso todavia</Text>
@@ -79,7 +80,7 @@ export default function ProgressScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.screen}>
+    <SafeAreaView edges={['top', 'left', 'right']} style={styles.screen}>
       <ScrollView
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
@@ -91,6 +92,7 @@ export default function ProgressScreen() {
               Tu constancia en el cuidado de la piel
             </Text>
           </View>
+          <BellButton />
         </View>
 
         <ProgressSummaryCard
