@@ -4,6 +4,14 @@
 
 React Native Expo frontend + Express/Node backend + Supabase.
 
+## Before doing anything
+
+1. Read `docs/plan_entrega2.md` completo — no solo la sección de tu módulo.
+2. Read the "Módulo 2 scope" section below.
+3. Read `CLAUDE.md` for architecture/conventions that apply to the whole repo.
+4. Confirm the tables this module needs already exist in `database/e2_schema.sql`.
+5. Run `npm test` in `backend/` to confirm Entrega 1 tests still pass before touching existing code.
+
 ## E2 module convention
 
 New backend modules must follow:
@@ -14,25 +22,25 @@ routes → controller → service → repository → tests
 
 Tests must be written in Spanish, following the existing project style.
 
-## Módulo 3 scope
+## Módulo 2 scope (current focus)
 
-Módulo 3 owns:
+Módulo 2 owns:
 
-- `profiles.role` usage in middleware.
-- `requireRole` middleware.
-- Specialist registration.
-- `specialist_profiles.license_status`.
-- Specialist status endpoint.
-- Frontend specialist registration flow.
-- Specialist status screen.
-- Role-based navigation.
+- `push_tokens` table usage (register/unregister token).
+- `notifications` backend module: routes + controller added on top of the existing `notifications.service.ts`.
+- `notificationsService.sendToUser()` (internal, never a public route).
+- Cron scheduler in `backend/src/jobs/notification.job.ts`.
+- Frontend `registerPushToken()` / `unregisterPushToken()` in `services/notifications.ts`.
+- In-app notification center screen (`app/notifications.tsx`), recreating `docs/figma/notifications-all-reference.png` and `docs/figma/notifications-unread-reference.png`.
 
-Do not implement M1, M2, M4 or M5 unless explicitly requested.
+Use the `expo-push-notifications` skill (`agents/skills/expo-push-notifications/SKILL.md`) for the detailed spec of this module.
+
+Do not implement M1, M3, M4 or M5 unless explicitly requested.
 
 ## Expected branch
 
 ```text
-feature/e2-roles-specialist-register
+feature/e2-push-notifications
 ```
 
 ## Backend conventions
@@ -43,13 +51,14 @@ feature/e2-roles-specialist-register
 - Put Supabase queries in repositories when possible.
 - Use existing `ApiError` pattern.
 - Do not duplicate logic from other modules if a shared helper already exists.
+- Use the Supabase **service role key** for the cron job; never the anon key there.
 
 ## Frontend conventions
 
-- Reuse existing app components, colors and route constants.
+- Reuse existing app components, colors (`constants/colors.ts`) and route constants (`constants/routes.ts`).
 - Add new routes to `constants/routes.ts` when the project uses it.
-- Keep specialist registration visually consistent with the current auth flow.
-- Do not create a separate visual language for specialists unless explicitly requested.
+- Keep the notification center visually consistent with the rest of the app — no new visual language.
+- Do not touch the existing local-scheduling logic in `services/notifications.ts` (`scheduleRemindersByTime`); only add the remote-token functions alongside it.
 
 ## Verification
 
@@ -67,6 +76,5 @@ npm run lint
 ## Security
 
 - Do not commit secrets.
-- Do not make `specialist-docs` public.
-- DNI and title photos must be stored in a private Supabase Storage bucket.
+- Do not expose `POST /api/notifications/send` as a public route — it's internal only.
 - Do not use real personal data in seeds or tests.
