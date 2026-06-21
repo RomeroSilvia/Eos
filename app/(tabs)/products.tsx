@@ -15,7 +15,7 @@ export default function ProductsScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      void refreshProducts();
+      void refreshProducts(true);
     }, [refreshProducts])
   );
 

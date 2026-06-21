@@ -18,11 +18,11 @@ export default function HomeScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      void refreshSummary();
+      void refreshSummary(true);
     }, [refreshSummary])
   );
 
-  if (isLoading && !summary) {
+  if (!summary) {
     return (
       <SafeAreaView edges={['top', 'left', 'right']} style={styles.screen}>
         <View style={styles.emptyState}>

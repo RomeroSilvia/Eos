@@ -12,7 +12,13 @@ import {
 	updateProduct
 } from './products.controller';
 
-const upload = multer({ storage: multer.memoryStorage() });
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fieldSize: 10 * 1024 * 1024,
+    fileSize: 10 * 1024 * 1024, 
+  },
+});
 
 export const productsRouter = Router();
 
