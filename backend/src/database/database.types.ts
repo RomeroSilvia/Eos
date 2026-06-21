@@ -42,6 +42,7 @@ export type Database = {
         Row: {
           id: string;
           user_id: string;
+          assigned_by: string | null;
           name: string;
           description: string | null;
           time_of_day: string | null;
@@ -52,6 +53,7 @@ export type Database = {
         Insert: {
           id?: string;
           user_id: string;
+          assigned_by?: string | null;
           name: string;
           description?: string | null;
           time_of_day?: string | null;
@@ -61,6 +63,7 @@ export type Database = {
         };
         Update: {
           name?: string;
+          assigned_by?: string | null;
           description?: string | null;
           time_of_day?: string | null;
           is_active?: boolean;
