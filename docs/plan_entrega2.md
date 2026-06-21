@@ -1035,7 +1035,9 @@ Las mismas que en E1 más estas adiciones:
 
 ---
 
-## Skills sugeridas 
+## Skills sugeridas (para confirmar con el equipo)
+
+Las siguientes skills podrían agregarse a `docs/` o al sistema de skills del proyecto para acelerar el trabajo en E2:
 
 ### Skill: `supabase-realtime`
 **Propósito:** Guía paso a paso para habilitar Realtime en una tabla de Supabase y suscribirse desde el frontend con el cliente JS. Incluye el patrón de canal filtrado por `relation_id` y manejo de cleanup en `useEffect`.  
