@@ -1,18 +1,27 @@
-import type { ProfileInsert, ProfileRow, ProfileUpdate } from '../../database/schema.types';
+import { supabase } from '../../config/supabase';
+import type { ProfileRow, ProfileUpdate } from '../../database/schema.types';
 
 export const profileRepository = {
-  findByUserId: async (_userId: string): Promise<ProfileRow | null> => {
-    // TODO: Implement Supabase query to get profile by user id.
-    return null;
+  findById: async (userId: string): Promise<ProfileRow | null> => {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', userId)
+      .maybeSingle();
+
+    if (error) throw error;
+    return data;
   },
 
-  create: async (_data: ProfileInsert): Promise<ProfileRow | null> => {
-    // TODO: Implement Supabase query to create a profile.
-    return null;
-  },
+  updateById: async (userId: string, data: ProfileUpdate): Promise<ProfileRow> => {
+    const { data: profile, error } = await supabase
+      .from('profiles')
+      .update(data)
+      .eq('id', userId)
+      .select('*')
+      .single();
 
-  update: async (_userId: string, _data: ProfileUpdate): Promise<ProfileRow | null> => {
-    // TODO: Implement Supabase query to update profile by user id.
-    return null;
+    if (error) throw error;
+    return profile;
   }
 };

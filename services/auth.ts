@@ -145,6 +145,23 @@ export async function logout(): Promise<void> {
   await deleteStoredItem(accessTokenKey);
 }
 
+export async function changePassword(newPassword: string): Promise<void> {
+  await apiRequest({
+    path: '/auth/update-password',
+    method: 'POST',
+    body: JSON.stringify({ newPassword })
+  });
+}
+
+export async function updateStoredProfile(profile: UserProfile): Promise<void> {
+  await setStoredItem(
+    sessionKey,
+    JSON.stringify({
+      profile
+    })
+  );
+}
+
 export async function saveAccessToken(token: string): Promise<void> {
   await setStoredItem(accessTokenKey, token);
 }

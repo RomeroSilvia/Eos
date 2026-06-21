@@ -98,11 +98,34 @@ export async function registerPushToken(): Promise<void> {
 }
 
 export async function unregisterPushToken(): Promise<void> {
+  await Notifications.cancelAllScheduledNotificationsAsync();
+
   try {
     await apiRequest({ path: '/notifications/token', method: 'DELETE' });
   } catch {
     // Si el token ya no existía en el servidor no bloqueamos el logout.
   }
+}
+
+export async function areNotificationsEnabled(): Promise<boolean> {
+  const permissions = await Notifications.getPermissionsAsync();
+  return permissions.granted;
+}
+
+export async function setNotificationsEnabled(enabled: boolean): Promise<boolean> {
+  if (!enabled) {
+    await unregisterPushToken();
+    return false;
+  }
+
+  const granted = await requestNotificationPermissions();
+
+  if (!granted) {
+    return false;
+  }
+
+  await registerPushToken();
+  return true;
 }
 
 export async function getNotifications(): Promise<AppNotification[]> {
