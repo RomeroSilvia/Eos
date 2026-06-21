@@ -31,10 +31,15 @@ export default function NotificationsScreen() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<NotificationTab>('all');
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   useFocusEffect(
     useCallback(() => {
-      getNotifications().then(setNotifications).catch(() => setNotifications([]));
+      setIsLoading(true);
+      getNotifications()
+        .then(setNotifications)
+        .catch(() => setNotifications([]))
+        .finally(() => setIsLoading(false));
       return () => { invalidateUnreadCache(); };
     }, [])
   );
@@ -55,6 +60,16 @@ export default function NotificationsScreen() {
   );
 
   const groups = useMemo(() => groupByDay(visibleNotifications), [visibleNotifications]);
+
+  if (isLoading) {
+    return (
+      <SafeAreaView style={styles.screen}>
+        <View style={styles.center}>
+          <Text style={styles.emptyText}>Cargando notificaciones...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.screen}>
@@ -197,6 +212,11 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '700',
     marginBottom: 12
+  },
+  center: {
+    alignItems: 'center',
+    flex: 1,
+    justifyContent: 'center'
   },
   emptyState: {
     alignItems: 'center',

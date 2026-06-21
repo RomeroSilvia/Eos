@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { BellButton } from '@/components/BellButton';
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
+import { RemindersSection } from '@/components/RemindersSection';
 import { colors } from '@/constants/colors';
 import { useProfile } from '@/hooks/useProfile';
 import { getMySpecialist, unlinkSpecialist } from '@/services/specialist';
@@ -128,11 +129,7 @@ export default function ProfileScreen() {
           ) : null}
         </Card>
 
-        <Card style={styles.settings}>
-          <Text style={styles.sectionTitle}>Recordatorios</Text>
-          <Text style={styles.description}>Configura permisos y prueba un recordatorio local.</Text>
-          <Text style={styles.reminderHint}>Activa notificaciones para no perder tus rutinas diarias.</Text>
-        </Card>
+        <RemindersSection />
       </ScrollView>
     </SafeAreaView>
   );
@@ -223,10 +220,6 @@ const styles = StyleSheet.create({
   },
   unlinkButton: {
     alignSelf: 'center'
-  },
-  reminderHint: {
-    color: colors.textSecondary,
-    fontSize: 13
   },
   mySpecialistCard: {
     backgroundColor: colors.primaryLight,

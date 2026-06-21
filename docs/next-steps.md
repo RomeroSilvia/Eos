@@ -19,6 +19,14 @@ El proyecto tiene implementados los módulos principales con integración real a
 11. Pantallas de historial por fecha y estadísticas avanzadas.
 12. Edición de rutinas y wizard de creación completo (6 pasos).
 13. Tests unitarios para products, progress y routines.
+14. Push notifications con cron job (08:00 y 21:00), mensajes personalizados por rutina, historial persistido en `notification_history` y pantalla in-app con agrupación por día.
+15. Roles diferenciados (`user`, `specialist`, `center_admin`) con navegación y middleware por rol.
+16. `RemindersSection` — sección de recordatorios en home y perfil derivada de las rutinas activas del usuario, con navegación a la tab de rutinas.
+17. Asignación de rutinas por especialista: columna `assigned_by` en `routines` con RLS por relación activa especialista-paciente.
+18. Pantalla de configuración (`app/settings.tsx`): edición de perfil, cambio de contraseña, toggle de notificaciones y re-test de piel.
+19. `SpecialistHomeCard` en home con especialista vinculado, estados de loading/error y CTA de búsqueda.
+20. Tests de controllers para routines y specialists.directory (20 suites, 186 tests en total).
+21. Chat con medios: envío de imágenes desde galería, separadores de fecha, soporte de videollamada y actualizaciones en tiempo real via Supabase Realtime.
 
 ## Tareas pendientes recomendadas
 
@@ -28,9 +36,10 @@ El proyecto tiene implementados los módulos principales con integración real a
 4. **Módulo Quiz — separar capas** — El controller de quiz actualmente consulta Supabase directamente. Seguir el patrón del resto de módulos: extraer a `quiz.service.ts` y `quiz.repository.ts`.
 5. **Manejo de errores en formularios** — Algunos formularios de creación no muestran estados de error o loading visibles al usuario.
 6. **Paginación** — El historial de progreso y los listados de productos no tienen paginación; puede ser necesario con datos reales acumulados.
-7. **Notificaciones sincronizadas** — El servicio `notifications.ts` existe pero los recordatorios no están sincronizados con las rutinas del usuario en backend.
-8. **Refresh de token** — No hay lógica de refresh automático del JWT cuando expira.
-9. **Índices en base de datos** — El schema inicial tiene índices comentados; confirmar los patrones de acceso y crearlos.
+7. **Refresh de token** — No hay lógica de refresh automático del JWT cuando expira.
+8. **Índices en base de datos** — El schema inicial tiene índices comentados; confirmar los patrones de acceso y crearlos.
+9. **Buscador de especialistas** — El endpoint de búsqueda existe pero el filtro por rol en Supabase PostgREST sobre tablas embebidas puede no funcionar correctamente; requiere revisión.
+10. **Tabs del especialista con datos reales** — Las tabs de consultas, pacientes y rutinas del especialista aún no consumen datos reales del backend.
 
 ## No hacer todavía
 

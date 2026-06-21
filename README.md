@@ -123,20 +123,34 @@ create policy "Usuarios actualizan sus propias notificaciones"
   on notification_history for update using (auth.uid() = user_id);
 ```
 
+### 6. Rutinas asignadas por especialista (Módulo 4)
+
+```sql
+-- database/e2_m4_assigned_routines.sql
+```
+
+### 7. Chat con medios y Realtime (Módulo 5)
+
+```sql
+-- database/e5_chat_messages_media_realtime.sql
+```
+
 ## Módulos verticales — Entrega 2
 
-### Módulo 2 — Push Notifications (rama: `feature/e2-push-notifications`)
+### Módulo 2 — Push Notifications 
 
 Implementado:
 
 - Registro y desregistro de tokens de dispositivo (`push_tokens`).
 - Cron job que envía recordatorios push a las 08:00 y 21:00 a usuarios con rutinas activas.
+- Mensajes personalizados con el nombre de la rutina: mañana (`Buen día ☀️ Hora de empezar tu rutina <nombre>`) y noche (`No te duermas sin tu rutina <nombre>`).
 - Historial de notificaciones persistido en `notification_history` (backend es la fuente de verdad).
 - Endpoints `GET /api/notifications` y `PATCH /api/notifications/:id/read`.
-- Pantalla in-app muestra el historial real desde el backend.
+- Pantalla in-app con loading state, agrupación por día (Hoy / Ayer / fecha) y tabs Todas / No leídas.
 - `BellButton` muestra el punto rojo solo cuando hay notificaciones sin leer (caché de 30 s).
+- `RemindersSection` — componente reutilizable en home y perfil: muestra las rutinas activas con ícono sol (mañana) o luna (noche) y horario. Al tocar navega a la tab de rutinas.
 
-### Módulo 3 — Roles y Registro de Especialistas (rama: `feature/e2-roles-specialist-register`)
+### Módulo 3 — Roles y Registro de Especialistas
 
 Implementado:
 
@@ -148,12 +162,27 @@ Implementado:
 - Storage privado para documentos con signed URLs temporales.
 - Navegación diferenciada por rol y `license_status`.
 
-Fuera del alcance de este módulo (pendiente en E2):
+### Módulo 4 — Asignación de Rutinas por Especialista
 
-- Gestión real de clientes desde el panel del especialista.
-- Chat y buscador de especialistas.
-- Asignación de rutinas por especialista.
-- Tabs del especialista con datos reales de clientes.
+Implementado:
+
+- Columna `assigned_by` en `routines` que referencia al especialista que asignó la rutina.
+- RLS en Supabase: los especialistas solo pueden crear/editar/eliminar rutinas de sus pacientes activos (`client_specialist_relations.status = 'active'`).
+- Migración idempotente en `database/e2_m4_assigned_routines.sql`.
+- `SpecialistHomeCard` en home: muestra especialista vinculado o CTA para buscar uno, con loading y error state.
+- `AppHeader` — componente de navegación reutilizable con breadcrumb.
+- Pantalla `app/settings.tsx` — configuración de perfil (nombre), contraseña, toggle de notificaciones y re-test de piel (solo para `user`).
+
+### Módulo 5 — Chat con Medios y Realtime 
+
+Implementado:
+
+- Bucket `chat-media` en Supabase Storage (privado, límite 15 MB, formatos JPEG/PNG/WebP).
+- Columnas de medios en `chat_messages`: `message_type` (`text` | `image`), `media_path`, `media_mime_type`, `media_size`.
+- Constraints de integridad por tipo de mensaje.
+- Publicación de `chat_messages` en `supabase_realtime` para actualizaciones en tiempo real.
+- Chat actualizado con envío de imágenes via `expo-image-picker`, separadores de fecha y soporte de videollamada.
+- Corrección de políticas de storage para acceso admin a documentos de especialistas.
 
 ## Documentación adicional
 
