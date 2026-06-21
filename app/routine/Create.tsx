@@ -3,6 +3,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors } from '@/constants/colors';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { RoutineIllustration } from '@/components/icons/RoutineIllustration';
+import { AppHeader } from '@/components/navigation/AppHeader';
 import { Stepper } from '@/components/Stepper';
 
 export default function CreateRoutineScreen() {
@@ -11,10 +12,8 @@ export default function CreateRoutineScreen() {
 
   return (
     <SafeAreaView style={styles.screen}>
+      <AppHeader breadcrumb={assignClientId ? 'Pacientes / Rutinas' : 'Rutinas'} title="Nueva rutina" />
       <View style={styles.container}>
-
-        <Text style={styles.title}>Nueva Rutina</Text>
-
         <Stepper current={1} />
 
         <Text style={styles.subtitle}>
@@ -57,13 +56,6 @@ const styles = StyleSheet.create({
     padding: 20,
     alignItems: 'center'
   },
-  title: {
-    fontSize: 22,
-    fontWeight: '800',
-    color: colors.textPrimary,
-    alignSelf: 'flex-start'
-  },
-
   stepper: {
     flexDirection: 'row',
     alignItems: 'center',

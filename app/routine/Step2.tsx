@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, TextInput, Pressable } from 'react-native';
+import { Alert, View, Text, StyleSheet, TextInput, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors } from '@/constants/colors';
 import { Stepper } from '@/components/Stepper';
@@ -7,6 +7,8 @@ import { useState } from 'react';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { createRoutine } from '@/services/routines';
 import { assignRoutineToPatient } from '@/services/specialist';
+import { AppHeader } from '@/components/navigation/AppHeader';
+import { getFriendlyErrorMessage } from '@/services/api/client';
 
 type IconName = keyof typeof MaterialCommunityIcons.glyphMap;
 
@@ -27,17 +29,64 @@ const goals: Goal[] = [
 export default function Step2() {
     const router = useRouter();
     const { assignClientId } = useLocalSearchParams<{ assignClientId?: string }>();
+    const assignClientIdParam = getSingleParam(assignClientId);
     const [name, setName] = useState('');
     const [selected, setSelected] = useState<number | null>(null);
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     const isValid = name.trim() !== '' && selected !== null;
 
+    const handleContinue = async () => {
+        if (!isValid || isSubmitting) {
+            return;
+        }
+
+        const payload = {
+            name,
+            description: goals.find(g => g.id === selected)?.label,
+            time_of_day: null
+        };
+
+        try {
+            setIsSubmitting(true);
+
+            const routine = assignClientIdParam
+                ? await assignRoutineToPatient(assignClientIdParam, payload)
+                : await createRoutine(payload);
+
+            if (!routine?.id) {
+                Alert.alert('Rutina', 'No pudimos crear la rutina. Intenta nuevamente.');
+                return;
+            }
+
+            router.push({
+                pathname: '/routine/Step3',
+                params: assignClientIdParam
+                    ? { routineId: routine.id, assignClientId: assignClientIdParam }
+                    : { routineId: routine.id }
+            });
+        } catch (error) {
+            if (process.env.NODE_ENV !== 'production') {
+                console.warn('[routine/Step2:create]', {
+                    assigningToPatient: Boolean(assignClientIdParam),
+                    patientId: assignClientIdParam,
+                    error
+                });
+            }
+
+            Alert.alert(
+                'Rutina',
+                getFriendlyErrorMessage(error, 'No pudimos crear la rutina. Intenta nuevamente.')
+            );
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
     return (
         <SafeAreaView style={styles.screen}>
+            <AppHeader breadcrumb={assignClientIdParam ? 'Pacientes / Rutinas' : 'Rutinas'} title="Nueva rutina" />
             <View style={styles.container}>
-
-                <Text style={styles.title}>Nueva Rutina</Text>
-
                 <View style={{ alignItems: 'center' }}>
                     <Stepper current={2} />
                 </View>
@@ -90,45 +139,27 @@ export default function Step2() {
                 </View>
 
                 <Pressable
-                    disabled={!isValid}
-                    onPress={async () => {
-                        console.log('CLICK STEP2');
-
-                        const payload = {
-                            name,
-                            description: goals.find(g => g.id === selected)?.label,
-                            time_of_day: null
-                        };
-
-                        const routine = assignClientId
-                            ? await assignRoutineToPatient(assignClientId, payload)
-                            : await createRoutine(payload);
-
-                        console.log('RESPONSE:', routine);
-
-                        if (!routine?.id) {
-                            console.log('NO ID');
-                            return;
-                        }
-
-                        router.push({
-                            pathname: '/routine/Step3',
-                            params: assignClientId
-                                ? { routineId: routine.id, assignClientId }
-                                : { routineId: routine.id }
-                        });
-                    }}
+                    disabled={!isValid || isSubmitting}
+                    onPress={handleContinue}
                     style={[
                         styles.button,
-                        !isValid && styles.disabled
+                        (!isValid || isSubmitting) && styles.disabled
                     ]}
                 >
-                    <Text style={styles.buttonText}>Continuar</Text>
+                    <Text style={styles.buttonText}>{isSubmitting ? 'Creando...' : 'Continuar'}</Text>
                 </Pressable>
 
             </View>
         </SafeAreaView>
     );
+}
+
+function getSingleParam(value: unknown): string | undefined {
+    if (Array.isArray(value)) {
+        return typeof value[0] === 'string' && value[0].trim() ? value[0] : undefined;
+    }
+
+    return typeof value === 'string' && value.trim() ? value : undefined;
 }
 
 const styles = StyleSheet.create({

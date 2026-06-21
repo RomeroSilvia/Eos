@@ -7,6 +7,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { getRoutineById } from '@/services/routines';
 import type { Routine, RoutineStep, RoutineTimeOfDay } from '@/types/routine';
+import { AppHeader } from '@/components/navigation/AppHeader';
 
 type SectionKey = 'limpieza' | 'tratamientos' | 'hidratacion' | 'proteccion' | 'complementario';
 
@@ -68,9 +69,8 @@ export default function Step6Confirm() {
 
   return (
     <SafeAreaView style={styles.screen}>
+      <AppHeader breadcrumb={assignClientId ? 'Pacientes / Rutinas' : 'Rutinas'} title="Confirmar rutina" />
       <View style={styles.container}>
-        <Text style={styles.title}>Nueva Rutina</Text>
-
         <View style={{ alignItems: 'center' }}>
           <Stepper current={4} />
         </View>

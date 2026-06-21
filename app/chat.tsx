@@ -7,6 +7,7 @@ import type { RealtimeChannel } from '@supabase/supabase-js';
 import { useFocusEffect } from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
 import { Button } from '@/components/Button';
+import { AppHeader } from '@/components/navigation/AppHeader';
 import { colors } from '@/constants/colors';
 import { ApiClientError, getFriendlyErrorMessage } from '@/services/api/client';
 import { getCurrentProfile } from '@/services/auth';
@@ -380,7 +381,7 @@ export default function ChatScreen() {
 
   return (
     <SafeAreaView style={styles.screen}>
-      <Text style={styles.title}>Consultas</Text>
+      <AppHeader breadcrumb="Consultas" style={styles.header} title="Chat" />
       <View style={styles.participantCard}>
         <View style={styles.participantIconWrap}>
           <Ionicons color={colors.primaryDark} name="person-circle-outline" size={22} />
@@ -563,11 +564,9 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 16
   },
-  title: {
-    color: colors.textPrimary,
-    fontSize: 28,
-    fontWeight: '900',
-    marginBottom: 10
+  header: {
+    paddingHorizontal: 0,
+    paddingTop: 0
   },
   info: {
     color: colors.textSecondary,

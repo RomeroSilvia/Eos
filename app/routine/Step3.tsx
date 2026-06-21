@@ -6,6 +6,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { updateRoutine } from '@/services/routines';
+import { AppHeader } from '@/components/navigation/AppHeader';
 
 export default function Step3() {
   const router = useRouter();
@@ -15,9 +16,8 @@ export default function Step3() {
 
   return (
     <SafeAreaView style={styles.screen}>
+      <AppHeader breadcrumb={assignClientId ? 'Pacientes / Rutinas' : 'Rutinas'} title="Nueva rutina" />
       <View style={styles.container}>
-        <Text style={styles.title}>Nueva Rutina</Text>
-
         <View style={{ alignItems: 'center' }}>
           <Stepper current={3} />
         </View>

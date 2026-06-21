@@ -3,6 +3,7 @@ import { useCallback, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Card } from '@/components/Card';
+import { AppHeader } from '@/components/navigation/AppHeader';
 import { colors } from '@/constants/colors';
 import { getSpecialistStatus, type SpecialistStatus } from '@/services/specialist';
 import { logout } from '@/services/auth';
@@ -71,9 +72,8 @@ export default function SpecialistStatusScreen() {
 
   return (
     <SafeAreaView style={styles.screen}>
+      <AppHeader fallbackRoute="/(tabs)/home" title="Estado de especialista" />
       <View style={styles.content}>
-        <Text style={styles.title}>Estado de especialista</Text>
-
         <Card style={styles.statusCard}>
           {isLoading ? (
             <View style={styles.loading}>

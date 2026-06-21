@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { AppHeader } from '@/components/navigation/AppHeader';
 import { ProgressStateCard } from '@/components/progress/ProgressStateCard';
 import { colors } from '@/constants/colors';
 import { routes } from '@/constants/routes';
@@ -29,16 +30,9 @@ export default function ProgressHistoryScreen() {
 
   return (
     <SafeAreaView style={styles.screen}>
+      <AppHeader breadcrumb="Progreso" title="Historial" />
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <View style={styles.header}>
-          <Pressable accessibilityLabel="Volver" onPress={() => router.back()} style={styles.backButton}>
-            <Ionicons color={colors.primaryDark} name="chevron-back" size={22} />
-          </Pressable>
-          <View style={styles.headerText}>
-            <Text style={styles.title}>Historial</Text>
-            <Text style={styles.subtitle}>Tus rutinas completadas y parciales</Text>
-          </View>
-        </View>
+        <Text style={styles.subtitle}>Tus rutinas completadas y parciales</Text>
 
         {isLoading ? (
           <ProgressStateCard icon="hourglass-outline" title="Cargando historial..." text="Estamos buscando tus rutinas." />
@@ -109,36 +103,10 @@ const styles = StyleSheet.create({
     padding: 20,
     paddingBottom: 116
   },
-  header: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: 12,
-    paddingTop: 8
-  },
-  backButton: {
-    alignItems: 'center',
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderRadius: 18,
-    borderWidth: 1,
-    height: 40,
-    justifyContent: 'center',
-    width: 40
-  },
-  headerText: {
-    flex: 1,
-    minWidth: 0
-  },
-  title: {
-    color: colors.textPrimary,
-    fontSize: 30,
-    fontWeight: '900',
-    lineHeight: 36
-  },
   subtitle: {
     color: colors.textSecondary,
     fontSize: 15,
-    marginTop: 3
+    marginTop: -4
   },
   list: {
     gap: 12
