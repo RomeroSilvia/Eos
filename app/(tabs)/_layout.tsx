@@ -1,11 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
 import { View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FloatingActionMenu } from '@/components/FloatingActionMenu';
 import { colors } from '@/constants/colors';
 
 type TabIconName = keyof typeof Ionicons.glyphMap;
-const tabBarHeight = 76;
+const TAB_CONTENT_HEIGHT = 68;
 
 function tabIcon(name: TabIconName, focusedName: TabIconName) {
   const TabBarIcon = ({ color, focused, size }: { color: string; focused: boolean; size: number }) => (
@@ -18,6 +19,9 @@ function tabIcon(name: TabIconName, focusedName: TabIconName) {
 }
 
 export default function TabsLayout() {
+  const insets = useSafeAreaInsets();
+  const tabBarHeight = TAB_CONTENT_HEIGHT + insets.bottom;
+
   return (
     <View style={{ flex: 1 }}>
       <Tabs
@@ -34,7 +38,7 @@ export default function TabsLayout() {
             backgroundColor: colors.surface,
             borderTopColor: colors.border,
             height: tabBarHeight,
-            paddingBottom: 10,
+            paddingBottom: insets.bottom + 6,
             paddingTop: 8
           }
         }}
