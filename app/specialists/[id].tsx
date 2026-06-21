@@ -1,10 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
-import { router, useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
+import { AppHeader } from '@/components/navigation/AppHeader';
 import { colors } from '@/constants/colors';
 import { getMySpecialist, getSpecialists, type SpecialistSpecialty } from '@/services/specialist';
 
@@ -98,11 +98,8 @@ export default function SpecialistDetailScreen() {
 
   return (
     <SafeAreaView style={styles.screen}>
+      <AppHeader breadcrumb="Especialistas" title="Perfil del especialista" />
       <View style={styles.content}>
-        <Button onPress={() => router.back()} style={styles.backButton} variant="ghost">
-          Volver
-        </Button>
-
         <Card style={styles.profileCard}>
           <View style={styles.avatarWrap}>
             <Ionicons color={colors.primaryDark} name="medkit-outline" size={30} />
@@ -153,9 +150,6 @@ const styles = StyleSheet.create({
   content: {
     gap: 14,
     padding: 20
-  },
-  backButton: {
-    alignSelf: 'flex-start'
   },
   profileCard: {
     alignItems: 'center',
