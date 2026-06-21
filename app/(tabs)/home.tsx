@@ -8,7 +8,10 @@ import { BellButton } from '@/components/BellButton';
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
 import { HomeMetricCard } from '@/components/HomeMetricCard';
+
 import { RemindersSection } from '@/components/RemindersSection';
+import { HomeReminderItem } from '@/components/HomeReminderItem';
+import { SpecialistHomeCard } from '@/components/home/SpecialistHomeCard';
 import { colors } from '@/constants/colors';
 import { useHome } from '@/hooks/useHome';
 import { formatStepCount } from '@/utils/format';
@@ -110,6 +113,7 @@ export default function HomeScreen() {
         </View>
 
         <RemindersSection />
+
       </ScrollView>
     </SafeAreaView>
   );

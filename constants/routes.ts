@@ -14,6 +14,7 @@ export const routes = {
   progressDayDetail: '/progress/history/[date]',
   progressStats: '/progress/stats',
   profile: '/profile',
+  settings: '/settings',
   notifications: '/notifications'
 } as const;
 

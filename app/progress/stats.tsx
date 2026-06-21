@@ -1,22 +1,19 @@
-import { useRouter } from 'expo-router';
 import { ScrollView, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { AppHeader } from '@/components/navigation/AppHeader';
 import { ProgressStateCard } from '@/components/progress/ProgressStateCard';
 import { ProductStatsSection } from '@/components/progress/stats/ProductStatsSection';
 import { RoutineStatsSection } from '@/components/progress/stats/RoutineStatsSection';
-import { StatsHeader } from '@/components/progress/stats/StatsHeader';
 import { colors } from '@/constants/colors';
 import { useProgressStats } from '@/hooks/useProgressStats';
 
 export default function ProgressStatsScreen() {
-  const router = useRouter();
   const { error, isLoading, stats } = useProgressStats();
 
   return (
     <SafeAreaView style={styles.screen}>
+      <AppHeader breadcrumb="Progreso" title="Estadísticas" />
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <StatsHeader onBack={() => router.back()} />
-
         {isLoading ? (
           <ProgressStateCard icon="hourglass-outline" title="Cargando estadísticas..." text="Estamos preparando tu resumen." />
         ) : error ? (

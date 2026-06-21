@@ -2,6 +2,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from '@/components/Button';
+import { AppHeader } from '@/components/navigation/AppHeader';
 import { colors } from '@/constants/colors';
 
 export default function ProductResultScreen() {
@@ -14,6 +15,7 @@ export default function ProductResultScreen() {
 
   return (
     <SafeAreaView style={styles.screen}>
+      <AppHeader breadcrumb="Productos" title={isSuccess ? 'Resultado' : 'Error'} />
       <View style={styles.content}>
         <View style={[styles.iconRing, isSuccess ? styles.ringSuccess : styles.ringError]}>
           <View style={[styles.iconCircle, isSuccess ? styles.circleSuccess : styles.circleError]}>

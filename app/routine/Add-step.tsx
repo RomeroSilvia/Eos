@@ -9,14 +9,16 @@ import { createStep, getStepProducts, getStepsByRoutine, setStepProducts, update
 import { useProducts } from '@/hooks/useProducts';
 import { ProductCard } from '@/components/ProductCard';
 import { ProductSelector } from '@/components/ProductSelector';
+import { AppHeader } from '@/components/navigation/AppHeader';
 import type { Product } from '@/types/product';
 
 export default function AddStep() {
   const router = useRouter();
-  const { section, routineId, stepId } = useLocalSearchParams<{
+  const { section, routineId, stepId, assignClientId } = useLocalSearchParams<{
     section: string;
     routineId: string;
     stepId?: string;
+    assignClientId?: string;
   }>();
 
   const [name, setName] = useState('');
@@ -103,14 +105,13 @@ export default function AddStep() {
 
   return (
     <SafeAreaView style={styles.screen}>
+      <AppHeader breadcrumb={assignClientId ? 'Pacientes / Rutinas' : 'Rutinas'} title={isEditing ? 'Editar paso' : 'Agregar paso'} />
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        <Text style={styles.title}>
-          {isEditing ? 'Editar paso' : section?.charAt(0).toUpperCase() + section?.slice(1)}
-        </Text>
+        <Text style={styles.title}>{section?.charAt(0).toUpperCase() + section?.slice(1)}</Text>
 
         <Text style={styles.label}>Nombre del paso</Text>
         <TextInput

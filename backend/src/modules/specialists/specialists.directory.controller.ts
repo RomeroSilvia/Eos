@@ -52,3 +52,28 @@ export const getMyPatientDetail: RequestHandler = asyncHandler(async (req, res) 
   const patient = await specialistsDirectoryService.getMyPatientDetail(req.user.id, patientId);
   res.json({ patient });
 });
+
+export const assignRoutineToPatient: RequestHandler = asyncHandler(async (req, res) => {
+  const patientId = req.params.patientId;
+
+  if (typeof patientId !== 'string') {
+    throw new ApiError(400, 'patientId es requerido.');
+  }
+
+  const body = req.body as {
+    name?: unknown;
+    description?: unknown;
+    time_of_day?: unknown;
+    is_active?: unknown;
+  };
+
+  const routine = await specialistsDirectoryService.assignRoutineToPatient(req.user.id, {
+    clientId: patientId,
+    name: typeof body.name === 'string' ? body.name : '',
+    description: typeof body.description === 'string' ? body.description : null,
+    timeOfDay: typeof body.time_of_day === 'string' ? body.time_of_day : null,
+    isActive: typeof body.is_active === 'boolean' ? body.is_active : undefined
+  });
+
+  res.status(201).json(routine);
+});

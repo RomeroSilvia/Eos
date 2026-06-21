@@ -7,6 +7,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { getRoutineById } from '@/services/routines';
 import type { Routine, RoutineStep, RoutineTimeOfDay } from '@/types/routine';
+import { AppHeader } from '@/components/navigation/AppHeader';
 
 type SectionKey = 'limpieza' | 'tratamientos' | 'hidratacion' | 'proteccion' | 'complementario';
 
@@ -24,7 +25,7 @@ const sections: {
 
 export default function Step6Confirm() {
   const router = useRouter();
-  const { routineId } = useLocalSearchParams<{ routineId: string }>();
+  const { routineId, assignClientId } = useLocalSearchParams<{ routineId: string; assignClientId?: string }>();
 
   const [routine, setRoutine] = useState<Routine | null>(null);
   const [expanded, setExpanded] = useState<Record<SectionKey, boolean>>({
@@ -68,9 +69,8 @@ export default function Step6Confirm() {
 
   return (
     <SafeAreaView style={styles.screen}>
+      <AppHeader breadcrumb={assignClientId ? 'Pacientes / Rutinas' : 'Rutinas'} title="Confirmar rutina" />
       <View style={styles.container}>
-        <Text style={styles.title}>Nueva Rutina</Text>
-
         <View style={{ alignItems: 'center' }}>
           <Stepper current={4} />
         </View>
@@ -142,7 +142,7 @@ export default function Step6Confirm() {
           onPress={() =>
             router.push({
               pathname: '/routine/Step4',
-              params: { routineId }
+              params: assignClientId ? { routineId, assignClientId } : { routineId }
             })
           }
         >
@@ -154,7 +154,7 @@ export default function Step6Confirm() {
           onPress={() =>
             router.push({
               pathname: '/routine/success',
-              params: { routineId }
+              params: assignClientId ? { routineId, assignClientId } : { routineId }
             })
           }
         >

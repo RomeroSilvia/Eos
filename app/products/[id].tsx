@@ -5,6 +5,7 @@ import { Alert, Image, Platform, Pressable, ScrollView, StyleSheet, Text, View }
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
+import { AppHeader } from '@/components/navigation/AppHeader';
 import { colors } from '@/constants/colors';
 import { useProfile } from '@/hooks/useProfile';
 import { useProducts } from '@/hooks/useProducts';
@@ -152,13 +153,7 @@ export default function ProductDetailScreen() {
 
   return (
     <SafeAreaView style={styles.screen}>
-      <View style={styles.header}>
-        <Pressable onPress={() => router.back()} style={styles.backBtn}>
-          <Ionicons color={colors.textPrimary} name="chevron-back" size={18} />
-          <Text style={styles.backText}>Volver atras</Text>
-        </Pressable>
-        <Ionicons color={colors.textSecondary} name="notifications-outline" size={24} />
-      </View>
+      <AppHeader breadcrumb="Productos" title="Detalle del producto" />
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <Text style={styles.title}>Detalle del Producto</Text>
@@ -252,24 +247,6 @@ const styles = StyleSheet.create({
   screen: {
     backgroundColor: colors.background,
     flex: 1
-  },
-  header: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingTop: 8,
-    paddingBottom: 4
-  },
-  backBtn: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: 4
-  },
-  backText: {
-    color: colors.textPrimary,
-    fontSize: 15,
-    fontWeight: '600'
   },
   content: {
     gap: 16,

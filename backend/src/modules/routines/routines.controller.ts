@@ -1,293 +1,205 @@
-import type { RequestHandler } from 'express';
+import type { Request, RequestHandler } from 'express';
 import { routinesService } from './routines.service';
+import { asyncHandler } from '../../utils/asyncHandler';
+import { ApiError } from '../../utils/ApiError';
 import type {
   RoutineInsert,
-  RoutineUpdate,
   RoutineStepInsert,
-  RoutineStepUpdate
+  RoutineStepUpdate,
+  RoutineUpdate
 } from '../../database/schema.types';
 
-type RoutineParams = { id: string };
-type StepParams = { stepId: string };
-
+type Role = 'user' | 'specialist' | 'center_admin';
 type CreateRoutineBody = Omit<RoutineInsert, 'user_id'>;
 type UpdateRoutineBody = RoutineUpdate;
-
 type CreateStepBody = Omit<RoutineStepInsert, 'routine_id'>;
 type UpdateStepBody = RoutineStepUpdate;
 
-/* RUTINAS */
+function roleOf(req: Request): Role {
+  return req.user.role ?? 'user';
+}
 
-export const getUserRoutines: RequestHandler = async (req, res) => {
-  try {
-    const userId = req.user.id;
-
-    const routines = await routinesService.getUserRoutines(userId);
-
-    return res.json(routines);
-  } catch {
-    return res.status(500).json({ error: 'Error fetching routines' });
+function requiredParam(value: unknown, name: string): string {
+  if (typeof value !== 'string' || value.trim() === '') {
+    throw new ApiError(400, `${name} is required`);
   }
-};
 
-export const getRoutineById: RequestHandler<RoutineParams> = async (req, res) => {
-  try {
-    const userId = req.user.id;
-    const { id } = req.params;
+  return value;
+}
 
-    if (!id) {
-      return res.status(400).json({ error: 'id is required' });
-    }
+export const getUserRoutines: RequestHandler = asyncHandler(async (req, res) => {
+  const routines = await routinesService.getUserRoutines(req.user.id);
+  res.json(routines);
+});
 
-    const routine = await routinesService.getRoutineById(id, userId);
+export const getRoutineById: RequestHandler = asyncHandler(async (req, res) => {
+  const routineId = requiredParam(req.params.id, 'id');
+  const routine = await routinesService.getRoutineById(routineId, req.user.id, roleOf(req));
 
-    if (!routine) {
-      return res.status(404).json({ error: 'Routine not found' });
-    }
-
-    return res.json(routine);
-  } catch {
-    return res.status(500).json({ error: 'Error fetching routine' });
+  if (!routine) {
+    throw new ApiError(404, 'Rutina no encontrada.');
   }
-};
 
-export const createRoutine: RequestHandler<{}, unknown, CreateRoutineBody> = async (req, res) => {
-  try {
-    const userId = req.user.id;
-    const { name, description, time_of_day, is_active } = req.body;
+  res.json(routine);
+});
 
-    if (!name || typeof name !== 'string' || name.trim() === '') {
-      return res.status(400).json({ error: 'name is required' });
-    }
+export const createRoutine: RequestHandler<{}, unknown, CreateRoutineBody> = asyncHandler(async (req, res) => {
+  const { name, description, time_of_day, is_active } = req.body;
 
-    if (time_of_day && !['morning', 'night', 'custom'].includes(time_of_day)) {
-      return res.status(400).json({ error: 'invalid time_of_day' });
-    }
-
-    const routine = await routinesService.createRoutine({
-      user_id: userId,
-      name: name.trim(),
-      description: description ?? null,
-      time_of_day: time_of_day ?? null,
-      is_active: is_active ?? true
-    });
-
-    return res.status(201).json(routine);
-  } catch (error) {
-    console.error(error);
-    return res.status(500).json({ error: 'Error creating routine' });
+  if (!name || typeof name !== 'string' || name.trim() === '') {
+    throw new ApiError(400, 'name is required');
   }
-};
 
-export const updateRoutine: RequestHandler<RoutineParams, unknown, UpdateRoutineBody> = async (req, res) => {
-  try {
-    const userId = req.user.id;
-    const { id } = req.params;
-    const { name, time_of_day } = req.body;
-
-    if (!id) {
-      return res.status(400).json({ error: 'id is required' });
-    }
-
-    if (name !== undefined && (typeof name !== 'string' || name.trim() === '')) {
-      return res.status(400).json({ error: 'invalid name' });
-    }
-
-    if (time_of_day && !['morning', 'night', 'custom'].includes(time_of_day)) {
-      return res.status(400).json({ error: 'invalid time_of_day' });
-    }
-
-    const updated = await routinesService.updateRoutine(id, userId, req.body);
-
-    if (!updated) {
-      return res.status(404).json({ error: 'Routine not found' });
-    }
-
-    return res.json(updated);
-  } catch (error) {
-    console.error(error);
-    return res.status(500).json({ error: 'Error updating routine' });
+  if (time_of_day && !['morning', 'night', 'custom'].includes(time_of_day)) {
+    throw new ApiError(400, 'invalid time_of_day');
   }
-};
 
-export const deleteRoutine: RequestHandler<RoutineParams> = async (req, res) => {
-  try {
-    const userId = req.user.id;
-    const { id } = req.params;
+  const routine = await routinesService.createRoutine({
+    user_id: req.user.id,
+    name: name.trim(),
+    description: description ?? null,
+    time_of_day: time_of_day ?? null,
+    is_active: is_active ?? true
+  });
 
-    if (!id) {
-      return res.status(400).json({ error: 'id is required' });
-    }
+  res.status(201).json(routine);
+});
 
-    const success = await routinesService.deleteRoutine(id, userId);
+export const updateRoutine: RequestHandler<{}, unknown, UpdateRoutineBody> = asyncHandler(async (req, res) => {
+  const routineId = requiredParam(req.params.id, 'id');
+  const { name, time_of_day } = req.body;
 
-    if (!success) {
-      return res.status(404).json({ error: 'Routine not found' });
-    }
-
-    return res.status(204).send();
-  } catch {
-    return res.status(500).json({ error: 'Error deleting routine' });
+  if (name !== undefined && (typeof name !== 'string' || name.trim() === '')) {
+    throw new ApiError(400, 'invalid name');
   }
-};
 
-/* PASOS */
-
-export const getStepsByRoutine: RequestHandler<RoutineParams> = async (req, res) => {
-  try {
-    const { id } = req.params;
-
-    if (!id) {
-      return res.status(400).json({ error: 'routine id is required' });
-    }
-
-    const steps = await routinesService.getStepsByRoutine(id);
-
-    return res.json(steps);
-  } catch {
-    return res.status(500).json({ error: 'Error fetching steps' });
+  if (time_of_day && !['morning', 'night', 'custom'].includes(time_of_day)) {
+    throw new ApiError(400, 'invalid time_of_day');
   }
-};
 
-export const createStep: RequestHandler<RoutineParams, unknown, CreateStepBody> = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { name, step_order, is_required } = req.body;
+  const updated = await routinesService.updateRoutine(routineId, req.user.id, roleOf(req), req.body);
 
-    if (!id) {
-      return res.status(400).json({ error: 'routine id is required' });
-    }
-
-    if (!name || typeof name !== 'string' || name.trim() === '') {
-      return res.status(400).json({ error: 'name is required' });
-    }
-
-    if (step_order !== undefined && typeof step_order !== 'number') {
-      return res.status(400).json({ error: 'step_order must be a number' });
-    }
-
-    const step = await routinesService.createStep(id, {
-      name: name.trim(),
-      description: req.body.description ?? null,
-      category: req.body.category ?? null,
-      step_order,
-      is_required: is_required ?? false
-    });
-
-    return res.status(201).json(step);
-  } catch {
-    return res.status(500).json({ error: 'Error creating step' });
+  if (!updated) {
+    throw new ApiError(404, 'Rutina no encontrada.');
   }
-};
 
-export const updateStep: RequestHandler<StepParams, unknown, UpdateStepBody> = async (req, res) => {
-  try {
-    const { stepId } = req.params;
-    const { name, step_order } = req.body;
+  res.json(updated);
+});
 
-    if (!stepId) {
-      return res.status(400).json({ error: 'stepId is required' });
-    }
+export const deleteRoutine: RequestHandler = asyncHandler(async (req, res) => {
+  const routineId = requiredParam(req.params.id, 'id');
+  const success = await routinesService.deleteRoutine(routineId, req.user.id, roleOf(req));
 
-    if (name !== undefined && (typeof name !== 'string' || name.trim() === '')) {
-      return res.status(400).json({ error: 'invalid name' });
-    }
-
-    if (step_order !== undefined && typeof step_order !== 'number') {
-      return res.status(400).json({ error: 'step_order must be a number' });
-    }
-
-    const updated = await routinesService.updateStep(stepId, req.body);
-
-    if (!updated) {
-      return res.status(404).json({ error: 'Step not found' });
-    }
-
-    return res.json(updated);
-  } catch {
-    return res.status(500).json({ error: 'Error updating step' });
+  if (!success) {
+    throw new ApiError(404, 'Rutina no encontrada.');
   }
-};
 
-export const deleteStep: RequestHandler<StepParams> = async (req, res) => {
-  try {
-    const { stepId } = req.params;
+  res.status(204).send();
+});
 
-    if (!stepId) {
-      return res.status(400).json({ error: 'stepId is required' });
-    }
+export const getStepsByRoutine: RequestHandler = asyncHandler(async (req, res) => {
+  const routineId = requiredParam(req.params.id, 'routine id');
+  const steps = await routinesService.getStepsByRoutine(routineId, req.user.id, roleOf(req));
+  res.json(steps);
+});
 
-    const success = await routinesService.deleteStep(stepId);
+export const createStep: RequestHandler<{}, unknown, CreateStepBody> = asyncHandler(async (req, res) => {
+  const routineId = requiredParam(req.params.id, 'routine id');
+  const { name, step_order, is_required } = req.body;
 
-    if (!success) {
-      return res.status(404).json({ error: 'Step not found' });
-    }
-
-    return res.status(204).send();
-  } catch {
-    return res.status(500).json({ error: 'Error deleting step' });
+  if (!name || typeof name !== 'string' || name.trim() === '') {
+    throw new ApiError(400, 'name is required');
   }
-};
+
+  if (step_order !== undefined && typeof step_order !== 'number') {
+    throw new ApiError(400, 'step_order must be a number');
+  }
+
+  const step = await routinesService.createStep(routineId, req.user.id, roleOf(req), {
+    name: name.trim(),
+    description: req.body.description ?? null,
+    category: req.body.category ?? null,
+    step_order,
+    is_required: is_required ?? false
+  });
+
+  res.status(201).json(step);
+});
+
+export const updateStep: RequestHandler<{}, unknown, UpdateStepBody> = asyncHandler(async (req, res) => {
+  const stepId = requiredParam(req.params.stepId, 'stepId');
+  const { name, step_order } = req.body;
+
+  if (name !== undefined && (typeof name !== 'string' || name.trim() === '')) {
+    throw new ApiError(400, 'invalid name');
+  }
+
+  if (step_order !== undefined && typeof step_order !== 'number') {
+    throw new ApiError(400, 'step_order must be a number');
+  }
+
+  const updated = await routinesService.updateStep(stepId, req.user.id, roleOf(req), req.body);
+
+  if (!updated) {
+    throw new ApiError(404, 'Paso de rutina no encontrado.');
+  }
+
+  res.json(updated);
+});
+
+export const deleteStep: RequestHandler = asyncHandler(async (req, res) => {
+  const stepId = requiredParam(req.params.stepId, 'stepId');
+  const success = await routinesService.deleteStep(stepId, req.user.id, roleOf(req));
+
+  if (!success) {
+    throw new ApiError(404, 'Paso de rutina no encontrado.');
+  }
+
+  res.status(204).send();
+});
 
 export const routinesHealth: RequestHandler = (_req, res) => {
-  return res.json(routinesService.getHealth());
+  res.json(routinesService.getHealth());
 };
 
-/* PRODUCTOS DE UN PASO */
+export const getStepProducts: RequestHandler = asyncHandler(async (req, res) => {
+  const stepId = requiredParam(req.params.stepId, 'stepId');
+  const products = await routinesService.getProductsByStep(stepId, req.user.id, roleOf(req));
+  res.json(products);
+});
 
-export const getStepProducts: RequestHandler<StepParams> = async (req, res) => {
-  try {
-    const { stepId } = req.params;
-    const products = await routinesService.getProductsByStep(stepId);
-    return res.json(products);
-  } catch {
-    return res.status(500).json({ error: 'Error fetching step products' });
+export const setStepProducts: RequestHandler<{}, unknown, { product_ids: string[] }> = asyncHandler(async (req, res) => {
+  const stepId = requiredParam(req.params.stepId, 'stepId');
+  const { product_ids } = req.body;
+
+  if (!Array.isArray(product_ids)) {
+    throw new ApiError(400, 'product_ids must be an array');
   }
-};
 
-export const setStepProducts: RequestHandler<StepParams, unknown, { product_ids: string[] }> = async (req, res) => {
-  try {
-    const { stepId } = req.params;
-    const { product_ids } = req.body;
+  await routinesService.setStepProducts(stepId, req.user.id, roleOf(req), product_ids);
+  res.status(204).send();
+});
 
-    if (!Array.isArray(product_ids)) {
-      return res.status(400).json({ error: 'product_ids must be an array' });
-    }
+export const attachProduct: RequestHandler<{}, unknown, { product_id: string }> = asyncHandler(async (req, res) => {
+  const stepId = requiredParam(req.params.stepId, 'stepId');
+  const { product_id } = req.body;
 
-    await routinesService.setStepProducts(stepId, product_ids);
-    return res.status(204).send();
-  } catch {
-    return res.status(500).json({ error: 'Error setting step products' });
+  if (!product_id || typeof product_id !== 'string') {
+    throw new ApiError(400, 'product_id is required');
   }
-};
 
-export const attachProduct: RequestHandler<StepParams, unknown, { product_id: string }> = async (req, res) => {
-  try {
-    const { stepId } = req.params;
-    const { product_id } = req.body;
+  const result = await routinesService.attachProductToStep(stepId, req.user.id, roleOf(req), product_id);
+  res.status(201).json(result);
+});
 
-    if (!product_id || typeof product_id !== 'string') {
-      return res.status(400).json({ error: 'product_id is required' });
-    }
+export const detachProduct: RequestHandler = asyncHandler(async (req, res) => {
+  const stepId = requiredParam(req.params.stepId, 'stepId');
+  const productId = requiredParam(req.params.productId, 'productId');
+  const success = await routinesService.detachProductFromStep(stepId, req.user.id, roleOf(req), productId);
 
-    const result = await routinesService.attachProductToStep(stepId, product_id);
-    return res.status(201).json(result);
-  } catch {
-    return res.status(500).json({ error: 'Error attaching product to step' });
+  if (!success) {
+    throw new ApiError(404, 'Asociacion no encontrada.');
   }
-};
 
-export const detachProduct: RequestHandler<StepParams & { productId: string }> = async (req, res) => {
-  try {
-    const { stepId, productId } = req.params;
-    const success = await routinesService.detachProductFromStep(stepId, productId);
-
-    if (!success) {
-      return res.status(404).json({ error: 'Association not found' });
-    }
-
-    return res.status(204).send();
-  } catch {
-    return res.status(500).json({ error: 'Error detaching product from step' });
-  }
-};
+  res.status(204).send();
+});

@@ -10,6 +10,13 @@ import type {
   RoutineUpdate
 } from '../../database/schema.types';
 
+type SupabaseLikeError = {
+  message?: string;
+  code?: string;
+  details?: string;
+  hint?: string;
+};
+
 export const routinesRepository = {
   findAllByUserId: async (userId: string): Promise<RoutineRow[]> => {
     const { data, error } = await supabase
@@ -84,27 +91,66 @@ export const routinesRepository = {
     };
   },
 
+  findRawById: async (routineId: string): Promise<RoutineRow | null> => {
+    const { data, error } = await supabase
+      .from('routines')
+      .select('*')
+      .eq('id', routineId)
+      .maybeSingle();
+
+    if (error) throw error;
+    return data ?? null;
+  },
+
+  findRoutineByStepId: async (stepId: string): Promise<RoutineRow | null> => {
+    const { data, error } = await supabase
+      .from('routine_steps')
+      .select('routine_id')
+      .eq('id', stepId)
+      .maybeSingle();
+
+    if (error) throw error;
+    if (!data?.routine_id) return null;
+
+    return routinesRepository.findRawById(data.routine_id);
+  },
+
+  findProductsByIds: async (productIds: string[]): Promise<ProductRow[]> => {
+    if (productIds.length === 0) {
+      return [];
+    }
+
+    const { data, error } = await supabase
+      .from('products')
+      .select('*')
+      .in('id', productIds);
+
+    if (error) throw error;
+    return data ?? [];
+  },
+
   create: async (data: RoutineInsert): Promise<RoutineRow | null> => {
-    const { data: created, error } = await supabase
+    const { data: created, error, status, statusText } = await supabase
       .from('routines')
       .insert([data as any])
       .select();
 
-    if (error) throw error;
+    if (error) {
+      logSupabaseInsertError('routines', data, error, status, statusText);
+      throw error;
+    }
 
     return created?.[0] ?? null;
   },
 
   update: async (
     routineId: string,
-    userId: string,
     data: RoutineUpdate
   ): Promise<RoutineRow | null> => {
     const { data: updated, error } = await supabase
       .from('routines')
       .update(data)
       .eq('id', routineId)
-      .eq('user_id', userId)
       .select()
       .single();
 
@@ -112,12 +158,11 @@ export const routinesRepository = {
     return updated;
   },
 
-  remove: async (routineId: string, userId: string): Promise<boolean> => {
+  remove: async (routineId: string): Promise<boolean> => {
     const { error } = await supabase
       .from('routines')
       .delete()
-      .eq('id', routineId)
-      .eq('user_id', userId);
+      .eq('id', routineId);
 
     return !error;
   },
@@ -134,13 +179,16 @@ export const routinesRepository = {
   },
 
   createStep: async (data: RoutineStepInsert): Promise<RoutineStepRow | null> => {
-    const { data: created, error } = await supabase
+    const { data: created, error, status, statusText } = await supabase
       .from('routine_steps')
       .insert([data as any])
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      logSupabaseInsertError('routine_steps', data, error, status, statusText);
+      throw error;
+    }
     return created;
   },
 
@@ -236,3 +284,26 @@ export const routinesRepository = {
     return !error;
   }
 };
+
+function logSupabaseInsertError(
+  table: 'routines' | 'routine_steps',
+  payload: unknown,
+  error: unknown,
+  status?: number,
+  statusText?: string
+): void {
+  const normalized = error as SupabaseLikeError;
+
+  console.error('[supabase-insert-error]', {
+    table,
+    payload,
+    status: status ?? null,
+    statusText: statusText ?? null,
+    error: {
+      message: normalized?.message ?? String(error),
+      code: normalized?.code ?? null,
+      details: normalized?.details ?? null,
+      hint: normalized?.hint ?? null
+    }
+  });
+}

@@ -32,6 +32,7 @@ export default function RoutineScreen() {
   );
 
   const steps = routine?.routine_steps ?? [];
+  const isAssignedRoutine = Boolean(routine?.assigned_by);
   const currentIndex = steps.findIndex((step) => !completedStepIds.has(step.id));
   const activeIndex = currentIndex === -1 ? steps.length : currentIndex;
 
@@ -141,38 +142,44 @@ export default function RoutineScreen() {
             <View style={styles.todayHeader}>
               <Text style={styles.todayTitle}>{routine.name}</Text>
 
-              <View style={styles.headerActions}>
-                <Pressable
-                  onPress={() =>
-                    router.push({
-                      pathname: '/routine/routine-edit',
-                      params: { routineId: routine.id }
-                    })
-                  }
-                  accessibilityLabel="Editar rutina"
-                  accessibilityRole="button"
-                  hitSlop={10}
-                >
-                  <MaterialCommunityIcons
-                    name="pencil-outline"
-                    size={24}
-                    color={colors.textSecondary}
-                  />
-                </Pressable>
+              {isAssignedRoutine ? (
+                <View style={styles.assignedBadge}>
+                  <Text style={styles.assignedBadgeText}>Asignada por especialista</Text>
+                </View>
+              ) : (
+                <View style={styles.headerActions}>
+                  <Pressable
+                    onPress={() =>
+                      router.push({
+                        pathname: '/routine/routine-edit',
+                        params: { routineId: routine.id }
+                      })
+                    }
+                    accessibilityLabel="Editar rutina"
+                    accessibilityRole="button"
+                    hitSlop={10}
+                  >
+                    <MaterialCommunityIcons
+                      name="pencil-outline"
+                      size={24}
+                      color={colors.textSecondary}
+                    />
+                  </Pressable>
 
-                <Pressable
-                  onPress={confirmDeleteRoutine}
-                  accessibilityLabel="Eliminar rutina"
-                  accessibilityRole="button"
-                  hitSlop={10}
-                >
-                  <MaterialCommunityIcons
-                    name="trash-can-outline"
-                    size={24}
-                    color={colors.error}
-                  />
-                </Pressable>
-              </View>
+                  <Pressable
+                    onPress={confirmDeleteRoutine}
+                    accessibilityLabel="Eliminar rutina"
+                    accessibilityRole="button"
+                    hitSlop={10}
+                  >
+                    <MaterialCommunityIcons
+                      name="trash-can-outline"
+                      size={24}
+                      color={colors.error}
+                    />
+                  </Pressable>
+                </View>
+              )}
             </View>
 
             <View style={styles.timeline}>
@@ -232,6 +239,7 @@ export default function RoutineScreen() {
                   onToggle={toggleStep}
                   onEdit={(selectedStep) => editStep(selectedStep.id, selectedStep.category)}
                   onDelete={(selectedStep) => confirmDeleteStep(selectedStep.id, selectedStep.name)}
+                  readonly={isAssignedRoutine}
                 />
               ))}
             </View>
@@ -285,6 +293,9 @@ function RoutineListItem({
           {getRoutineTypeLabel(routine.time_of_day)}
           {routine.description ? ` · ${routine.description}` : ''}
         </Text>
+        {routine.assigned_by ? (
+          <Text style={styles.routineAssignedText}>Asignada por especialista</Text>
+        ) : null}
       </View>
 
       <View style={styles.routineItemRight}>
@@ -385,6 +396,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 14
+  },
+
+  assignedBadge: {
+    backgroundColor: colors.primaryLight,
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 5
+  },
+
+  assignedBadgeText: {
+    color: colors.primaryDark,
+    fontSize: 11,
+    fontWeight: '900'
   },
 
   timeline: {
@@ -511,6 +535,12 @@ const styles = StyleSheet.create({
   routineItemMeta: {
     color: colors.textSecondary,
     fontSize: 13
+  },
+
+  routineAssignedText: {
+    color: colors.primaryDark,
+    fontSize: 12,
+    fontWeight: '800'
   },
 
   routineItemRight: {

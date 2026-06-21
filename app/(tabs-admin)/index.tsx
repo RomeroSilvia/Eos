@@ -362,7 +362,7 @@ function DocumentImageSection({
         <View style={styles.documentUnavailable}>
           <Ionicons color={colors.textSecondary} name="image-outline" size={28} />
           <Text style={styles.stateText}>
-            {document.errorMessage ?? 'No se encontró el archivo subido para este documento.'}
+            {document.errorMessage ?? 'No se pudo cargar este documento. Es posible que el archivo no exista o haya sido removido.'}
           </Text>
         </View>
       )}

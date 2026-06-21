@@ -7,6 +7,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import { getStepsByRoutine } from '@/services/routines';
+import { AppHeader } from '@/components/navigation/AppHeader';
 
 type SectionItem = {
   id: string;
@@ -24,7 +25,7 @@ type Sections = {
 
 export default function Step4() {
   const router = useRouter();
-  const { routineId } = useLocalSearchParams<{ routineId: string }>();
+  const { routineId, assignClientId } = useLocalSearchParams<{ routineId: string; assignClientId?: string }>();
 
   const [sections, setSections] = useState<Sections>({
     limpieza: [],
@@ -73,15 +74,14 @@ export default function Step4() {
   const goToAddStep = (section: string) => {
     router.push({
       pathname: '/routine/Add-step',
-      params: { section, routineId }
+      params: assignClientId ? { section, routineId, assignClientId } : { section, routineId }
     });
   };
 
   return (
     <SafeAreaView style={styles.screen}>
+      <AppHeader breadcrumb={assignClientId ? 'Pacientes / Rutinas' : 'Rutinas'} title="Nueva rutina" />
       <View style={styles.container}>
-        <Text style={styles.title}>Nueva Rutina</Text>
-
         <View style={{ alignItems: 'center' }}>
           <Stepper current={4} />
         </View>
@@ -144,7 +144,7 @@ export default function Step4() {
           onPress={() =>
             router.push({
               pathname: '/routine/Step6-confirm',
-              params: { routineId }
+              params: assignClientId ? { routineId, assignClientId } : { routineId }
             })
           }
         >

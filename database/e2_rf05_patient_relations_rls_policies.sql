@@ -9,13 +9,16 @@ on public.client_specialist_relations
 for select
 to authenticated
 using (
-  client_id = auth.uid()
-  or specialist_id = auth.uid()
-  or exists (
-    select 1
-    from public.specialist_profiles specialist_profile
-    where specialist_profile.user_id = auth.uid()
-      and specialist_profile.id = client_specialist_relations.specialist_id
+  status = 'active'
+  and (
+    client_id = auth.uid()
+    or specialist_id = auth.uid()
+    or exists (
+      select 1
+      from public.specialist_profiles specialist_profile
+      where specialist_profile.user_id = auth.uid()
+        and specialist_profile.id = client_specialist_relations.specialist_id
+    )
   )
 );
 
@@ -29,7 +32,8 @@ using (
   or exists (
     select 1
     from public.client_specialist_relations relation
-    where (
+    where relation.status = 'active'
+      and (
         (
           (
             relation.specialist_id = auth.uid()
@@ -57,7 +61,8 @@ using (
   or exists (
     select 1
     from public.client_specialist_relations relation
-    where (
+    where relation.status = 'active'
+      and (
         relation.specialist_id = auth.uid()
         or exists (
           select 1
@@ -80,7 +85,8 @@ using (
   or exists (
     select 1
     from public.client_specialist_relations relation
-    where (
+    where relation.status = 'active'
+      and (
         relation.specialist_id = auth.uid()
         or exists (
           select 1
@@ -103,7 +109,8 @@ using (
   or exists (
     select 1
     from public.client_specialist_relations relation
-    where (
+    where relation.status = 'active'
+      and (
         relation.specialist_id = auth.uid()
         or exists (
           select 1
@@ -131,7 +138,8 @@ using (
         or exists (
           select 1
           from public.client_specialist_relations relation
-          where (
+          where relation.status = 'active'
+            and (
               relation.specialist_id = auth.uid()
               or exists (
                 select 1
@@ -162,7 +170,8 @@ using (
         or exists (
           select 1
           from public.client_specialist_relations relation
-          where (
+          where relation.status = 'active'
+            and (
               relation.specialist_id = auth.uid()
               or exists (
                 select 1
@@ -193,7 +202,8 @@ using (
         or exists (
           select 1
           from public.client_specialist_relations relation
-          where (
+          where relation.status = 'active'
+            and (
               relation.specialist_id = auth.uid()
               or exists (
                 select 1
@@ -218,7 +228,8 @@ using (
   or exists (
     select 1
     from public.client_specialist_relations relation
-    where (
+    where relation.status = 'active'
+      and (
         relation.specialist_id = auth.uid()
         or exists (
           select 1
