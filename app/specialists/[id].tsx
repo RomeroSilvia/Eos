@@ -12,7 +12,6 @@ type SpecialistDetailState = {
   id: string;
   fullName: string;
   specialty: SpecialistSpecialty | null;
-  email: string | null;
 };
 
 export default function SpecialistDetailScreen() {
@@ -20,7 +19,6 @@ export default function SpecialistDetailScreen() {
     id?: string | string[];
     fullName?: string | string[];
     specialty?: SpecialistSpecialty | string | string[];
-    email?: string | string[];
   }>();
 
   const [isLoadingDetails, setIsLoadingDetails] = useState(false);
@@ -30,10 +28,9 @@ export default function SpecialistDetailScreen() {
     () => ({
       id: specialistId,
       fullName: asSingleValue(params.fullName) ?? 'Especialista',
-      specialty: toSpecialty(asSingleValue(params.specialty)),
-      email: normalizeEmail(asSingleValue(params.email))
+      specialty: toSpecialty(asSingleValue(params.specialty))
     }),
-    [params.email, params.fullName, params.specialty, specialistId]
+    [params.fullName, params.specialty, specialistId]
   );
   const [detail, setDetail] = useState<SpecialistDetailState>(initialDetail);
 
@@ -46,7 +43,7 @@ export default function SpecialistDetailScreen() {
       return;
     }
 
-    const shouldFetch = !detail.email || !detail.specialty;
+    const shouldFetch = !detail.specialty;
 
     if (!shouldFetch) {
       return;
@@ -64,13 +61,12 @@ export default function SpecialistDetailScreen() {
           setDetail((prev) => ({
             ...prev,
             fullName: mySpecialist.fullName || prev.fullName,
-            specialty: mySpecialist.specialty ?? prev.specialty,
-            email: mySpecialist.email ?? prev.email
+            specialty: mySpecialist.specialty ?? prev.specialty
           }));
         }
 
         const hasEnoughDataFromRelation =
-          mySpecialist?.id === specialistId && Boolean(mySpecialist.email || mySpecialist.specialty);
+          mySpecialist?.id === specialistId && Boolean(mySpecialist.specialty);
 
         if (hasEnoughDataFromRelation) {
           return;
@@ -86,8 +82,7 @@ export default function SpecialistDetailScreen() {
         setDetail((prev) => ({
           ...prev,
           fullName: fullDetail.fullName || prev.fullName,
-          specialty: fullDetail.specialty ?? prev.specialty,
-          email: fullDetail.email ?? prev.email
+          specialty: fullDetail.specialty ?? prev.specialty
         }));
       } finally {
         if (!cancelled) {
@@ -99,7 +94,7 @@ export default function SpecialistDetailScreen() {
     return () => {
       cancelled = true;
     };
-  }, [detail.email, detail.specialty, specialistId]);
+  }, [detail.specialty, specialistId]);
 
   return (
     <SafeAreaView style={styles.screen}>
@@ -116,7 +111,6 @@ export default function SpecialistDetailScreen() {
           <Text style={styles.specialty}>
             {detail.specialty ? getSpecialtyLabel(detail.specialty) : 'Especialidad no informada'}
           </Text>
-          <Text style={styles.email}>{detail.email ?? 'Email no informado'}</Text>
           {isLoadingDetails ? <Text style={styles.loadingHint}>Completando datos del perfil...</Text> : null}
           <Text style={styles.description}>
             Este perfil muestra los datos del especialista seleccionado.
@@ -141,14 +135,6 @@ function toSpecialty(value?: string): SpecialistSpecialty | null {
   }
 
   return null;
-}
-
-function normalizeEmail(value?: string): string | null {
-  if (!value || value.trim().length === 0) {
-    return null;
-  }
-
-  return value.trim();
 }
 
 function getSpecialtyLabel(specialty: SpecialistSpecialty): string {
@@ -194,10 +180,6 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     fontSize: 15,
     fontWeight: '700'
-  },
-  email: {
-    color: colors.textSecondary,
-    fontSize: 14
   },
   loadingHint: {
     color: colors.textSecondary,

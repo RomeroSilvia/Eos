@@ -77,7 +77,7 @@ export default function SpecialistsScreen() {
         setMySpecialist({
           id: selected.id,
           fullName: selected.fullName,
-          email: selected.email ?? null,
+          email: null,
           specialty: selected.specialty
         });
       }
@@ -99,32 +99,6 @@ export default function SpecialistsScreen() {
       setLinkingId(null);
     }
   }
-
-  const displayedSpecialists = (() => {
-    const base = specialists.map((item) => ({ ...item, pinned: false }));
-
-    if (!mySpecialist) {
-      return base;
-    }
-
-    const currentIndex = base.findIndex((item) => item.id === mySpecialist.id);
-
-    if (currentIndex >= 0) {
-      const [current] = base.splice(currentIndex, 1);
-      return [{ ...current, pinned: true }, ...base];
-    }
-
-    return [
-      {
-        id: mySpecialist.id,
-        fullName: mySpecialist.fullName,
-        email: mySpecialist.email ?? null,
-        specialty: mySpecialist.specialty,
-        pinned: true
-      },
-      ...base
-    ];
-  })();
 
   return (
     <SafeAreaView style={styles.screen}>
@@ -207,10 +181,10 @@ export default function SpecialistsScreen() {
               <ActivityIndicator color={colors.primary} />
               <Text style={styles.description}>Buscando especialistas...</Text>
             </View>
-          ) : displayedSpecialists.length === 0 ? (
-            <Text style={styles.description}>No encontramos especialistas para ese filtro.</Text>
+          ) : specialists.length === 0 ? (
+            <Text style={styles.description}>No encontramos especialistas con esos filtros.</Text>
           ) : (
-            displayedSpecialists.map((item) => {
+            specialists.map((item) => {
               const isCurrent = mySpecialist?.id === item.id;
 
               return (
@@ -235,8 +209,7 @@ export default function SpecialistsScreen() {
                           params: {
                             id: item.id,
                             fullName: item.fullName,
-                            specialty: item.specialty,
-                            email: item.email ?? ''
+                            specialty: item.specialty
                           }
                         })
                       }
