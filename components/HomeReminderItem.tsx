@@ -8,24 +8,29 @@ type HomeReminderItemProps = {
   onToggle?: (reminderId: string) => void;
 };
 
+function getIcon(timeOfDay?: string): 'sunny-outline' | 'moon-outline' | 'notifications-outline' {
+  if (timeOfDay === 'morning') return 'sunny-outline';
+  if (timeOfDay === 'night') return 'moon-outline';
+  return 'notifications-outline';
+}
+
 export function HomeReminderItem({ reminder, onToggle }: HomeReminderItemProps) {
+  const iconName = getIcon(reminder.timeOfDay);
+
   return (
     <View style={styles.item}>
       <View style={styles.icon}>
-        <Ionicons color={colors.secondary} name="notifications-outline" size={20} />
+        <Ionicons color={colors.textSecondary} name={iconName} size={20} />
       </View>
       <Text style={styles.title}>{reminder.title}</Text>
-      <Pressable
-        onPress={() => onToggle?.(reminder.id)}
-        style={[
-          styles.timeBadge,
-          { backgroundColor: reminder.enabled ? colors.primary : colors.border }
-        ]}
-      >
-        <Text style={[styles.timeText, { color: reminder.enabled ? colors.surface : colors.textSecondary }]}>
-          {reminder.time}
-        </Text>
-      </Pressable>
+      {reminder.time ? (
+        <Pressable
+          onPress={() => onToggle?.(reminder.id)}
+          style={styles.timeBadge}
+        >
+          <Text style={styles.timeText}>{reminder.time}</Text>
+        </Pressable>
+      ) : null}
     </View>
   );
 }
@@ -39,7 +44,7 @@ const styles = StyleSheet.create({
   },
   icon: {
     alignItems: 'center',
-    backgroundColor: colors.secondaryLight,
+    backgroundColor: colors.border,
     borderRadius: 16,
     height: 40,
     justifyContent: 'center',
@@ -60,6 +65,6 @@ const styles = StyleSheet.create({
   timeText: {
     color: colors.textSecondary,
     fontSize: 13,
-    fontWeight: '500'
+    fontWeight: '600'
   }
 });

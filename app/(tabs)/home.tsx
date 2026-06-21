@@ -8,13 +8,13 @@ import { BellButton } from '@/components/BellButton';
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
 import { HomeMetricCard } from '@/components/HomeMetricCard';
-import { HomeReminderItem } from '@/components/HomeReminderItem';
+import { RemindersSection } from '@/components/RemindersSection';
 import { colors } from '@/constants/colors';
 import { useHome } from '@/hooks/useHome';
 import { formatStepCount } from '@/utils/format';
 
 export default function HomeScreen() {
-  const { summary, isLoading, refreshSummary, toggleReminder } = useHome();
+  const { summary, refreshSummary } = useHome();
 
   useFocusEffect(
     useCallback(() => {
@@ -109,14 +109,7 @@ export default function HomeScreen() {
           ))}
         </View>
 
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Recordatorios</Text>
-        </View>
-        <Card>
-          {summary.reminders.map((reminder) => (
-            <HomeReminderItem key={reminder.id} reminder={reminder} onToggle={toggleReminder} />
-          ))}
-        </Card>
+        <RemindersSection />
       </ScrollView>
     </SafeAreaView>
   );
