@@ -1,3 +1,4 @@
+import multer from 'multer';
 import { Router } from 'express';
 import { authenticate } from '../../middlewares/auth.middleware';
 import {
@@ -11,6 +12,14 @@ import {
 	updateProduct
 } from './products.controller';
 
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fieldSize: 10 * 1024 * 1024,
+    fileSize: 10 * 1024 * 1024, 
+  },
+});
+
 export const productsRouter = Router();
 
 productsRouter.get('/health', productsHealth);
@@ -19,8 +28,8 @@ productsRouter.use(authenticate);
 
 productsRouter.get('/', getProducts);
 productsRouter.get('/:id', getProductById);
-productsRouter.post('/', createProduct);
-productsRouter.patch('/:id', updateProduct);
+productsRouter.post('/', upload.single('image'), createProduct);
+productsRouter.patch('/:id', upload.single('image'), updateProduct);
 productsRouter.delete('/:id', deleteProduct);
 productsRouter.delete('/:id/force', forceDeleteProduct);
 productsRouter.put('/:id/replace', replaceProduct);

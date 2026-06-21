@@ -3,6 +3,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { useRouter, type Href } from 'expo-router';
 import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { BellButton } from '@/components/BellButton';
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
 import { colors } from '@/constants/colors';
@@ -56,9 +57,12 @@ export default function ProfileScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.screen}>
+    <SafeAreaView edges={['top', 'left', 'right']} style={styles.screen}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <Text style={styles.title}>Perfil</Text>
+        <View style={styles.titleRow}>
+          <Text style={styles.title}>Perfil</Text>
+          <BellButton />
+        </View>
         <Card style={styles.profileCard}>
           <View style={styles.avatar}>
             <Ionicons color={colors.primaryDark} name="person" size={30} />
@@ -148,11 +152,16 @@ const styles = StyleSheet.create({
     padding: 20,
     paddingBottom: 116
   },
+  titleRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingTop: 8
+  },
   title: {
     color: colors.textPrimary,
     fontSize: 30,
-    fontWeight: '900',
-    paddingTop: 8
+    fontWeight: '900'
   },
   profileCard: {
     alignItems: 'center',

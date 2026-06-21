@@ -14,6 +14,7 @@ export default function RootLayout() {
         <Stack.Screen name="quiz-results" />
         <Stack.Screen name="resultados" />
         <Stack.Screen name="specialist-status" />
+        <Stack.Screen name="notifications" />
         <Stack.Screen name="patients/[id]" />
         <Stack.Screen name="(auth)" />
         <Stack.Screen name="(tabs)" />

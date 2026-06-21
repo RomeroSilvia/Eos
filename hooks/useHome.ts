@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { getCurrentProfile } from '@/services/auth';
 import { getRoutineDayProgress } from '@/services/progress';
 import { getActiveRoutine } from '@/services/routines';
@@ -8,8 +8,12 @@ import type { RoutineStep } from '@/types/routine';
 const hydrationCategories = new Set(['hidratacion', 'proteccion', 'proteccion solar']);
 const glowCategories = new Set(['tratamientos', 'limpieza', 'proteccion', 'proteccion solar']);
 
+const STALE_AFTER_MS = 30_000;
+
 export function useHome() {
   const [summary, setSummary] = useState<DailyHomeSummary | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const lastFetchedAt = useRef<number>(0);
 
   const toggleReminder = useCallback((reminderId: string) => {
     setSummary((prev) => {
@@ -23,13 +27,18 @@ export function useHome() {
     });
   }, []);
 
-  const refreshSummary = useCallback(async () => {
+  const refreshSummary = useCallback(async (force = false) => {
+    if (!force && Date.now() - lastFetchedAt.current < STALE_AFTER_MS) return;
     try {
-      const user = await getCurrentProfile();
-      const activeRoutine = await getActiveRoutine();
+      setIsLoading(true);
+      const [user, activeRoutine] = await Promise.all([
+        getCurrentProfile(),
+        getActiveRoutine(),
+      ]);
       const steps = activeRoutine?.routine_steps ?? [];
       const progress = activeRoutine ? await getRoutineDayProgress(activeRoutine.id) : null;
       const completedSteps = progress?.completed_step_ids.length ?? 0;
+      lastFetchedAt.current = Date.now();
       const completedStepIds = new Set(progress?.completed_step_ids ?? []);
       const hydrationSteps = getMetricStepsByCategory(steps, hydrationCategories);
       const glowSteps = getMetricStepsByCategory(steps, glowCategories);
@@ -48,14 +57,16 @@ export function useHome() {
     } catch (error) {
       console.error(error);
       setSummary(null);
+    } finally {
+      setIsLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    void refreshSummary();
+    void refreshSummary(true);
   }, [refreshSummary]);
 
-  return { summary, refreshSummary, toggleReminder };
+  return { summary, isLoading, refreshSummary, toggleReminder };
 }
 
 function getMetricStepsByCategory(steps: RoutineStep[], allowedCategories: Set<string>): RoutineStep[] {

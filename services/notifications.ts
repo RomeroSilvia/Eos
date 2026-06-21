@@ -1,4 +1,8 @@
+import Constants from 'expo-constants';
 import * as Notifications from 'expo-notifications';
+import { Platform } from 'react-native';
+import { apiRequest } from '@/services/api/client';
+import type { AppNotification, AppNotificationKind } from '@/types/notification';
 import type { Reminder } from '@/types/reminder';
 
 let schedulingPromise: Promise<void> | null = null;
@@ -74,6 +78,50 @@ async function scheduleRemindersByTimeInternal(reminders: Reminder[]): Promise<v
       console.error(`Error scheduling reminder ${reminder.id}:`, error);
     }
   }
+}
+
+export async function registerPushToken(): Promise<void> {
+  // getExpoPushTokenAsync no funciona en Expo Go desde SDK 53; solo en dev/prod builds
+  if (Constants.appOwnership === 'expo') return;
+
+  const { status } = await Notifications.requestPermissionsAsync();
+  if (status !== 'granted') return;
+
+  const projectId = Constants.expoConfig?.extra?.eas?.projectId as string | undefined;
+  const tokenData = await Notifications.getExpoPushTokenAsync({ projectId });
+
+  await apiRequest({
+    path: '/notifications/token',
+    method: 'POST',
+    body: JSON.stringify({ expoToken: tokenData.data, platform: Platform.OS })
+  });
+}
+
+export async function unregisterPushToken(): Promise<void> {
+  try {
+    await apiRequest({ path: '/notifications/token', method: 'DELETE' });
+  } catch {
+    // Si el token ya no existía en el servidor no bloqueamos el logout.
+  }
+}
+
+export async function getNotifications(): Promise<AppNotification[]> {
+  const rows = await apiRequest<Array<{
+    id: string; title: string; body: string; kind: string; is_read: boolean; created_at: string;
+  }>>({ path: '/notifications', method: 'GET' });
+
+  return rows.map((row) => ({
+    id: row.id,
+    title: row.title,
+    body: row.body,
+    kind: row.kind as AppNotificationKind,
+    isRead: row.is_read,
+    createdAt: row.created_at,
+  }));
+}
+
+export async function markNotificationRead(id: string): Promise<void> {
+  await apiRequest({ path: `/notifications/${id}/read`, method: 'PATCH' });
 }
 
 function parseReminderTime(timeString: string): { hour: number | null; minute: number | null } {
