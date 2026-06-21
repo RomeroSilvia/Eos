@@ -5,6 +5,7 @@ export type RoutineTimeOfDay = 'morning' | 'night' | 'custom';
 export type Routine = {
   id: string;
   user_id: string;
+  assigned_by: string | null;
   name: string;
   description: string | null;
   time_of_day: RoutineTimeOfDay | null;
