@@ -18,6 +18,7 @@ export type SkinProfileRow        = Tables<'skin_profiles'>;
 export type RoutineStepProductRow = Tables<'routine_step_products'>;
 export type RoutineLogRow         = Tables<'routine_logs'>;
 export type RoutineStepLogRow     = Tables<'routine_step_logs'>;
+export type PushTokenRow          = Tables<'push_tokens'>;
 
 // ─── Insert types (escritura) ─────────────────────────────────────────────────
 
@@ -30,6 +31,7 @@ export type SkinProfileInsert       = TablesInsert<'skin_profiles'>;
 export type RoutineStepProductInsert = TablesInsert<'routine_step_products'>;
 export type RoutineLogInsert        = TablesInsert<'routine_logs'>;
 export type RoutineStepLogInsert    = TablesInsert<'routine_step_logs'>;
+export type PushTokenInsert         = TablesInsert<'push_tokens'>;
 
 // ─── Update types (actualización parcial) ─────────────────────────────────────
 

@@ -277,6 +277,29 @@ export type Database = {
         };
         Relationships: [];
       };
+
+      push_tokens: {
+        Row: {
+          id: string;
+          user_id: string;
+          expo_token: string;
+          platform: 'ios' | 'android' | null;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          expo_token: string;
+          platform?: 'ios' | 'android' | null;
+          updated_at?: string;
+        };
+        Update: {
+          expo_token?: string;
+          platform?: 'ios' | 'android' | null;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;
