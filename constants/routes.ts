@@ -8,6 +8,9 @@ export const routes = {
   specialistDetail: '/specialists/[id]',
   chat: '/chat',
   progress: '/progress',
+  progressHistory: '/progress/history',
+  progressDayDetail: '/progress/history/[date]',
+  progressStats: '/progress/stats',
   profile: '/profile',
   notifications: '/notifications'
 } as const;
