@@ -15,14 +15,14 @@ function currentHHmm(): string {
 async function sendRoutineReminders(): Promise<void> {
   const db = supabase as any;
 
-  // Usuarios que tienen token registrado Y al menos una rutina activa
+  // Todos los usuarios con al menos una rutina activa (independiente de si tienen push token)
   const { data, error } = await db
-    .from('push_tokens')
-    .select('user_id, routines!inner(id)')
-    .eq('routines.is_active', true);
+    .from('routines')
+    .select('user_id')
+    .eq('is_active', true);
 
   if (error) {
-    console.error('[notification.job] Error consultando tokens:', error.message);
+    console.error('[notification.job] Error consultando rutinas activas:', error.message);
     return;
   }
 
