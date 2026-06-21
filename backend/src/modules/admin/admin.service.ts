@@ -185,10 +185,15 @@ async function createSignedDocumentUrl(path: string | null, documentType: 'dniPh
     normalizedPath: internalPath
   });
 
-  const signedUrl = await tryCreateSignedUrl(internalPath);
+  const initialAttempt = await tryCreateSignedUrl(internalPath);
 
-  if (signedUrl) {
-    return signedUrl;
+  if (initialAttempt.signedUrl) {
+    return initialAttempt.signedUrl;
+  }
+
+  if (!isStorageNotFoundError(initialAttempt.error)) {
+    logDocumentSigningError(documentType, internalPath, initialAttempt.error);
+    throw mapSignedUrlError(initialAttempt.error);
   }
 
   const recoveredUrl = await tryRecoverSignedUrlByFolder(internalPath, documentType);
@@ -197,20 +202,26 @@ async function createSignedDocumentUrl(path: string | null, documentType: 'dniPh
     return recoveredUrl;
   }
 
-  logDocumentSigningError(documentType, internalPath, { message: 'Object not found' });
-  throw mapSignedUrlError({ message: 'Object not found' });
+  logDocumentSigningError(documentType, internalPath, initialAttempt.error);
+  throw mapSignedUrlError(initialAttempt.error);
 }
 
-async function tryCreateSignedUrl(path: string): Promise<string | null> {
+async function tryCreateSignedUrl(path: string): Promise<{ signedUrl: string | null; error: unknown }> {
   const { data, error } = await supabase.storage
     .from(SPECIALIST_DOCS_BUCKET)
     .createSignedUrl(path, SPECIALIST_DOCUMENT_SIGNED_URL_EXPIRES_IN);
 
   if (error || !data?.signedUrl) {
-    return null;
+    return {
+      signedUrl: null,
+      error: error ?? new Error('Signed URL not generated')
+    };
   }
 
-  return data.signedUrl;
+  return {
+    signedUrl: data.signedUrl,
+    error: null
+  };
 }
 
 async function tryRecoverSignedUrlByFolder(
@@ -250,11 +261,11 @@ async function tryRecoverSignedUrlByFolder(
 
   for (const candidate of orderedCandidates) {
     const candidatePath = `${folderPath}/${candidate}`;
-    const candidateSignedUrl = await tryCreateSignedUrl(candidatePath);
+    const candidateAttempt = await tryCreateSignedUrl(candidatePath);
 
-    if (candidateSignedUrl) {
+    if (candidateAttempt.signedUrl) {
       logDocumentRecoveryDebug(documentType, originalPath, candidatePath);
-      return candidateSignedUrl;
+      return candidateAttempt.signedUrl;
     }
   }
 
@@ -369,6 +380,17 @@ function mapSignedUrlError(error: unknown): ApiError {
   }
 
   return new ApiError(500, 'No pudimos generar el enlace seguro del documento.');
+}
+
+function isStorageNotFoundError(error: unknown): boolean {
+  const message = getErrorMessage(error).toLowerCase();
+
+  return (
+    message.includes('not found') ||
+    message.includes('not exist') ||
+    message.includes('no such') ||
+    message.includes('404')
+  );
 }
 
 function logDocumentSigningDebug(meta: {

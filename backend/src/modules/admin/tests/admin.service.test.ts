@@ -540,6 +540,10 @@ describe('adminService', () => {
       createSignedUrl: jest.fn().mockResolvedValue({
         data: null,
         error: { message: 'Object not found' }
+      }),
+      list: jest.fn().mockResolvedValue({
+        data: [],
+        error: null
       })
     });
 
@@ -559,6 +563,10 @@ describe('adminService', () => {
       createSignedUrl: jest.fn().mockResolvedValue({
         data: null,
         error: { message: 'storage unavailable' }
+      }),
+      list: jest.fn().mockResolvedValue({
+        data: [],
+        error: null
       })
     });
 
