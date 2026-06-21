@@ -52,6 +52,7 @@ products              → id, user_id, name, brand, category, notes, image_url, 
 routine_step_products → id, step_id, product_id, created_at   (UNIQUE step_id+product_id)
 routine_logs          → id, user_id, routine_id, log_date, completed_at, completion_percentage, created_at, updated_at
 routine_step_logs     → id, routine_log_id, step_id, is_completed, completed_at, created_at, updated_at
+push_tokens           → id, user_id (UNIQUE), expo_token, platform ('ios'|'android'), updated_at  [RLS habilitado]
 ```
 
 **Nota importante:** la tabla `profiles` no tiene columna `role`. El rol se guarda solo en `user_metadata` de Supabase Auth. Esto se debe resolver en E2.
