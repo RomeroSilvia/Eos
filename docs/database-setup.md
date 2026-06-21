@@ -13,7 +13,7 @@ Eos usa Supabase PostgreSQL como base de datos.
 
 | Tabla | Descripción |
 |---|---|
-| `profiles` | Perfil del usuario (nombre, email, skin_type) |
+| `profiles` | Perfil del usuario (nombre, email, skin_type, role) |
 | `skin_profiles` | Resultado del quiz de diagnóstico de piel por usuario |
 | `routines` | Rutinas del usuario (mañana / noche / personalizada) |
 | `routine_steps` | Pasos de cada rutina con orden y categoría |
@@ -21,6 +21,11 @@ Eos usa Supabase PostgreSQL como base de datos.
 | `routine_step_products` | Asociación N:M entre pasos y productos |
 | `routine_logs` | Registro diario de completitud por rutina |
 | `routine_step_logs` | Registro diario de completitud por paso |
+| `specialist_profiles` | Datos del especialista: matrícula, especialidad, `license_status` |
+| `specialist_clients` | Relación especialista-paciente |
+| `push_tokens` | Token Expo de cada dispositivo para envío de push notifications |
+| `notification_history` | Historial de notificaciones enviadas al usuario (fuente de verdad del backend) |
+| `messages` | Mensajes del chat en tiempo real entre usuario y especialista |
 
 ## Obtener credenciales
 

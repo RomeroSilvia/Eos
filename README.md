@@ -131,10 +131,12 @@ Implementado:
 
 - Registro y desregistro de tokens de dispositivo (`push_tokens`).
 - Cron job que envía recordatorios push a las 08:00 y 21:00 a usuarios con rutinas activas.
+- Mensajes personalizados con el nombre de la rutina: mañana (`Buen día ☀️ Hora de empezar tu rutina <nombre>`) y noche (`No te duermas sin tu rutina <nombre>`).
 - Historial de notificaciones persistido en `notification_history` (backend es la fuente de verdad).
 - Endpoints `GET /api/notifications` y `PATCH /api/notifications/:id/read`.
-- Pantalla in-app muestra el historial real desde el backend.
+- Pantalla in-app con loading state, agrupación por día (Hoy / Ayer / fecha) y tabs Todas / No leídas.
 - `BellButton` muestra el punto rojo solo cuando hay notificaciones sin leer (caché de 30 s).
+- `RemindersSection` — componente reutilizable en home y perfil: muestra las rutinas activas con ícono sol (mañana) o luna (noche) y horario. Al tocar navega a la tab de rutinas.
 
 ### Módulo 3 — Roles y Registro de Especialistas (rama: `feature/e2-roles-specialist-register`)
 
