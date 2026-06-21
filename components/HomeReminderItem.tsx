@@ -6,6 +6,7 @@ import type { Reminder } from '@/types/reminder';
 type HomeReminderItemProps = {
   reminder: Reminder;
   onToggle?: (reminderId: string) => void;
+  onPress?: () => void;
 };
 
 function getIcon(timeOfDay?: string): 'sunny-outline' | 'moon-outline' | 'notifications-outline' {
@@ -14,11 +15,11 @@ function getIcon(timeOfDay?: string): 'sunny-outline' | 'moon-outline' | 'notifi
   return 'notifications-outline';
 }
 
-export function HomeReminderItem({ reminder, onToggle }: HomeReminderItemProps) {
+export function HomeReminderItem({ reminder, onToggle, onPress }: HomeReminderItemProps) {
   const iconName = getIcon(reminder.timeOfDay);
 
   return (
-    <View style={styles.item}>
+    <Pressable style={styles.item} onPress={onPress} disabled={!onPress}>
       <View style={styles.icon}>
         <Ionicons color={colors.textSecondary} name={iconName} size={20} />
       </View>
@@ -31,7 +32,7 @@ export function HomeReminderItem({ reminder, onToggle }: HomeReminderItemProps) 
           <Text style={styles.timeText}>{reminder.time}</Text>
         </Pressable>
       ) : null}
-    </View>
+    </Pressable>
   );
 }
 

@@ -1,3 +1,4 @@
+import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Card } from '@/components/Card';
@@ -25,6 +26,7 @@ function routineToReminder(routine: Routine): Reminder {
 }
 
 export function RemindersSection() {
+  const router = useRouter();
   const [reminders, setReminders] = useState<Reminder[]>([]);
 
   useEffect(() => {
@@ -49,7 +51,7 @@ export function RemindersSection() {
           reminders.map((reminder, index) => (
             <View key={reminder.id}>
               {index > 0 && <View style={styles.separator} />}
-              <HomeReminderItem reminder={reminder} />
+              <HomeReminderItem reminder={reminder} onPress={() => router.push('/routine')} />
             </View>
           ))
         )}
