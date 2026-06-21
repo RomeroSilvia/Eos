@@ -28,6 +28,28 @@ describe('errorMiddleware', () => {
     );
   });
 
+  it('serializa details de ApiError cuando existen', () => {
+    const res = makeResponse();
+
+    errorMiddleware(
+      new ApiError(409, 'El producto esta en uso en rutinas activas.', {
+        affectedRoutines: [{ routineId: 'routine-1', routineName: 'Rutina', stepName: 'Limpieza' }]
+      }),
+      {} as Request,
+      res,
+      jest.fn() as NextFunction
+    );
+
+    expect(res.status).toHaveBeenCalledWith(409);
+    expect(res.json).toHaveBeenCalledWith({
+      status: 'error',
+      message: 'El producto esta en uso en rutinas activas.',
+      details: {
+        affectedRoutines: [{ routineId: 'routine-1', routineName: 'Rutina', stepName: 'Limpieza' }]
+      }
+    });
+  });
+
   it('mantiene mensaje generico para errores inesperados en produccion', () => {
     const previousNodeEnv = process.env.NODE_ENV;
     process.env.NODE_ENV = 'production';
