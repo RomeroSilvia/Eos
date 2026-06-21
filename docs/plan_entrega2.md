@@ -301,134 +301,84 @@ describe('updateSkinType', () => {
 
 ## Módulo 2 — Push Notifications Remotas
 
-**Rama sugerida:** `feature/e2-push-notifications`
+**Rama:** `feature/e2-push-notifications`
 
-### Contexto de partida
 
-- `services/notifications.ts` ya implementa scheduling **local** con `expo-notifications`.
-- Los recordatorios se muestran en el home con toggle (on/off).
-- No hay tokens de push registrados en el backend ni envío remoto.
-- La tabla `push_tokens` se crea en la migración E2.
+#### Backend — módulo `notifications` completo
 
-### Qué construir
+**Tabla nueva en Supabase:** `notification_history`
 
-#### Backend — nuevo módulo `notifications`
+```sql
+create table notification_history (
+  id          uuid        primary key default gen_random_uuid(),
+  user_id     uuid        references auth.users(id) on delete cascade not null,
+  title       text        not null,
+  body        text        not null default '',
+  kind        text        not null,
+  is_read     boolean     not null default false,
+  created_at  timestamptz not null default now()
+);
 
-Crear `backend/src/modules/notifications/` con el patrón estándar (routes/controller/service/repository/tests).
+create index notification_history_user_idx
+  on notification_history(user_id, created_at desc);
 
-**`notifications.repository.ts`**
+alter table notification_history enable row level security;
+
+create policy "Usuarios leen sus propias notificaciones"
+  on notification_history for select using (auth.uid() = user_id);
+
+create policy "Usuarios actualizan sus propias notificaciones"
+  on notification_history for update using (auth.uid() = user_id);
+```
+
+**Endpoints implementados:**
+
+```
+POST   /api/notifications/token      → registrar/actualizar token del dispositivo
+DELETE /api/notifications/token      → desregistrar al hacer logout
+GET    /api/notifications            → historial de notificaciones del usuario (últimas 50)
+PATCH  /api/notifications/:id/read   → marcar una notificación como leída
+GET    /api/notifications/health
+```
+
+**Cron job** (`backend/src/jobs/notification.job.ts`):
+- Corre cada minuto; dispara a las 08:00 y 21:00
+- Busca usuarios con token registrado y al menos una rutina activa
+- Envía push con títulos del Figma ("Buen día ☀️ Hora de empezar tu rutina" / "Es momento de cerrar el día 🌙")
+- Incluye `{ kind: 'routine-morning' | 'routine-evening' }` en el payload
+- **Guarda cada notificación enviada en `notification_history`**
+
+**Función service-to-service** (sin cambios en la firma):
 ```typescript
-export const notificationsRepository = {
-  upsertToken: async (userId: string, expoToken: string, platform: string) => {
-    // UPSERT en push_tokens (onConflict: 'user_id')
-  },
-  deleteToken: async (userId: string) => { ... },
-  findTokensByUserIds: async (userIds: string[]): Promise<PushTokenRow[]> => { ... },
-  findTokenByUserId: async (userId: string): Promise<PushTokenRow | null> => { ... }
-};
+notificationsService.sendToUser(userId, title, body, data?)
+// usada por M4 (rutina asignada) y M5 (mensaje nuevo)
 ```
 
-**`notifications.service.ts`**
+#### Frontend
 
+**`services/notifications.ts`** — nuevas funciones:
 ```typescript
-const EXPO_PUSH_API = 'https://exp.host/--/api/v2/push/send';
-
-export const notificationsService = {
-  registerToken: async (userId: string, expoToken: string, platform: string) => {
-    return notificationsRepository.upsertToken(userId, expoToken, platform);
-  },
-
-  // Enviar una notificación puntual a un usuario
-  sendToUser: async (userId: string, title: string, body: string, data?: Record<string, string>) => {
-    const tokenRow = await notificationsRepository.findTokenByUserId(userId);
-    if (!tokenRow) return; // usuario sin token registrado → silenciar
-
-    await fetch(EXPO_PUSH_API, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify([{ to: tokenRow.expo_token, title, body, data: data ?? {} }])
-    });
-  }
-};
+getNotifications(): Promise<AppNotification[]>   // GET /api/notifications
+markNotificationRead(id: string): Promise<void>  // PATCH /api/notifications/:id/read
 ```
 
-**`notifications.controller.ts`** — endpoints:
-```
-POST /api/notifications/token        → registrar/actualizar token (authenticate)
-DELETE /api/notifications/token      → desregistrar al hacer logout (authenticate)
-POST /api/notifications/send         → uso interno (service role, NO exponer al cliente)
-```
+**`app/notifications.tsx`** — lee del backend con `useFocusEffect`; `markAsRead` persiste en servidor.
 
-**Scheduler (cron job)**
+**`hooks/useHasUnreadNotifications.ts`** — hook con caché de 30 s compartida entre todas las instancias para evitar llamadas redundantes. Expone `invalidateUnreadCache()` para que la pantalla de notificaciones invalide al salir o al marcar leída.
 
-Agregar a `backend/src/server.ts` o en un archivo `backend/src/jobs/notification.job.ts`:
-
-```typescript
-import cron from 'node-cron';
-
-// Correr cada minuto; evaluar si algún usuario tiene recordatorio en este momento
-cron.schedule('* * * * *', async () => {
-  const now = new Date();
-  const currentTime = `${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`;
-
-  // Buscar usuarios con notifications_enabled=true y reminder_time=currentTime
-  // Para cada uno: verificar si tiene rutina activa del día → enviar push
-  // Implementar con una query a profiles JOIN con routines
-});
-```
-
-Instalar: `npm install node-cron && npm install -D @types/node-cron`
-
-#### Frontend — actualizar `services/notifications.ts`
-
-Agregar al archivo existente:
-
-```typescript
-// Registrar el token de Expo Push en el backend al hacer login
-export async function registerPushToken(): Promise<void> {
-  const { status } = await Notifications.requestPermissionsAsync();
-  if (status !== 'granted') return;
-
-  const tokenData = await Notifications.getExpoPushTokenAsync({
-    projectId: Constants.expoConfig?.extra?.eas?.projectId
-  });
-
-  await apiRequest({
-    path: '/notifications/token',
-    method: 'POST',
-    body: JSON.stringify({
-      expoToken: tokenData.data,
-      platform: Platform.OS
-    })
-  });
-}
-
-// Llamar desde services/auth.ts después del login exitoso
-```
-
-Agregar en `app/(tabs)/home.tsx` la opción de configurar horario de recordatorios. Persistir el horario en `profiles` (necesita columnas `notification_morning` y `notification_evening` — agregar a la migración E2 si se quiere guardar del lado servidor, o mantener local con `AsyncStorage` si se prefiere no ampliar el schema).
-
-### Tests
-
-Archivo: `backend/src/modules/notifications/tests/notifications.service.test.ts`
-
-```typescript
-describe('notificationsService', () => {
-  it('registra un token nuevo correctamente', ...)
-  it('actualiza el token si el usuario ya tiene uno', ...)
-  it('no falla si el usuario no tiene token al enviar', ...)
-  it('llama a la Expo Push API con el payload correcto', ...)
-});
-```
+**`components/BellButton.tsx`** — usa el hook internamente; el punto rojo aparece solo si hay notificaciones sin leer.
 
 ### Contrato de interfaz que expone este módulo
 
 ```typescript
 // Endpoint: POST /api/notifications/token    → 200 OK
 // Endpoint: DELETE /api/notifications/token  → 204 No Content
+// Endpoint: GET  /api/notifications          → AppNotification[]
+// Endpoint: PATCH /api/notifications/:id/read → 204 No Content
 // Función interna (service-to-service):
 //   notificationsService.sendToUser(userId, title, body, data?)
-//   → usada por Módulo 4 (rutina asignada) y Módulo 5 (mensaje nuevo)
+//   → usada por M4 (rutina asignada) y M5 (mensaje nuevo)
+// DB: notification_history → fuente de verdad del historial in-app
 ```
 
 ---
