@@ -185,16 +185,97 @@ async function createSignedDocumentUrl(path: string | null, documentType: 'dniPh
     normalizedPath: internalPath
   });
 
+  const signedUrl = await tryCreateSignedUrl(internalPath);
+
+  if (signedUrl) {
+    return signedUrl;
+  }
+
+  const recoveredUrl = await tryRecoverSignedUrlByFolder(internalPath, documentType);
+
+  if (recoveredUrl) {
+    return recoveredUrl;
+  }
+
+  logDocumentSigningError(documentType, internalPath, { message: 'Object not found' });
+  throw mapSignedUrlError({ message: 'Object not found' });
+}
+
+async function tryCreateSignedUrl(path: string): Promise<string | null> {
   const { data, error } = await supabase.storage
     .from(SPECIALIST_DOCS_BUCKET)
-    .createSignedUrl(internalPath, SPECIALIST_DOCUMENT_SIGNED_URL_EXPIRES_IN);
+    .createSignedUrl(path, SPECIALIST_DOCUMENT_SIGNED_URL_EXPIRES_IN);
 
   if (error || !data?.signedUrl) {
-    logDocumentSigningError(documentType, internalPath, error);
-    throw mapSignedUrlError(error);
+    return null;
   }
 
   return data.signedUrl;
+}
+
+async function tryRecoverSignedUrlByFolder(
+  originalPath: string,
+  documentType: 'dniPhoto' | 'titlePhoto'
+): Promise<string | null> {
+  const folderPath = getParentPath(originalPath);
+  const expectedName = getFileName(originalPath);
+
+  if (!folderPath) {
+    return null;
+  }
+
+  const { data: files, error } = await supabase.storage
+    .from(SPECIALIST_DOCS_BUCKET)
+    .list(folderPath, {
+      limit: 20,
+      sortBy: { column: 'created_at', order: 'desc' }
+    });
+
+  if (error || !files?.length) {
+    return null;
+  }
+
+  const validNames = files
+    .map((file) => file?.name)
+    .filter((name): name is string => typeof name === 'string' && name.trim().length > 0);
+
+  if (!validNames.length) {
+    return null;
+  }
+
+  const exactCandidate = validNames.find((name) => decodeStoragePath(name) === decodeStoragePath(expectedName));
+  const orderedCandidates = exactCandidate
+    ? [exactCandidate, ...validNames.filter((name) => name !== exactCandidate)]
+    : validNames;
+
+  for (const candidate of orderedCandidates) {
+    const candidatePath = `${folderPath}/${candidate}`;
+    const candidateSignedUrl = await tryCreateSignedUrl(candidatePath);
+
+    if (candidateSignedUrl) {
+      logDocumentRecoveryDebug(documentType, originalPath, candidatePath);
+      return candidateSignedUrl;
+    }
+  }
+
+  return null;
+}
+
+function getParentPath(value: string): string | null {
+  const normalizedValue = value.replace(/\/+/g, '/').replace(/^\/+|\/+$/g, '');
+  const segments = normalizedValue.split('/').filter(Boolean);
+
+  if (segments.length < 2) {
+    return null;
+  }
+
+  return segments.slice(0, -1).join('/');
+}
+
+function getFileName(value: string): string {
+  const normalizedValue = value.replace(/\/+/g, '/').replace(/^\/+|\/+$/g, '');
+  const segments = normalizedValue.split('/').filter(Boolean);
+  return segments[segments.length - 1] ?? normalizedValue;
 }
 
 export function normalizeSpecialistDocumentPath(value: string | null): string {
@@ -206,10 +287,15 @@ export function normalizeSpecialistDocumentPath(value: string | null): string {
   }
 
   const urlPath = extractStoragePathFromUrl(trimmedValue);
-  let normalizedPath = decodeStoragePath(urlPath ?? trimmedValue).replace(/^\/+/, '');
+  const routePath = extractStoragePathFromRoute(trimmedValue);
+  let normalizedPath = decodeStoragePath(urlPath ?? routePath ?? trimmedValue).replace(/^\/+/, '');
 
   while (normalizedPath.startsWith(bucketPrefix)) {
     normalizedPath = normalizedPath.slice(bucketPrefix.length).replace(/^\/+/, '');
+  }
+
+  if (!normalizedPath || normalizedPath.includes('://')) {
+    throw new ApiError(404, 'El documento no está disponible.');
   }
 
   return normalizedPath;
@@ -218,29 +304,31 @@ export function normalizeSpecialistDocumentPath(value: string | null): string {
 function extractStoragePathFromUrl(value: string): string | null {
   try {
     const url = new URL(value);
-    const path = decodeStoragePath(url.pathname);
-    const segments = path.split('/').filter(Boolean);
-    const storageIndex = segments.findIndex((segment, index) => (
-      segment === 'storage' &&
-      segments[index + 1] === 'v1' &&
-      segments[index + 2] === 'object'
-    ));
+    const queryPath = url.searchParams.get('path');
 
-    if (storageIndex === -1) {
-      return null;
+    if (queryPath) {
+      const fromQueryRoute = extractStoragePathFromRoute(queryPath);
+      if (fromQueryRoute) return fromQueryRoute;
     }
 
-    const objectSegments = segments.slice(storageIndex + 3);
-    const bucketIndex = objectSegments.findIndex((segment) => segment === SPECIALIST_DOCS_BUCKET);
-
-    if (bucketIndex === -1) {
-      return null;
-    }
-
-    return objectSegments.slice(bucketIndex + 1).join('/');
+    return extractStoragePathFromRoute(url.pathname);
   } catch {
     return null;
   }
+}
+
+function extractStoragePathFromRoute(value: string): string | null {
+  const decodedValue = decodeStoragePath(value);
+  const sanitizedValue = decodedValue.replace(/^\/+/, '');
+  const segments = sanitizedValue.split('/').filter(Boolean);
+  const bucketIndex = segments.findIndex((segment) => segment === SPECIALIST_DOCS_BUCKET);
+
+  if (bucketIndex === -1) {
+    return null;
+  }
+
+  const objectPath = segments.slice(bucketIndex + 1).join('/').replace(/^\/+/, '');
+  return objectPath || null;
 }
 
 function decodeStoragePath(value: string): string {
@@ -277,7 +365,7 @@ function mapSignedUrlError(error: unknown): ApiError {
     normalizedMessage.includes('no such') ||
     normalizedMessage.includes('404')
   ) {
-    return new ApiError(404, 'No encontramos el archivo subido para este documento.');
+    return new ApiError(404, 'No se pudo cargar este documento. Es posible que el archivo no exista o haya sido removido.');
   }
 
   return new ApiError(500, 'No pudimos generar el enlace seguro del documento.');
@@ -304,6 +392,20 @@ function logDocumentSigningError(
     bucket: SPECIALIST_DOCS_BUCKET,
     normalizedPath,
     errorMessage: getErrorMessage(error)
+  });
+}
+
+function logDocumentRecoveryDebug(
+  documentType: 'dniPhoto' | 'titlePhoto',
+  originalPath: string,
+  recoveredPath: string
+): void {
+  if (env.nodeEnv !== 'development') return;
+  console.info('[admin/specialist-documents:recovered]', {
+    documentType,
+    bucket: SPECIALIST_DOCS_BUCKET,
+    originalPath,
+    recoveredPath
   });
 }
 

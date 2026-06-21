@@ -23,6 +23,7 @@ jest.mock('../admin.repository', () => ({
 const mockedRepo = jest.mocked(adminRepository);
 const mockedStorageFrom = supabase.storage.from as jest.Mock;
 let mockedCreateSignedUrl: jest.Mock;
+let mockedList: jest.Mock;
 
 function makeSpecialist(overrides = {}) {
   return {
@@ -40,12 +41,17 @@ function makeSpecialist(overrides = {}) {
 describe('adminService', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockedList = jest.fn().mockResolvedValue({
+      data: [],
+      error: null
+    });
     mockedCreateSignedUrl = jest.fn((path: string) => Promise.resolve({
       data: { signedUrl: `https://signed.example/${path}` },
       error: null
     }));
     mockedStorageFrom.mockReturnValue({
-      createSignedUrl: mockedCreateSignedUrl
+      createSignedUrl: mockedCreateSignedUrl,
+      list: mockedList
     });
   });
 
@@ -288,6 +294,58 @@ describe('adminService', () => {
     });
   });
 
+  it('normaliza URL legacy render/image/authenticated antes de generar signed URLs', async () => {
+    mockedRepo.findSpecialistDocumentsById.mockResolvedValue({
+      id: 'specialist-profile-1',
+      dni_photo_url: 'https://project.supabase.co/storage/v1/render/image/authenticated/specialist-docs/user-1/dni/documento.jpg?width=640',
+      title_photo_url: 'https://project.supabase.co/storage/v1/render/image/sign/specialist-docs/user-1/titulo/titulo.jpg?token=abc123'
+    });
+
+    const result = await adminService.getSpecialistDocuments('specialist-profile-1');
+
+    expect(mockedCreateSignedUrl).toHaveBeenNthCalledWith(1, 'user-1/dni/documento.jpg', 300);
+    expect(mockedCreateSignedUrl).toHaveBeenNthCalledWith(2, 'user-1/titulo/titulo.jpg', 300);
+    expect(result).toEqual({
+      dniPhoto: {
+        available: true,
+        url: 'https://signed.example/user-1/dni/documento.jpg',
+        errorMessage: null
+      },
+      titlePhoto: {
+        available: true,
+        url: 'https://signed.example/user-1/titulo/titulo.jpg',
+        errorMessage: null
+      },
+      expiresIn: 300
+    });
+  });
+
+  it('normaliza URL con query path antes de generar signed URLs', async () => {
+    mockedRepo.findSpecialistDocumentsById.mockResolvedValue({
+      id: 'specialist-profile-1',
+      dni_photo_url: 'https://project.supabase.co/storage/v1/render/image?path=specialist-docs%2Fuser-1%2Fdni%2Fdocumento.jpg&width=640',
+      title_photo_url: 'https://project.supabase.co/storage/v1/render/image?path=%2Fspecialist-docs%2Fuser-1%2Ftitulo%2Ftitulo.jpg&width=640'
+    });
+
+    const result = await adminService.getSpecialistDocuments('specialist-profile-1');
+
+    expect(mockedCreateSignedUrl).toHaveBeenNthCalledWith(1, 'user-1/dni/documento.jpg', 300);
+    expect(mockedCreateSignedUrl).toHaveBeenNthCalledWith(2, 'user-1/titulo/titulo.jpg', 300);
+    expect(result).toEqual({
+      dniPhoto: {
+        available: true,
+        url: 'https://signed.example/user-1/dni/documento.jpg',
+        errorMessage: null
+      },
+      titlePhoto: {
+        available: true,
+        url: 'https://signed.example/user-1/titulo/titulo.jpg',
+        errorMessage: null
+      },
+      expiresIn: 300
+    });
+  });
+
   it('documentos de specialistProfileId inexistente devuelve 404', async () => {
     mockedRepo.findSpecialistDocumentsById.mockResolvedValue(null);
 
@@ -380,8 +438,20 @@ describe('adminService', () => {
           error: null
         }
     ));
+    const list = jest.fn((folderPath: string) => Promise.resolve(
+      folderPath.includes('/dni')
+        ? {
+          data: [{ name: 'otro-documento.jpg' }],
+          error: null
+        }
+        : {
+          data: [],
+          error: null
+        }
+    ));
     mockedStorageFrom.mockReturnValue({
-      createSignedUrl
+      createSignedUrl,
+      list
     });
 
     const result = await adminService.getSpecialistDocuments('specialist-profile-1');
@@ -390,7 +460,66 @@ describe('adminService', () => {
       dniPhoto: {
         available: false,
         url: null,
-        errorMessage: 'No encontramos el archivo subido para este documento.'
+        errorMessage: 'No se pudo cargar este documento. Es posible que el archivo no exista o haya sido removido.'
+      },
+      titlePhoto: {
+        available: true,
+        url: 'https://signed.example/user-1/titulo/titulo.jpg',
+        errorMessage: null
+      },
+      expiresIn: 300
+    });
+  });
+
+  it('recupera documento cuando el path exacto no existe pero hay archivos en la carpeta', async () => {
+    mockedRepo.findSpecialistDocumentsById.mockResolvedValue({
+      id: 'specialist-profile-1',
+      dni_photo_url: 'user-1/dni/documento.jpg',
+      title_photo_url: 'user-1/titulo/titulo.jpg'
+    });
+
+    const createSignedUrl = jest.fn((path: string) => Promise.resolve(
+      path === 'user-1/dni/documento.jpg'
+        ? {
+          data: null,
+          error: { message: 'Object not found' }
+        }
+        : {
+          data: { signedUrl: `https://signed.example/${path}` },
+          error: null
+        }
+    ));
+
+    const list = jest.fn((folderPath: string) => Promise.resolve(
+      folderPath === 'user-1/dni'
+        ? {
+          data: [{ name: '1782077012800-79xz1xmk0k8.jpg' }],
+          error: null
+        }
+        : {
+          data: [],
+          error: null
+        }
+    ));
+
+    mockedStorageFrom.mockReturnValue({
+      createSignedUrl,
+      list
+    });
+
+    const result = await adminService.getSpecialistDocuments('specialist-profile-1');
+
+    expect(createSignedUrl).toHaveBeenCalledWith('user-1/dni/documento.jpg', 300);
+    expect(list).toHaveBeenCalledWith('user-1/dni', {
+      limit: 20,
+      sortBy: { column: 'created_at', order: 'desc' }
+    });
+    expect(createSignedUrl).toHaveBeenCalledWith('user-1/dni/1782077012800-79xz1xmk0k8.jpg', 300);
+    expect(result).toEqual({
+      dniPhoto: {
+        available: true,
+        url: 'https://signed.example/user-1/dni/1782077012800-79xz1xmk0k8.jpg',
+        errorMessage: null
       },
       titlePhoto: {
         available: true,
