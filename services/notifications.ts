@@ -1,4 +1,7 @@
+import Constants from 'expo-constants';
 import * as Notifications from 'expo-notifications';
+import { Platform } from 'react-native';
+import { apiRequest } from '@/services/api/client';
 import type { Reminder } from '@/types/reminder';
 
 let schedulingPromise: Promise<void> | null = null;
@@ -73,6 +76,31 @@ async function scheduleRemindersByTimeInternal(reminders: Reminder[]): Promise<v
     } catch (error) {
       console.error(`Error scheduling reminder ${reminder.id}:`, error);
     }
+  }
+}
+
+export async function registerPushToken(): Promise<void> {
+  // getExpoPushTokenAsync no funciona en Expo Go desde SDK 53; solo en dev/prod builds
+  if (Constants.appOwnership === 'expo') return;
+
+  const { status } = await Notifications.requestPermissionsAsync();
+  if (status !== 'granted') return;
+
+  const projectId = Constants.expoConfig?.extra?.eas?.projectId as string | undefined;
+  const tokenData = await Notifications.getExpoPushTokenAsync({ projectId });
+
+  await apiRequest({
+    path: '/notifications/token',
+    method: 'POST',
+    body: JSON.stringify({ expoToken: tokenData.data, platform: Platform.OS })
+  });
+}
+
+export async function unregisterPushToken(): Promise<void> {
+  try {
+    await apiRequest({ path: '/notifications/token', method: 'DELETE' });
+  } catch {
+    // Si el token ya no existía en el servidor no bloqueamos el logout.
   }
 }
 

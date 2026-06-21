@@ -8,7 +8,8 @@ export const routes = {
   specialistDetail: '/specialists/[id]',
   chat: '/chat',
   progress: '/progress',
-  profile: '/profile'
+  profile: '/profile',
+  notifications: '/notifications'
 } as const;
 
 export type AppRoute = (typeof routes)[keyof typeof routes];
