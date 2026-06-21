@@ -1,19 +1,15 @@
 import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
 import type { Product, ProductCategory, ProductBrand } from '@/types/product';
-<<<<<<< HEAD
-import { apiConfig, apiRequest, ApiClientError } from '@/services/api/client';
-=======
 import { ApiClientError, apiConfig, apiRequest } from '@/services/api/client';
 
 export type ProductUsageConflict = {
   affectedRoutines: { routineId: string; routineName: string; stepName: string }[];
 };
 
-export type RemoveWithProtectionResult =
-  | { status: 'deleted' }
-  | { status: 'conflict'; conflict: ProductUsageConflict };
->>>>>>> main
+export type RemoveWithProtectionResult = 
+| { status: 'deleted' }
+| { status: 'conflict'; conflict: ProductUsageConflict };
 
 export type ProductImagePayload = {
   imageUri?: string;
@@ -174,17 +170,7 @@ export async function deleteProduct(id: string): Promise<void> {
   }
 }
 
-<<<<<<< HEAD
-type AffectedRoutine = { routineId: string; routineName: string; stepName: string };
-
-export type RemoveWithProtectionResult =
-  | { status: 'deleted' }
-  | { status: 'conflict'; conflict: { affectedRoutines: AffectedRoutine[] } };
-
-export async function deleteProductWithProtection(id: string): Promise<RemoveWithProtectionResult> {
-=======
 export async function removeWithProtection(id: string): Promise<RemoveWithProtectionResult> {
->>>>>>> main
   try {
     await apiRequest<void>({ path: `/products/${id}`, method: 'DELETE' });
     return { status: 'deleted' };
@@ -192,57 +178,29 @@ export async function removeWithProtection(id: string): Promise<RemoveWithProtec
     if (error instanceof ApiClientError && error.status === 409) {
       return {
         status: 'conflict',
-<<<<<<< HEAD
-        conflict: (error.details as { affectedRoutines: AffectedRoutine[] }) ?? { affectedRoutines: [] },
-      };
-    }
-    console.error('[deleteProductWithProtection]', error);
-=======
         conflict: normalizeProductUsageConflict(error.details)
       };
     }
 
     console.error('[removeWithProtection]', error);
->>>>>>> main
     throw error instanceof Error ? error : new Error(`Error del servidor: ${String(error)}`);
   }
 }
 
-<<<<<<< HEAD
-export async function forceDeleteProduct(id: string): Promise<void> {
-  try {
-    await apiRequest<void>({ path: `/products/${id}/force`, method: 'DELETE' });
-  } catch (error) {
-    console.error('[forceDeleteProduct]', error);
-=======
 export async function forceRemove(id: string): Promise<void> {
   try {
     await apiRequest<void>({ path: `/products/${id}/force`, method: 'DELETE' });
   } catch (error) {
     console.error('[forceRemove]', error);
->>>>>>> main
     throw error instanceof Error ? error : new Error(`Error del servidor: ${String(error)}`);
   }
 }
 
-<<<<<<< HEAD
-export async function replaceProductAndDelete(id: string, replacementProductId: string): Promise<void> {
-=======
 export async function replaceAndRemove(id: string, replacementProductId: string): Promise<void> {
->>>>>>> main
   try {
     await apiRequest<void>({
       path: `/products/${id}/replace`,
       method: 'PUT',
-<<<<<<< HEAD
-      body: JSON.stringify({ replacementProductId }),
-    });
-  } catch (error) {
-    console.error('[replaceProductAndDelete]', error);
-    throw error instanceof Error ? error : new Error(`Error del servidor: ${String(error)}`);
-  }
-}
-=======
       body: JSON.stringify({ replacementProductId })
     });
   } catch (error) {
@@ -288,4 +246,3 @@ function normalizeProductUsageConflict(details: unknown): ProductUsageConflict {
       .filter((item): item is ProductUsageConflict['affectedRoutines'][number] => item !== null)
   };
 }
->>>>>>> main
