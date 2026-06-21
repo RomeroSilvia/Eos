@@ -4,6 +4,7 @@ import { env } from './config/env';
 import { adminRouter } from './modules/admin/admin.routes';
 import { authRouter } from './modules/auth/auth.routes';
 import { chatRouter } from './modules/chat/chat.routes';
+import { notificationsRouter } from './modules/notifications/notifications.routes';
 import { productsRouter } from './modules/products/products.routes';
 import { profileRouter } from './modules/profile/profile.routes';
 import { progressRouter } from './modules/progress/progress.routes';
@@ -43,6 +44,7 @@ app.use('/api/profile', profileRouter);
 app.use('/api/specialist', specialistRouter);
 app.use('/api/specialists', specialistsRouter);
 app.use('/api/chat', chatRouter);
+app.use('/api/notifications', notificationsRouter);
 
 app.use(notFoundMiddleware);
 app.use(errorMiddleware);
