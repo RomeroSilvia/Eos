@@ -1,5 +1,6 @@
 import { supabase } from '../../config/supabase';
 import { TABLE_NAMES } from '../../database/tableNames';
+import { specialistsSharedRepository } from './specialists.shared.repository';
 import type {
   ProfileRow,
   SpecialistProfileRow
@@ -32,7 +33,7 @@ type ActiveRelationWithClient = Pick<ClientSpecialistRelationRow, 'id' | 'client
 
 type ClientProfileRow = Pick<ProfileRow, 'id' | 'full_name' | 'email' | 'skin_type'>;
 
-export const specialistsRepository = {
+export const specialistsDirectoryRepository = {
   findVerifiedSpecialists: async (filters: { specialty?: string; name?: string }): Promise<SpecialistWithProfile[]> => {
     const db = supabase as any;
 
@@ -125,8 +126,8 @@ export const specialistsRepository = {
     if (!relation) return null;
 
     const [specialist, specialistProfile] = await Promise.all([
-      specialistsRepository.findProfileById(relation.specialist_id),
-      specialistsRepository.findSpecialistProfileByUserId(relation.specialist_id)
+      specialistsSharedRepository.findProfileById(relation.specialist_id),
+      specialistsDirectoryRepository.findSpecialistProfileByUserId(relation.specialist_id)
     ]);
 
     return {
@@ -139,34 +140,16 @@ export const specialistsRepository = {
     };
   },
 
-  findProfileById: async (userId: string): Promise<Pick<ProfileRow, 'id' | 'full_name' | 'email'> | null> => {
-    const db = supabase as any;
-
-    const { data, error } = await db
-      .from(TABLE_NAMES.profiles)
-      .select('id, full_name, email')
-      .eq('id', userId)
-      .maybeSingle();
-
-    if (error) throw error;
-    return data ?? null;
-  },
-
   findSpecialistProfileByUserId: async (
     userId: string
   ): Promise<Pick<SpecialistProfileRow, 'specialty' | 'license_status'> | null> => {
-    const db = supabase as any;
-
-    const { data, error } = await db
-      .from(TABLE_NAMES.specialistProfiles)
-      .select('specialty, license_status')
-      .eq('user_id', userId)
-      .maybeSingle();
-
-    if (error) throw error;
+    const data = await specialistsSharedRepository.findSpecialistProfileByUserId(userId);
 
     if (data) {
-      return data;
+      return {
+        specialty: data.specialty,
+        license_status: data.license_status
+      };
     }
 
     try {

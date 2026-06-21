@@ -1,16 +1,13 @@
 import { ApiError } from '../../utils/ApiError';
-import { specialistsRepository } from './specialists.repository';
+import { specialistsDirectoryRepository } from './specialists.directory.repository';
+import { ALLOWED_SPECIALTIES, type AllowedSpecialty } from './specialists.constants';
 
 type SearchFilters = {
   specialty?: string;
   name?: string;
 };
 
-const ALLOWED_SPECIALTIES = ['dermatologo', 'cosmetologo'] as const;
-
-type AllowedSpecialty = typeof ALLOWED_SPECIALTIES[number];
-
-export const specialistsService = {
+export const specialistsDirectoryService = {
   getHealth: () => ({
     module: 'specialists',
     status: 'ready'
@@ -20,12 +17,11 @@ export const specialistsService = {
     const specialty = normalizeSpecialty(filters.specialty);
     const name = normalizeOptionalString(filters.name);
 
-    const rows = await specialistsRepository.findVerifiedSpecialists({ specialty, name });
+    const rows = await specialistsDirectoryRepository.findVerifiedSpecialists({ specialty, name });
 
     return rows.map((row) => ({
       id: row.profile.id,
       fullName: row.profile.full_name,
-      email: row.profile.email,
       specialty: row.specialistProfile.specialty,
       licenseStatus: row.specialistProfile.license_status
     }));
@@ -40,13 +36,13 @@ export const specialistsService = {
       throw new ApiError(400, 'No podes vincularte con tu propio perfil.');
     }
 
-    const specialist = await specialistsRepository.findVerifiedSpecialistByUserId(specialistId);
+    const specialist = await specialistsDirectoryRepository.findVerifiedSpecialistByUserId(specialistId);
 
     if (!specialist) {
       throw new ApiError(404, 'Especialista no encontrado o no verificado.');
     }
 
-    const activeRelation = await specialistsRepository.findActiveRelationByClientId(clientId);
+    const activeRelation = await specialistsDirectoryRepository.findActiveRelationByClientId(clientId);
 
     if (activeRelation?.specialist_id === specialistId) {
       return {
@@ -59,9 +55,9 @@ export const specialistsService = {
       };
     }
 
-    await specialistsRepository.deactivateActiveRelation(clientId);
+    await specialistsDirectoryRepository.deactivateActiveRelation(clientId);
 
-    const relation = await specialistsRepository.createRelation({
+    const relation = await specialistsDirectoryRepository.createRelation({
       client_id: clientId,
       specialist_id: specialistId,
       status: 'active'
@@ -78,11 +74,11 @@ export const specialistsService = {
   },
 
   unlinkSpecialist: async (clientId: string) => {
-    await specialistsRepository.deactivateActiveRelation(clientId);
+    await specialistsDirectoryRepository.deactivateActiveRelation(clientId);
   },
 
   getMySpecialist: async (clientId: string) => {
-    const relation = await specialistsRepository.findActiveRelationByClientId(clientId);
+    const relation = await specialistsDirectoryRepository.findActiveRelationByClientId(clientId);
 
     if (!relation?.specialist) {
       return null;
@@ -100,19 +96,19 @@ export const specialistsService = {
   },
 
   getMyPatients: async (specialistId: string) => {
-    const relations = await specialistsRepository.findActiveRelationsBySpecialistId(specialistId);
+    const relations = await specialistsDirectoryRepository.findActiveRelationsBySpecialistId(specialistId);
 
     if (relations.length === 0) {
       return [];
     }
 
     const clientIds = relations.map((relation) => relation.client_id);
-    const clients = await specialistsRepository.findProfilesByIds(clientIds);
-    const latestSkinTypes = await specialistsRepository.findLatestSkinTypesByUserIds(clientIds);
+    const clients = await specialistsDirectoryRepository.findProfilesByIds(clientIds);
+    const latestSkinTypes = await specialistsDirectoryRepository.findLatestSkinTypesByUserIds(clientIds);
     const photos = await Promise.all(
       clients.map(async (client) => ({
         clientId: client.id,
-        profileImageUrl: await specialistsRepository.findProfilePhotoById(client.id)
+        profileImageUrl: await specialistsDirectoryRepository.findProfilePhotoById(client.id)
       }))
     );
     const photoByClientId = new Map(photos.map((photo) => [photo.clientId, photo.profileImageUrl]));

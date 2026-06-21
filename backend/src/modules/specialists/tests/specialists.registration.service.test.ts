@@ -1,15 +1,21 @@
 import { supabase } from '../../../config/supabase';
 import { ApiError } from '../../../utils/ApiError';
 import type { SpecialistProfileRow } from '../../../database/schema.types';
-import { specialistRepository } from '../specialist.repository';
-import { specialistService } from '../specialist.service';
+import { specialistsRegistrationRepository } from '../specialists.registration.repository';
+import { specialistsRegistrationService } from '../specialists.registration.service';
+import { specialistsSharedRepository } from '../specialists.shared.repository';
 
-jest.mock('../specialist.repository', () => ({
-  specialistRepository: {
+jest.mock('../specialists.registration.repository', () => ({
+  specialistsRegistrationRepository: {
     findByLicenseNumber: jest.fn(),
-    findByUserId: jest.fn(),
-    findFullNameByUserId: jest.fn(),
     create: jest.fn()
+  }
+}));
+
+jest.mock('../specialists.shared.repository', () => ({
+  specialistsSharedRepository: {
+    findSpecialistProfileByUserId: jest.fn(),
+    findProfileById: jest.fn()
   }
 }));
 
@@ -26,8 +32,13 @@ jest.mock('../../../config/supabase', () => {
   };
 });
 
-const mockedRepo = jest.mocked(specialistRepository);
+const mockedRepo = jest.mocked(specialistsRegistrationRepository);
+const mockedSharedRepo = jest.mocked(specialistsSharedRepository);
 const mockedStorageFrom = supabase.storage.from as jest.Mock;
+
+const validJpegBuffer = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46]);
+const validPngBuffer = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00]);
+const validWebpBuffer = Buffer.from('RIFFxxxxWEBPVP8 ', 'ascii');
 
 function makeSpecialistProfile(overrides: Partial<SpecialistProfileRow> = {}): SpecialistProfileRow {
   return {
@@ -55,7 +66,7 @@ function makeFile(
     encoding: overrides.encoding ?? '7bit',
     mimetype: overrides.mimetype ?? 'image/jpeg',
     size: overrides.size ?? 1024,
-    buffer: overrides.buffer ?? Buffer.from('fake-image-data'),
+    buffer: overrides.buffer ?? validJpegBuffer,
     destination: overrides.destination ?? '',
     filename: overrides.filename ?? '',
     path: overrides.path ?? '',
@@ -63,7 +74,7 @@ function makeFile(
   };
 }
 
-describe('specialistService', () => {
+describe('specialistsRegistrationService', () => {
   let mockUpload: jest.Mock;
 
   beforeEach(() => {
@@ -71,8 +82,12 @@ describe('specialistService', () => {
 
     mockUpload = jest.fn().mockResolvedValue({ error: null });
     mockedStorageFrom.mockReturnValue({ upload: mockUpload });
-    mockedRepo.findFullNameByUserId.mockResolvedValue('Marta Lopez');
-    mockedRepo.findByUserId.mockResolvedValue(null);
+    mockedSharedRepo.findProfileById.mockResolvedValue({
+      id: 'user-1',
+      full_name: 'Marta Lopez',
+      email: 'marta@example.com'
+    });
+    mockedSharedRepo.findSpecialistProfileByUserId.mockResolvedValue(null);
   });
 
   describe('register', () => {
@@ -80,7 +95,7 @@ describe('specialistService', () => {
       mockedRepo.findByLicenseNumber.mockResolvedValue(makeSpecialistProfile());
 
       await expect(
-        specialistService.register(
+        specialistsRegistrationService.register(
           'user-1',
           'token-1',
           { specialty: 'dermatologo', licenseNumber: 'MN-12345' },
@@ -93,10 +108,10 @@ describe('specialistService', () => {
     });
 
     it('lanza 409 cuando el usuario ya tiene solicitud', async () => {
-      mockedRepo.findByUserId.mockResolvedValue(makeSpecialistProfile());
+      mockedSharedRepo.findSpecialistProfileByUserId.mockResolvedValue(makeSpecialistProfile());
 
       await expect(
-        specialistService.register(
+        specialistsRegistrationService.register(
           'user-1',
           'token-1',
           { specialty: 'dermatologo', licenseNumber: 'MN-99999' },
@@ -113,7 +128,7 @@ describe('specialistService', () => {
       mockedRepo.findByLicenseNumber.mockResolvedValue(null);
       mockedRepo.create.mockResolvedValue(created);
 
-      const result = await specialistService.register(
+      const result = await specialistsRegistrationService.register(
         'user-1',
         'token-1',
         { specialty: 'dermatologo', licenseNumber: 'MN-12345' },
@@ -137,7 +152,7 @@ describe('specialistService', () => {
       mockedRepo.findByLicenseNumber.mockResolvedValue(null);
       mockedRepo.create.mockResolvedValue(makeSpecialistProfile());
 
-      await specialistService.register(
+      await specialistsRegistrationService.register(
         'user-autenticado',
         'token-1',
         { specialty: 'dermatologo', licenseNumber: 'MN-12345', user_id: 'otro-user' } as any,
@@ -162,7 +177,7 @@ describe('specialistService', () => {
       mockedRepo.findByLicenseNumber.mockResolvedValue(null);
       mockedRepo.create.mockResolvedValue(makeSpecialistProfile());
 
-      await specialistService.register(
+      await specialistsRegistrationService.register(
         'user-1',
         'token-1',
         { specialty: 'cosmetologo', licenseNumber: 'COS-678' },
@@ -184,9 +199,9 @@ describe('specialistService', () => {
 
     it('acepta documentos JPEG, PNG y WEBP', async () => {
       const allowedFiles: Express.Multer.File[] = [
-        makeFile('dniPhoto', 'dni.jpg', { mimetype: 'image/jpeg' }),
-        makeFile('dniPhoto', 'dni.png', { mimetype: 'image/png' }),
-        makeFile('dniPhoto', 'dni.webp', { mimetype: 'image/webp' })
+        makeFile('dniPhoto', 'dni.jpg', { mimetype: 'image/jpeg', buffer: validJpegBuffer }),
+        makeFile('dniPhoto', 'dni.png', { mimetype: 'image/png', buffer: validPngBuffer }),
+        makeFile('dniPhoto', 'dni.webp', { mimetype: 'image/webp', buffer: validWebpBuffer })
       ];
 
       for (const file of allowedFiles) {
@@ -195,7 +210,7 @@ describe('specialistService', () => {
         mockedRepo.findByLicenseNumber.mockResolvedValue(null);
         mockedRepo.create.mockResolvedValue(makeSpecialistProfile());
 
-        await specialistService.register(
+        await specialistsRegistrationService.register(
           'user-1',
           'token-1',
           { specialty: 'dermatologo', licenseNumber: `MN-${file.originalname}` },
@@ -208,7 +223,7 @@ describe('specialistService', () => {
 
     it('rechaza MIME invalido con 400', async () => {
       await expect(
-        specialistService.register(
+        specialistsRegistrationService.register(
           'user-1',
           'token-1',
           { specialty: 'dermatologo', licenseNumber: 'MN-12345' },
@@ -220,9 +235,31 @@ describe('specialistService', () => {
       });
     });
 
+    it('rechaza archivo con MIME valido pero contenido invalido', async () => {
+      await expect(
+        specialistsRegistrationService.register(
+          'user-1',
+          'token-1',
+          { specialty: 'dermatologo', licenseNumber: 'MN-12345' },
+          {
+            dniPhoto: [
+              makeFile('dniPhoto', 'dni.jpg', {
+                mimetype: 'image/jpeg',
+                buffer: Buffer.from('contenido-no-jpeg')
+              })
+            ],
+            titlePhoto: [makeFile('titlePhoto')]
+          }
+        )
+      ).rejects.toMatchObject({
+        statusCode: 400,
+        message: 'El archivo no tiene un formato válido.'
+      });
+    });
+
     it('rechaza archivo demasiado grande con 413', async () => {
       await expect(
-        specialistService.register(
+        specialistsRegistrationService.register(
           'user-1',
           'token-1',
           { specialty: 'dermatologo', licenseNumber: 'MN-12345' },
@@ -236,7 +273,7 @@ describe('specialistService', () => {
 
     it('rechaza cuando falta la foto del DNI', async () => {
       await expect(
-        specialistService.register(
+        specialistsRegistrationService.register(
           'user-1',
           'token-1',
           { specialty: 'dermatologo', licenseNumber: 'MN-12345' },
@@ -250,7 +287,7 @@ describe('specialistService', () => {
 
     it('rechaza cuando falta la foto del titulo profesional', async () => {
       await expect(
-        specialistService.register(
+        specialistsRegistrationService.register(
           'user-1',
           'token-1',
           { specialty: 'dermatologo', licenseNumber: 'MN-12345' },
@@ -264,7 +301,7 @@ describe('specialistService', () => {
 
     it('rechaza cuando falta specialty con mensaje claro', async () => {
       await expect(
-        specialistService.register(
+        specialistsRegistrationService.register(
           'user-1',
           'token-1',
           { licenseNumber: 'MN-12345' },
@@ -278,7 +315,7 @@ describe('specialistService', () => {
 
     it('rechaza specialty invalida con mensaje claro', async () => {
       await expect(
-        specialistService.register(
+        specialistsRegistrationService.register(
           'user-1',
           'token-1',
           { specialty: 'cirujano', licenseNumber: 'MN-12345' },
@@ -292,7 +329,7 @@ describe('specialistService', () => {
 
     it('rechaza cuando falta licenseNumber con mensaje claro', async () => {
       await expect(
-        specialistService.register(
+        specialistsRegistrationService.register(
           'user-1',
           'token-1',
           { specialty: 'dermatologo' },
@@ -309,7 +346,7 @@ describe('specialistService', () => {
       mockUpload.mockResolvedValueOnce({ error: { message: 'new row violates row-level security policy' } });
 
       await expect(
-        specialistService.register(
+        specialistsRegistrationService.register(
           'user-1',
           'token-1',
           { specialty: 'dermatologo', licenseNumber: 'MN-12345' },
@@ -329,7 +366,7 @@ describe('specialistService', () => {
       });
 
       await expect(
-        specialistService.register(
+        specialistsRegistrationService.register(
           'user-1',
           'token-1',
           { specialty: 'dermatologo', licenseNumber: 'MN-12345' },
@@ -344,9 +381,9 @@ describe('specialistService', () => {
 
   describe('getStatus', () => {
     it('devuelve pending con nombre, especialidad y matricula cuando la solicitud esta pendiente', async () => {
-      mockedRepo.findByUserId.mockResolvedValue(makeSpecialistProfile({ license_status: 'pending' }));
+      mockedSharedRepo.findSpecialistProfileByUserId.mockResolvedValue(makeSpecialistProfile({ license_status: 'pending' }));
 
-      const result = await specialistService.getStatus('user-1');
+      const result = await specialistsRegistrationService.getStatus('user-1');
 
       expect(result).toEqual({
         license_status: 'pending',
@@ -358,9 +395,9 @@ describe('specialistService', () => {
     });
 
     it('devuelve rejected con motivo de rechazo', async () => {
-      mockedRepo.findByUserId.mockResolvedValue(makeSpecialistProfile({ license_status: 'rejected', rejection_reason: 'Documento ilegible' }));
+      mockedSharedRepo.findSpecialistProfileByUserId.mockResolvedValue(makeSpecialistProfile({ license_status: 'rejected', rejection_reason: 'Documento ilegible' }));
 
-      await expect(specialistService.getStatus('user-1')).resolves.toEqual({
+      await expect(specialistsRegistrationService.getStatus('user-1')).resolves.toEqual({
         license_status: 'rejected',
         rejection_reason: 'Documento ilegible',
         specialty: 'dermatologo',
@@ -370,9 +407,9 @@ describe('specialistService', () => {
     });
 
     it('devuelve verified cuando la matricula esta aprobada', async () => {
-      mockedRepo.findByUserId.mockResolvedValue(makeSpecialistProfile({ license_status: 'verified' }));
+      mockedSharedRepo.findSpecialistProfileByUserId.mockResolvedValue(makeSpecialistProfile({ license_status: 'verified' }));
 
-      await expect(specialistService.getStatus('user-1')).resolves.toEqual({
+      await expect(specialistsRegistrationService.getStatus('user-1')).resolves.toEqual({
         license_status: 'verified',
         rejection_reason: null,
         specialty: 'dermatologo',
@@ -382,9 +419,9 @@ describe('specialistService', () => {
     });
 
     it('devuelve estado not_submitted cuando no existe perfil de especialista', async () => {
-      mockedRepo.findByUserId.mockResolvedValue(null);
+      mockedSharedRepo.findSpecialistProfileByUserId.mockResolvedValue(null);
 
-      await expect(specialistService.getStatus('user-1')).resolves.toEqual({
+      await expect(specialistsRegistrationService.getStatus('user-1')).resolves.toEqual({
         license_status: 'not_submitted',
         rejection_reason: null,
         specialty: null,
@@ -394,12 +431,14 @@ describe('specialistService', () => {
     });
 
     it('no devuelve rutas internas de DNI ni titulo profesional', async () => {
-      mockedRepo.findByUserId.mockResolvedValue(makeSpecialistProfile());
+      mockedSharedRepo.findSpecialistProfileByUserId.mockResolvedValue(makeSpecialistProfile());
 
-      const result = await specialistService.getStatus('user-1');
+      const result = await specialistsRegistrationService.getStatus('user-1');
 
       expect(result).not.toHaveProperty('dni_photo_url');
       expect(result).not.toHaveProperty('title_photo_url');
     });
   });
 });
+
+
