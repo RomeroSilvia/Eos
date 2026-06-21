@@ -2,6 +2,16 @@ import { supabase } from '../../config/supabase';
 import type { PushTokenRow } from '../../database/schema.types';
 import { TABLE_NAMES } from '../../database/tableNames';
 
+export type NotificationHistoryRow = {
+  id: string;
+  user_id: string;
+  title: string;
+  body: string;
+  kind: string;
+  is_read: boolean;
+  created_at: string;
+};
+
 export const notificationsRepository = {
   upsertToken: async (
     userId: string,
@@ -55,5 +65,40 @@ export const notificationsRepository = {
 
     if (error) throw error;
     return (data ?? []) as PushTokenRow[];
+  },
+
+  saveNotification: async (
+    userId: string,
+    title: string,
+    body: string,
+    kind: string
+  ): Promise<void> => {
+    const db = supabase as any;
+    const { error } = await db
+      .from(TABLE_NAMES.notificationHistory)
+      .insert({ user_id: userId, title, body, kind });
+    if (error) throw error;
+  },
+
+  findNotificationsByUserId: async (userId: string): Promise<NotificationHistoryRow[]> => {
+    const db = supabase as any;
+    const { data, error } = await db
+      .from(TABLE_NAMES.notificationHistory)
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(50);
+    if (error) throw error;
+    return (data ?? []) as NotificationHistoryRow[];
+  },
+
+  markNotificationRead: async (id: string, userId: string): Promise<void> => {
+    const db = supabase as any;
+    const { error } = await db
+      .from(TABLE_NAMES.notificationHistory)
+      .update({ is_read: true })
+      .eq('id', id)
+      .eq('user_id', userId);
+    if (error) throw error;
   }
 };

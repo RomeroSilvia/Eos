@@ -27,3 +27,15 @@ export const unregisterToken: RequestHandler = asyncHandler(async (req, res) => 
   await notificationsService.deleteToken(req.user.id);
   res.status(204).send();
 });
+
+export const getNotifications: RequestHandler = asyncHandler(async (req, res) => {
+  const notifications = await notificationsService.getNotifications(req.user.id);
+  res.json(notifications);
+});
+
+export const markNotificationRead: RequestHandler = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  if (!id) throw new ApiError(400, 'id es requerido.');
+  await notificationsService.markNotificationRead(id, req.user.id);
+  res.status(204).send();
+});

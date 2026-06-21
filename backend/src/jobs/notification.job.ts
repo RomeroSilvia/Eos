@@ -31,11 +31,16 @@ async function sendRoutineReminders(): Promise<void> {
   // Deduplicar por user_id (un usuario puede tener varias rutinas activas)
   const userIds: string[] = [...new Set<string>(data.map((row: { user_id: string }) => row.user_id))];
 
-  const title = 'Es hora de tu rutina ✨';
-  const body = 'No olvides completar tu rutina de skincare de hoy.';
+  const isMorning = currentHHmm() === '08:00';
+  const title = isMorning ? 'Buen día ☀️ Hora de empezar tu rutina' : 'Es momento de cerrar el día 🌙';
+  const body = isMorning ? 'Tenés una rutina pendiente.' : 'No te duermas sin tu rutina';
+  const kind = isMorning ? 'routine-morning' : 'routine-evening';
 
   await Promise.allSettled(
-    userIds.map((userId) => notificationsService.sendToUser(userId, title, body))
+    userIds.map(async (userId) => {
+      await notificationsService.sendToUser(userId, title, body, { kind });
+      await notificationsService.saveNotification(userId, title, body, kind);
+    })
   );
 
   console.log(`[notification.job] Recordatorios enviados a ${userIds.length} usuario(s).`);
