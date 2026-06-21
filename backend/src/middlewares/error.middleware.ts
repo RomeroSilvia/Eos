@@ -16,6 +16,7 @@ export const errorMiddleware: ErrorRequestHandler = (error, _req, res, _next) =>
 
   res.status(statusCode).json({
     status: 'error',
-    message
+    message,
+    ...(isApiError && typeof error.details !== 'undefined' ? { details: error.details } : {})
   });
 };

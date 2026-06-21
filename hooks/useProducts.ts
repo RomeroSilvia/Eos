@@ -2,7 +2,10 @@ import { useCallback, useEffect, useState } from 'react';
 import {
   createProduct as createProductService,
   deleteProduct as deleteProductService,
+  forceRemove as forceRemoveService,
   getProducts,
+  removeWithProtection as removeWithProtectionService,
+  replaceAndRemove as replaceAndRemoveService,
   type ProductImagePayload,
   updateProduct as updateProductService,
 } from '@/services/products';
@@ -55,5 +58,35 @@ export function useProducts() {
     setProducts((prev) => prev.filter((p) => p.id !== id));
   };
 
-  return { products, createProduct, updateProduct, removeProduct, isLoading, refreshProducts };
+  const removeWithProtection = async (id: string) => {
+    const result = await removeWithProtectionService(id);
+
+    if (result.status === 'deleted') {
+      setProducts((prev) => prev.filter((p) => p.id !== id));
+    }
+
+    return result;
+  };
+
+  const forceRemove = async (id: string) => {
+    await forceRemoveService(id);
+    setProducts((prev) => prev.filter((p) => p.id !== id));
+  };
+
+  const replaceAndRemove = async (id: string, replacementProductId: string) => {
+    await replaceAndRemoveService(id, replacementProductId);
+    setProducts((prev) => prev.filter((p) => p.id !== id));
+  };
+
+  return {
+    products,
+    createProduct,
+    updateProduct,
+    removeProduct,
+    removeWithProtection,
+    forceRemove,
+    replaceAndRemove,
+    isLoading,
+    refreshProducts
+  };
 }

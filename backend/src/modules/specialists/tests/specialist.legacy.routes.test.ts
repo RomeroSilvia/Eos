@@ -1,6 +1,6 @@
 import { MulterError } from 'multer';
 import { ApiError } from '../../../utils/ApiError';
-import { mapSpecialistUploadError } from '../specialist.routes';
+import { mapSpecialistUploadError } from '../specialist.legacy.routes';
 
 describe('specialistRoutes upload', () => {
   it('rechaza archivo demasiado grande con 413', () => {

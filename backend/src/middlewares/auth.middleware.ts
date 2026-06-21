@@ -1,5 +1,6 @@
 import type { RequestHandler } from 'express';
 import { supabase } from '../config/supabase';
+import { env } from '../config/env';
 import { ApiError } from '../utils/ApiError';
 
 export const authenticate: RequestHandler = async (req, _res, next) => {
@@ -23,7 +24,8 @@ export const authenticate: RequestHandler = async (req, _res, next) => {
       .maybeSingle();
 
     if (profileError) {
-      throw new ApiError(500, profileError.message);
+      logProfileLoadError(profileError);
+      throw new ApiError(500, 'No pudimos validar tu sesión.');
     }
 
     req.user = {
@@ -54,4 +56,13 @@ function normalizeRole(role?: string | null): 'user' | 'specialist' | 'center_ad
   }
 
   return 'user';
+}
+
+function logProfileLoadError(error: unknown): void {
+  if (env.nodeEnv !== 'development') return;
+
+  console.error('[auth:profile:error]', {
+    errorName: error instanceof Error ? error.name : typeof error,
+    errorMessage: error instanceof Error ? error.message : String(error)
+  });
 }

@@ -1,14 +1,15 @@
 import { apiRequest } from '@/services/api/client';
 
-export type ChatMessageKind = 'text' | 'image' | 'video' | 'file' | 'call_invite' | 'call_ended';
+export const MAX_CHAT_IMAGE_SIZE_MB = 15;
+export const MAX_CHAT_IMAGE_SIZE_BYTES = MAX_CHAT_IMAGE_SIZE_MB * 1024 * 1024;
+
+export type ChatMessageKind = 'text' | 'image' | 'call_invite' | 'call_ended';
 
 export type ChatParsedPayload = {
   kind: ChatMessageKind;
   text?: string;
   url?: string;
   title?: string;
-  mimeType?: string;
-  fileName?: string | null;
 };
 
 export type ChatMessage = {
@@ -16,6 +17,11 @@ export type ChatMessage = {
   relation_id: string;
   sender_id: string;
   content: string;
+  message_type?: 'text' | 'image';
+  mediaUrl?: string | null;
+  mediaAvailable?: boolean;
+  media_mime_type?: string | null;
+  media_size?: number | null;
   read_at: string | null;
   created_at: string;
 };
@@ -69,16 +75,9 @@ export async function sendChatMessage(payload: {
   });
 }
 
-export async function markChatAsRead(relationId?: string): Promise<void> {
-  await apiRequest({
-    path: '/chat/messages/read',
-    method: 'PATCH',
-    body: JSON.stringify({ relationId })
-  });
-}
-
-export async function sendChatMedia(payload: {
+export async function sendChatImage(payload: {
   file: { uri: string; name: string; type: string };
+  content?: string;
   relationId?: string;
 }): Promise<ChatSendResponse> {
   const formData = new FormData();
@@ -87,12 +86,24 @@ export async function sendChatMedia(payload: {
     formData.append('relationId', payload.relationId);
   }
 
-  formData.append('file', payload.file as any);
+  if (payload.content?.trim()) {
+    formData.append('content', payload.content.trim());
+  }
+
+  formData.append('image', payload.file as unknown as Blob);
 
   return apiRequest<ChatSendResponse>({
-    path: '/chat/media',
+    path: '/chat/messages',
     method: 'POST',
     body: formData
+  });
+}
+
+export async function markChatAsRead(relationId?: string): Promise<void> {
+  await apiRequest({
+    path: '/chat/messages/read',
+    method: 'PATCH',
+    body: JSON.stringify({ relationId })
   });
 }
 
@@ -107,22 +118,41 @@ export async function startChatVideoCall(payload: {
 }
 
 export function parseChatMessage(message: ChatMessage): ChatParsedPayload {
-  try {
-    const parsed = JSON.parse(message.content) as Partial<ChatParsedPayload>;
+  if (message.message_type === 'image') {
+    return {
+      kind: 'image',
+      text: message.content || undefined,
+      url: message.mediaUrl ?? undefined
+    };
+  }
 
-    if (
-      parsed.kind === 'image' ||
-      parsed.kind === 'video' ||
-      parsed.kind === 'file' ||
-      parsed.kind === 'call_invite' ||
-      parsed.kind === 'call_ended'
-    ) {
+  try {
+    const parsed = JSON.parse(message.content) as {
+      kind?: unknown;
+      url?: unknown;
+      title?: unknown;
+    };
+
+    if (parsed.kind === 'image' || parsed.kind === 'call_invite' || parsed.kind === 'call_ended') {
+      if (parsed.kind === 'image') {
+        return {
+          kind: 'image',
+          text: message.content,
+          url: message.mediaUrl ?? undefined
+        };
+      }
+
       return {
         kind: parsed.kind,
         url: typeof parsed.url === 'string' ? parsed.url : undefined,
-        title: typeof parsed.title === 'string' ? parsed.title : undefined,
-        mimeType: typeof parsed.mimeType === 'string' ? parsed.mimeType : undefined,
-        fileName: typeof parsed.fileName === 'string' ? parsed.fileName : null
+        title: typeof parsed.title === 'string' ? parsed.title : undefined
+      };
+    }
+
+    if (parsed.kind === 'video' || parsed.kind === 'file') {
+      return {
+        kind: 'text',
+        text: 'Adjunto no disponible en esta version.'
       };
     }
   } catch {

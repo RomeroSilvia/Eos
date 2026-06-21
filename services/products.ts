@@ -1,7 +1,15 @@
 import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
 import type { Product, ProductCategory, ProductBrand } from '@/types/product';
-import { apiConfig, apiRequest } from '@/services/api/client';
+import { ApiClientError, apiConfig, apiRequest } from '@/services/api/client';
+
+export type ProductUsageConflict = {
+  affectedRoutines: { routineId: string; routineName: string; stepName: string }[];
+};
+
+export type RemoveWithProtectionResult =
+  | { status: 'deleted' }
+  | { status: 'conflict'; conflict: ProductUsageConflict };
 
 export type ProductImagePayload = {
   imageUri?: string;
@@ -160,4 +168,81 @@ export async function deleteProduct(id: string): Promise<void> {
     console.error('[deleteProduct]', error);
     throw error instanceof Error ? error : new Error(`Error del servidor: ${String(error)}`);
   }
+}
+
+export async function removeWithProtection(id: string): Promise<RemoveWithProtectionResult> {
+  try {
+    await apiRequest<void>({ path: `/products/${id}`, method: 'DELETE' });
+    return { status: 'deleted' };
+  } catch (error) {
+    if (error instanceof ApiClientError && error.status === 409) {
+      return {
+        status: 'conflict',
+        conflict: normalizeProductUsageConflict(error.details)
+      };
+    }
+
+    console.error('[removeWithProtection]', error);
+    throw error instanceof Error ? error : new Error(`Error del servidor: ${String(error)}`);
+  }
+}
+
+export async function forceRemove(id: string): Promise<void> {
+  try {
+    await apiRequest<void>({ path: `/products/${id}/force`, method: 'DELETE' });
+  } catch (error) {
+    console.error('[forceRemove]', error);
+    throw error instanceof Error ? error : new Error(`Error del servidor: ${String(error)}`);
+  }
+}
+
+export async function replaceAndRemove(id: string, replacementProductId: string): Promise<void> {
+  try {
+    await apiRequest<void>({
+      path: `/products/${id}/replace`,
+      method: 'PUT',
+      body: JSON.stringify({ replacementProductId })
+    });
+  } catch (error) {
+    console.error('[replaceAndRemove]', error);
+    throw error instanceof Error ? error : new Error(`Error del servidor: ${String(error)}`);
+  }
+}
+
+function normalizeProductUsageConflict(details: unknown): ProductUsageConflict {
+  if (!details || typeof details !== 'object') {
+    return { affectedRoutines: [] };
+  }
+
+  const affectedRoutines = (details as { affectedRoutines?: unknown }).affectedRoutines;
+
+  if (!Array.isArray(affectedRoutines)) {
+    return { affectedRoutines: [] };
+  }
+
+  return {
+    affectedRoutines: affectedRoutines
+      .map((item) => {
+        if (!item || typeof item !== 'object') {
+          return null;
+        }
+
+        const candidate = item as Record<string, unknown>;
+
+        if (
+          typeof candidate.routineId !== 'string' ||
+          typeof candidate.routineName !== 'string' ||
+          typeof candidate.stepName !== 'string'
+        ) {
+          return null;
+        }
+
+        return {
+          routineId: candidate.routineId,
+          routineName: candidate.routineName,
+          stepName: candidate.stepName
+        };
+      })
+      .filter((item): item is ProductUsageConflict['affectedRoutines'][number] => item !== null)
+  };
 }

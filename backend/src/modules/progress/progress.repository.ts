@@ -29,6 +29,21 @@ export const progressRepository = {
     return data ?? [];
   },
 
+  findRoutineByIdAndUserId: async (routineId: string, userId: string): Promise<RoutineForProgress | null> => {
+    const { data, error } = await supabase
+      .from(TABLE_NAMES.routines)
+      .select('id, name, time_of_day, created_at')
+      .eq('id', routineId)
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    if (error) {
+      throw error;
+    }
+
+    return data ?? null;
+  },
+
   findRoutinesByIds: async (userId: string, routineIds: string[]): Promise<RoutineForProgress[]> => {
     if (routineIds.length === 0) {
       return [];
@@ -195,6 +210,24 @@ export const progressRepository = {
     }
 
     return data ?? [];
+  },
+
+  findRoutineStepByIdAndRoutineId: async (
+    stepId: string,
+    routineId: string
+  ): Promise<RoutineStepForProgress | null> => {
+    const { data, error } = await supabase
+      .from(TABLE_NAMES.routineSteps)
+      .select('id, routine_id, name, step_order')
+      .eq('id', stepId)
+      .eq('routine_id', routineId)
+      .maybeSingle();
+
+    if (error) {
+      throw error;
+    }
+
+    return data ?? null;
   },
 
   findProductsByUserId: async (userId: string): Promise<ProductForProgress[]> => {

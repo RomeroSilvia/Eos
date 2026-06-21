@@ -10,6 +10,9 @@ export const routes = {
   specialistPatientDetail: '/patients/[id]',
   chat: '/chat',
   progress: '/progress',
+  progressHistory: '/progress/history',
+  progressDayDetail: '/progress/history/[date]',
+  progressStats: '/progress/stats',
   profile: '/profile'
 } as const;
 

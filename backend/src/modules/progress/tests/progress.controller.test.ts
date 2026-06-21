@@ -1,5 +1,6 @@
 import type { Request, Response } from 'express';
 import { getFullHistoryByUserId, getHistoryByDate, getSummaryByUserId } from '../progress.controller';
+import { ApiError } from '../../../utils/ApiError';
 import * as progressService from '../progress.service';
 import type { ProgressSummary, RoutineLog } from '../progress.types';
 
@@ -10,6 +11,8 @@ jest.mock('../progress.service', () => ({
   getFullHistoryByUserId: jest.fn(),
   getHistoryByDate: jest.fn(),
   getDayDetailByDate: jest.fn(),
+  getRoutineDayProgress: jest.fn(),
+  setRoutineStepCompletion: jest.fn(),
   isIsoDate: jest.fn((date: string) => /^\d{4}-\d{2}-\d{2}$/.test(date))
 }));
 
@@ -85,28 +88,38 @@ describe('progress.controller', () => {
     expect(res.json).toHaveBeenCalledWith(summary);
   });
 
-  it('getSummaryByUserId responds 500 when service throws', async () => {
-    mockedProgressService.getSummaryByUserId.mockRejectedValue(new Error('Service failed'));
+  it('getSummaryByUserId no expone errores tecnicos cuando service throws', async () => {
+    mockedProgressService.getSummaryByUserId.mockRejectedValue(new Error('Supabase SQL failed at public.routine_logs'));
     const req = { user: { id: 'user-1' } } as unknown as Request;
     const res = createMockResponse();
+    const next = jest.fn();
 
-    await getSummaryByUserId(req, res as Response, jest.fn());
+    await getSummaryByUserId(req, res as Response, next);
 
-    expect(res.status).toHaveBeenCalledWith(500);
-    expect(res.json).toHaveBeenCalledWith({
-      message: 'Failed to get progress summary',
-      error: 'Service failed'
+    expect(res.status).not.toHaveBeenCalled();
+    expect(res.json).not.toHaveBeenCalled();
+    expect(next).toHaveBeenCalledWith(expect.any(ApiError));
+    expect(next.mock.calls[0][0]).toMatchObject({
+      statusCode: 500,
+      message: 'No pudimos obtener la información de progreso.'
     });
+    expect(JSON.stringify(next.mock.calls[0][0])).not.toContain('Supabase SQL');
   });
 
   it('getHistoryByDate responds 400 when date is missing', async () => {
     const req = { user: { id: 'user-1' }, query: {} } as unknown as Request;
     const res = createMockResponse();
+    const next = jest.fn();
 
-    await getHistoryByDate(req, res as Response, jest.fn());
+    await getHistoryByDate(req, res as Response, next);
 
-    expect(res.status).toHaveBeenCalledWith(400);
-    expect(res.json).toHaveBeenCalledWith({ message: 'date query param is required' });
+    expect(res.status).not.toHaveBeenCalled();
+    expect(res.json).not.toHaveBeenCalled();
+    expect(next).toHaveBeenCalledWith(expect.any(ApiError));
+    expect(next.mock.calls[0][0]).toMatchObject({
+      statusCode: 400,
+      message: 'date query param is required'
+    });
   });
 
   it('getHistoryByDate responds 200 when service returns history', async () => {

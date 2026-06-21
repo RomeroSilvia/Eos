@@ -97,9 +97,20 @@ export const chatRepository = {
     if (error) throw error;
   },
 
-  getPublicUrl: (bucket: string, path: string): string => {
-    const { data } = supabase.storage.from(bucket).getPublicUrl(path);
-    return data.publicUrl;
+  deleteFile: async (bucket: string, path: string): Promise<void> => {
+    const { error } = await supabase.storage.from(bucket).remove([path]);
+
+    if (error) throw error;
+  },
+
+  createSignedUrl: async (bucket: string, path: string, expiresIn: number): Promise<string | null> => {
+    const { data, error } = await supabase.storage.from(bucket).createSignedUrl(path, expiresIn);
+
+    if (error || !data?.signedUrl) {
+      return null;
+    }
+
+    return data.signedUrl;
   },
 
   findProfileById: async (userId: string): Promise<ProfileLite | null> => {

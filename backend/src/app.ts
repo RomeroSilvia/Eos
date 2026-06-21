@@ -9,7 +9,7 @@ import { profileRouter } from './modules/profile/profile.routes';
 import { progressRouter } from './modules/progress/progress.routes';
 import { quizRouter } from './modules/quiz/quiz.routes';
 import { routinesRouter } from './modules/routines/routines.routes';
-import { specialistRouter } from './modules/specialist/specialist.routes';
+import { specialistRouter } from './modules/specialists/specialist.legacy.routes';
 import { specialistsRouter } from './modules/specialists/specialists.routes';
 import { errorMiddleware } from './middlewares/error.middleware';
 import { notFoundMiddleware } from './middlewares/notFound.middleware';

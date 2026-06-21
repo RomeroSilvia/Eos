@@ -34,6 +34,12 @@ export const productsService = {
   },
 
   remove: async (productId: string, userId: string) => {
+    const product = await productsRepository.findById(productId, userId);
+
+    if (!product) {
+      throw new ApiError(404, 'Producto no encontrado.');
+    }
+
     const usages = await productsRepository.findUsagesInActiveRoutines(productId);
 
     const activeUsages = usages
@@ -63,6 +69,12 @@ export const productsService = {
   },
 
   forceRemove: async (productId: string, userId: string) => {
+    const product = await productsRepository.findById(productId, userId);
+
+    if (!product) {
+      throw new ApiError(404, 'Producto no encontrado.');
+    }
+
     await productsRepository.detachFromAllSteps(productId);
     return productsRepository.remove(productId, userId);
   },
@@ -70,6 +82,11 @@ export const productsService = {
   replaceInRoutines: async (productId: string, replacementProductId: string, userId: string) => {
     if (productId === replacementProductId) {
       throw new ApiError(400, 'El producto de reemplazo debe ser distinto al original.');
+    }
+
+    const product = await productsRepository.findById(productId, userId);
+    if (!product) {
+      throw new ApiError(404, 'Producto no encontrado.');
     }
 
     const replacement = await productsRepository.findById(replacementProductId, userId);

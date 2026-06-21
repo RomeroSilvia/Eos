@@ -3,15 +3,17 @@ import { createSupabaseUserClient } from '../../config/supabase';
 import { env } from '../../config/env';
 import { ApiError } from '../../utils/ApiError';
 import {
-  specialistRepository,
+  specialistsRegistrationRepository,
   type SpecialistSpecialty,
   type SpecialistStatus
-} from './specialist.repository';
-
-const SPECIALIST_DOCS_BUCKET = 'specialist-docs';
-const ALLOWED_SPECIALTIES = ['dermatologo', 'cosmetologo'] as const;
-const ALLOWED_DOCUMENT_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
-const MAX_DOCUMENT_SIZE_BYTES = 5 * 1024 * 1024;
+} from './specialists.registration.repository';
+import { specialistsSharedRepository } from './specialists.shared.repository';
+import {
+  ALLOWED_SPECIALTIES,
+  SPECIALIST_DOCS_BUCKET,
+  SPECIALIST_DOCUMENT_ALLOWED_MIME_TYPES,
+  SPECIALIST_DOCUMENT_MAX_SIZE_BYTES
+} from './specialists.constants';
 
 type SpecialistRegisterBody = {
   specialty?: unknown;
@@ -20,7 +22,7 @@ type SpecialistRegisterBody = {
 
 type SpecialistFiles = Partial<Record<'dniPhoto' | 'titlePhoto', Express.Multer.File[]>>;
 
-export const specialistService = {
+export const specialistsRegistrationService = {
   getHealth: () => ({
     module: 'specialist',
     status: 'ready'
@@ -48,7 +50,7 @@ export const specialistService = {
 
       stage = 'consulta perfil existente';
       logSpecialistRegisterDebug(stage, { userId });
-      const existingUserProfile = await specialistRepository.findByUserId(userId, userClient);
+      const existingUserProfile = await specialistsSharedRepository.findSpecialistProfileByUserId(userId, userClient);
 
       if (existingUserProfile) {
         throw new ApiError(409, 'Ya existe una solicitud de especialista para este usuario.');
@@ -56,7 +58,7 @@ export const specialistService = {
 
       stage = 'consulta matricula';
       logSpecialistRegisterDebug(stage, { userId });
-      const existingProfile = await specialistRepository.findByLicenseNumber(licenseNumber);
+      const existingProfile = await specialistsRegistrationRepository.findByLicenseNumber(licenseNumber);
 
       if (existingProfile) {
         throw new ApiError(409, 'Ese número de matrícula ya está registrado.');
@@ -72,7 +74,7 @@ export const specialistService = {
 
       stage = 'insert DB';
       logSpecialistRegisterDebug(stage, { userId });
-      const profile = await specialistRepository.create(
+      const profile = await specialistsRegistrationRepository.create(
         {
           user_id: userId,
           specialty,
@@ -102,10 +104,11 @@ export const specialistService = {
   },
 
   getStatus: async (userId: string): Promise<SpecialistStatus> => {
-    const [profile, fullName] = await Promise.all([
-      specialistRepository.findByUserId(userId),
-      specialistRepository.findFullNameByUserId(userId)
+    const [profile, profileData] = await Promise.all([
+      specialistsSharedRepository.findSpecialistProfileByUserId(userId),
+      specialistsSharedRepository.findProfileById(userId)
     ]);
+    const fullName = profileData?.full_name ?? null;
 
     if (!profile) {
       return {
@@ -180,12 +183,16 @@ async function uploadSpecialistDocument(
 }
 
 function validateSpecialistDocument(file: Express.Multer.File): void {
-  if (!ALLOWED_DOCUMENT_MIME_TYPES.includes(file.mimetype)) {
+  if (!SPECIALIST_DOCUMENT_ALLOWED_MIME_TYPES.includes(file.mimetype)) {
     throw new ApiError(400, 'Formato no permitido. Usá JPG, PNG o WEBP.');
   }
 
-  if (file.size > MAX_DOCUMENT_SIZE_BYTES) {
+  if (file.size > SPECIALIST_DOCUMENT_MAX_SIZE_BYTES) {
     throw new ApiError(413, 'La imagen es demasiado grande. Subí una imagen de hasta 5 MB.');
+  }
+
+  if (!hasValidDocumentSignature(file.buffer, file.mimetype)) {
+    throw new ApiError(400, 'El archivo no tiene un formato válido.');
   }
 }
 
@@ -260,4 +267,38 @@ function getImageExtension(filename: string | undefined, mimeType: string): stri
   if (mimeType.includes('png')) return 'png';
   if (mimeType.includes('webp')) return 'webp';
   return 'jpg';
+}
+
+function hasValidDocumentSignature(buffer: Buffer | undefined, mimeType: string): boolean {
+  if (!buffer || buffer.length < 4) {
+    return false;
+  }
+
+  if (mimeType === 'image/jpeg') {
+    return buffer.length >= 3 && buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff;
+  }
+
+  if (mimeType === 'image/png') {
+    return (
+      buffer.length >= 8 &&
+      buffer[0] === 0x89 &&
+      buffer[1] === 0x50 &&
+      buffer[2] === 0x4e &&
+      buffer[3] === 0x47 &&
+      buffer[4] === 0x0d &&
+      buffer[5] === 0x0a &&
+      buffer[6] === 0x1a &&
+      buffer[7] === 0x0a
+    );
+  }
+
+  if (mimeType === 'image/webp') {
+    return (
+      buffer.length >= 12 &&
+      buffer.toString('ascii', 0, 4) === 'RIFF' &&
+      buffer.toString('ascii', 8, 12) === 'WEBP'
+    );
+  }
+
+  return false;
 }

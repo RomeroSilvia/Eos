@@ -37,12 +37,12 @@ export default function ProgressDayDetailScreen() {
     setError(null);
 
     void getProgressDayDetail(selectedDate)
-      .then((dayDetail) => {
+      .then((dayDetail: RoutineDayDetail) => {
         if (isMounted) {
           setDetail(dayDetail);
         }
       })
-      .catch((unknownError) => {
+      .catch((unknownError: unknown) => {
         if (isMounted) {
           setError(unknownError instanceof Error ? unknownError : new Error('No se pudo cargar el detalle'));
           setDetail(null);

@@ -1,16 +1,16 @@
 import type { Request, Response } from 'express';
-import { getSpecialistStatus, registerSpecialist } from '../specialist.controller';
-import { specialistService } from '../specialist.service';
+import { getSpecialistStatus, registerSpecialist } from '../specialists.registration.controller';
+import { specialistsRegistrationService } from '../specialists.registration.service';
 
-jest.mock('../specialist.service', () => ({
-  specialistService: {
+jest.mock('../specialists.registration.service', () => ({
+  specialistsRegistrationService: {
     getHealth: jest.fn(),
     register: jest.fn(),
     getStatus: jest.fn()
   }
 }));
 
-const mockedService = jest.mocked(specialistService);
+const mockedService = jest.mocked(specialistsRegistrationService);
 
 describe('specialistController', () => {
   beforeEach(() => {
