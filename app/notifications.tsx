@@ -1,59 +1,17 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useFocusEffect, useRouter } from 'expo-router';
+import { useCallback, useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NotificationListItem } from '@/components/NotificationListItem';
 import { colors } from '@/constants/colors';
+import { getNotifications, markNotificationRead } from '@/services/notifications';
+import { invalidateUnreadCache } from '@/hooks/useHasUnreadNotifications';
 import type { AppNotification } from '@/types/notification';
 import { isToday, isYesterday } from '@/utils/date';
 
 type NotificationTab = 'all' | 'unread';
 
-// TODO(M2): reemplazar por datos reales una vez exista
-// GET /api/notifications (o el storage local que el equipo decida para el historial in-app).
-const MOCK_NOTIFICATIONS: AppNotification[] = [
-  {
-    id: '1',
-    kind: 'streak',
-    title: 'No pierdas tu racha ✨ Hoy toca cuidar tu piel',
-    body: 'Llevas 5 días seguidos, sigue así',
-    isRead: false,
-    createdAt: new Date().toISOString()
-  },
-  {
-    id: '2',
-    kind: 'routine-morning',
-    title: 'Buen día ☀️ Hora de empezar tu rutina',
-    body: 'Tenés una rutina pendiente.',
-    isRead: true,
-    createdAt: new Date().toISOString()
-  },
-  {
-    id: '3',
-    kind: 'routine-evening',
-    title: 'Es momento de cerrar el día 🌙',
-    body: 'No te duermas sin tu rutina',
-    isRead: true,
-    createdAt: new Date(Date.now() - 86_400_000).toISOString()
-  },
-  {
-    id: '4',
-    kind: 'product-reminder',
-    title: 'Hoy es día de Retinol',
-    body: 'Recordá aplicar Retinol Celimax en tu rutina de hoy',
-    isRead: true,
-    createdAt: new Date(Date.now() - 86_400_000).toISOString()
-  },
-  {
-    id: '5',
-    kind: 'routine-morning',
-    title: 'Buen día ☀️ Hora de empezar tu rutina',
-    body: 'Tenés una rutina pendiente.',
-    isRead: true,
-    createdAt: new Date(Date.now() - 86_400_000).toISOString()
-  }
-];
 
 function groupByDay(notifications: AppNotification[]): { label: string; items: AppNotification[] }[] {
   const groups = new Map<string, AppNotification[]>();
@@ -72,12 +30,21 @@ function groupByDay(notifications: AppNotification[]): { label: string; items: A
 export default function NotificationsScreen() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<NotificationTab>('all');
-  const [notifications, setNotifications] = useState<AppNotification[]>(MOCK_NOTIFICATIONS);
+  const [notifications, setNotifications] = useState<AppNotification[]>([]);
+
+  useFocusEffect(
+    useCallback(() => {
+      getNotifications().then(setNotifications).catch(() => setNotifications([]));
+      return () => { invalidateUnreadCache(); };
+    }, [])
+  );
 
   const markAsRead = (id: string) => {
     setNotifications((prev) =>
       prev.map((n) => (n.id === id ? { ...n, isRead: true } : n))
     );
+    void markNotificationRead(id);
+    invalidateUnreadCache();
   };
 
   const unreadCount = useMemo(() => notifications.filter((item) => !item.isRead).length, [notifications]);

@@ -2,13 +2,15 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { Pressable, StyleSheet, View, type ViewStyle } from 'react-native';
 import { colors } from '@/constants/colors';
+import { useHasUnreadNotifications } from '@/hooks/useHasUnreadNotifications';
 
 type Props = {
-  hasUnread?: boolean;
   style?: ViewStyle;
 };
 
-export function BellButton({ hasUnread = true, style }: Props) {
+export function BellButton({ style }: Props) {
+  const hasUnread = useHasUnreadNotifications();
+
   return (
     <Pressable onPress={() => router.push('/notifications')} style={[styles.button, style]}>
       <Ionicons color={colors.textPrimary} name="notifications-outline" size={24} />
