@@ -25,7 +25,7 @@ Eos usa Supabase PostgreSQL como base de datos.
 | `specialist_clients` | Relación especialista-paciente |
 | `push_tokens` | Token Expo de cada dispositivo para envío de push notifications |
 | `notification_history` | Historial de notificaciones enviadas al usuario (fuente de verdad del backend) |
-| `messages` | Mensajes del chat en tiempo real entre usuario y especialista |
+| `chat_messages` | Mensajes del chat en tiempo real; soporta tipo `text` e `image` con columnas `media_path`, `media_mime_type`, `media_size`; publicada en `supabase_realtime` |
 
 ## Obtener credenciales
 

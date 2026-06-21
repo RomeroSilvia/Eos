@@ -26,6 +26,7 @@ El proyecto tiene implementados los módulos principales con integración real a
 18. Pantalla de configuración (`app/settings.tsx`): edición de perfil, cambio de contraseña, toggle de notificaciones y re-test de piel.
 19. `SpecialistHomeCard` en home con especialista vinculado, estados de loading/error y CTA de búsqueda.
 20. Tests de controllers para routines y specialists.directory (20 suites, 186 tests en total).
+21. Chat con medios: envío de imágenes desde galería, separadores de fecha, soporte de videollamada y actualizaciones en tiempo real via Supabase Realtime.
 
 ## Tareas pendientes recomendadas
 

@@ -98,12 +98,6 @@ Ejecutar en Supabase SQL Editor en el siguiente orden antes de levantar el backe
 -- database/e2_profiles_rls_policies.sql
 ```
 
-### 6. Rutinas asignadas por especialista (Módulo 4)
-
-```sql
--- database/e2_m4_assigned_routines.sql
-```
-
 ### 5. Historial de notificaciones (Módulo 2)
 
 ```sql
@@ -129,9 +123,21 @@ create policy "Usuarios actualizan sus propias notificaciones"
   on notification_history for update using (auth.uid() = user_id);
 ```
 
+### 6. Rutinas asignadas por especialista (Módulo 4)
+
+```sql
+-- database/e2_m4_assigned_routines.sql
+```
+
+### 7. Chat con medios y Realtime (Módulo 5)
+
+```sql
+-- database/e5_chat_messages_media_realtime.sql
+```
+
 ## Módulos verticales — Entrega 2
 
-### Módulo 2 — Push Notifications (rama: `feature/e2-push-notifications`)
+### Módulo 2 — Push Notifications 
 
 Implementado:
 
@@ -144,7 +150,7 @@ Implementado:
 - `BellButton` muestra el punto rojo solo cuando hay notificaciones sin leer (caché de 30 s).
 - `RemindersSection` — componente reutilizable en home y perfil: muestra las rutinas activas con ícono sol (mañana) o luna (noche) y horario. Al tocar navega a la tab de rutinas.
 
-### Módulo 3 — Roles y Registro de Especialistas (rama: `feature/e2-roles-specialist-register`)
+### Módulo 3 — Roles y Registro de Especialistas
 
 Implementado:
 
@@ -156,7 +162,7 @@ Implementado:
 - Storage privado para documentos con signed URLs temporales.
 - Navegación diferenciada por rol y `license_status`.
 
-### Módulo 4 — Asignación de Rutinas por Especialista (rama: `feature/modulo-5`)
+### Módulo 4 — Asignación de Rutinas por Especialista
 
 Implementado:
 
@@ -166,6 +172,17 @@ Implementado:
 - `SpecialistHomeCard` en home: muestra especialista vinculado o CTA para buscar uno, con loading y error state.
 - `AppHeader` — componente de navegación reutilizable con breadcrumb.
 - Pantalla `app/settings.tsx` — configuración de perfil (nombre), contraseña, toggle de notificaciones y re-test de piel (solo para `user`).
+
+### Módulo 5 — Chat con Medios y Realtime 
+
+Implementado:
+
+- Bucket `chat-media` en Supabase Storage (privado, límite 15 MB, formatos JPEG/PNG/WebP).
+- Columnas de medios en `chat_messages`: `message_type` (`text` | `image`), `media_path`, `media_mime_type`, `media_size`.
+- Constraints de integridad por tipo de mensaje.
+- Publicación de `chat_messages` en `supabase_realtime` para actualizaciones en tiempo real.
+- Chat actualizado con envío de imágenes via `expo-image-picker`, separadores de fecha y soporte de videollamada.
+- Corrección de políticas de storage para acceso admin a documentos de especialistas.
 
 ## Documentación adicional
 
