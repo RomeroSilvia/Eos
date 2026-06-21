@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Tabs, useRouter } from 'expo-router';
+import { Tabs, useRouter, useSegments } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -23,9 +23,12 @@ function tabIcon(name: TabIconName, focusedName: TabIconName) {
 export default function SpecialistTabsLayout() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const segments = useSegments();
   const { isLoading: isProfileLoading, profile } = useProfile();
   const [isCheckingAccess, setIsCheckingAccess] = useState(true);
   const tabBarHeight = TAB_BAR_CONTENT_HEIGHT + insets.bottom;
+  const activeRoute = segments[segments.length - 1];
+  const showFloatingActionMenu = activeRoute !== 'pacientes';
 
   useEffect(() => {
     let isActive = true;
@@ -123,14 +126,16 @@ export default function SpecialistTabsLayout() {
           options={{ title: 'Perfil', tabBarIcon: tabIcon('person-outline', 'person') }}
         />
       </Tabs>
-      <FloatingActionMenu
-        productRoute={{
-          pathname: '/products/create',
-          params: { returnTo: 'specialist-products' }
-        }}
-        routineRoute="/routine/Create"
-        tabBarHeight={tabBarHeight}
-      />
+      {showFloatingActionMenu ? (
+        <FloatingActionMenu
+          productRoute={{
+            pathname: '/products/create',
+            params: { returnTo: 'specialist-products' }
+          }}
+          routineRoute="/routine/Create"
+          tabBarHeight={tabBarHeight}
+        />
+      ) : null}
     </View>
   );
 }
