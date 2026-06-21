@@ -20,4 +20,6 @@ backend/backend-dev*.log
 expo-env.d.ts
 # @end expo-cli
 
+backend/.jest-temp/
+
 CLAUDE.md

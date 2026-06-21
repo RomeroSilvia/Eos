@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { useCallback } from 'react';
@@ -13,7 +14,7 @@ import { useHome } from '@/hooks/useHome';
 import { formatStepCount } from '@/utils/format';
 
 export default function HomeScreen() {
-  const { summary, refreshSummary, toggleReminder } = useHome();
+  const { summary, isLoading, refreshSummary, toggleReminder } = useHome();
 
   useFocusEffect(
     useCallback(() => {
@@ -21,8 +22,16 @@ export default function HomeScreen() {
     }, [refreshSummary])
   );
 
-  if (!summary) {
-    return <SafeAreaView style={styles.screen} />;
+  if (isLoading && !summary) {
+    return (
+      <SafeAreaView edges={['top', 'left', 'right']} style={styles.screen}>
+        <View style={styles.emptyState}>
+          <Ionicons color={colors.primary} name="hourglass-outline" size={34} />
+          <Text style={styles.emptyTitle}>Cargando tu información</Text>
+          <Text style={styles.emptyText}>En breve estarás actualizado</Text>
+        </View>
+      </SafeAreaView>
+    );
   }
 
   const progress = summary.totalSteps > 0
@@ -205,5 +214,24 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     fontSize: 20,
     fontWeight: '900'
+  },
+  emptyState: {
+    alignItems: 'center',
+    flex: 1,
+    justifyContent: 'center',
+    padding: 32
+  },
+  emptyTitle: {
+    color: colors.textPrimary,
+    fontSize: 22,
+    fontWeight: '900',
+    marginTop: 14
+  },
+  emptyText: {
+    color: colors.textSecondary,
+    fontSize: 15,
+    lineHeight: 22,
+    marginTop: 8,
+    textAlign: 'center'
   }
 });

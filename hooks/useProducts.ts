@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   createProduct as createProductService,
   deleteProduct as deleteProductService,
@@ -12,15 +12,20 @@ import {
 } from '@/services/products';
 import type { Product, ProductBrand, ProductCategory } from '@/types/product';
 
+const STALE_AFTER_MS = 30_000;
+
 export function useProducts() {
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const lastFetchedAt = useRef<number>(0);
 
-  const refreshProducts = useCallback(async () => {
+  const refreshProducts = useCallback(async (force = false) => {
+    if (!force && Date.now() - lastFetchedAt.current < STALE_AFTER_MS) return;
     try {
       setIsLoading(true);
       const data = await getProducts();
       setProducts(data);
+      lastFetchedAt.current = Date.now();
     } catch (err) {
       console.error('No pudimos cargar los productos.', err);
     } finally {
@@ -29,7 +34,7 @@ export function useProducts() {
   }, []);
 
   useEffect(() => {
-    void refreshProducts();
+    void refreshProducts(true);
   }, [refreshProducts]);
 
   const createProduct = async (data: {

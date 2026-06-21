@@ -19,7 +19,7 @@ export default function ProductsScreen() {
     }, [refreshProducts])
   );
 
-  if (isLoading) {
+  if (isLoading && products.length === 0) {
     return (
       <SafeAreaView edges={['top', 'left', 'right']} style={styles.screen}>
         <View style={styles.center}>
