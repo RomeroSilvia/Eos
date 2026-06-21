@@ -35,7 +35,7 @@ export const getNotifications: RequestHandler = asyncHandler(async (req, res) =>
 
 export const markNotificationRead: RequestHandler = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  if (!id) throw new ApiError(400, 'id es requerido.');
+  if (!id || typeof id !== 'string') throw new ApiError(400, 'id es requerido.');
   await notificationsService.markNotificationRead(id, req.user.id);
   res.status(204).send();
 });

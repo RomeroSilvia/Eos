@@ -18,7 +18,7 @@ async function sendRoutineReminders(): Promise<void> {
   // Todos los usuarios con al menos una rutina activa (independiente de si tienen push token)
   const { data, error } = await db
     .from('routines')
-    .select('user_id')
+    .select('user_id, name')
     .eq('is_active', true);
 
   if (error) {
@@ -28,22 +28,31 @@ async function sendRoutineReminders(): Promise<void> {
 
   if (!data || data.length === 0) return;
 
-  // Deduplicar por user_id (un usuario puede tener varias rutinas activas)
-  const userIds: string[] = [...new Set<string>(data.map((row: { user_id: string }) => row.user_id))];
+  // Primera rutina activa por usuario (para incluir su nombre en la notificación)
+  const userRoutineMap = new Map<string, string>();
+  for (const row of data as { user_id: string; name: string }[]) {
+    if (!userRoutineMap.has(row.user_id)) {
+      userRoutineMap.set(row.user_id, row.name);
+    }
+  }
 
   const isMorning = currentHHmm() === '08:00';
-  const title = isMorning ? 'Buen día ☀️ Hora de empezar tu rutina' : 'Es momento de cerrar el día 🌙';
-  const body = isMorning ? 'Tenés una rutina pendiente.' : 'No te duermas sin tu rutina';
   const kind = isMorning ? 'routine-morning' : 'routine-evening';
 
   await Promise.allSettled(
-    userIds.map(async (userId) => {
+    Array.from(userRoutineMap.entries()).map(async ([userId, routineName]) => {
+      const title = isMorning
+        ? `Buen día ☀️ Hora de empezar tu rutina ${routineName}`
+        : 'Es momento de cerrar el día 🌙';
+      const body = isMorning
+        ? 'Tenés una rutina pendiente.'
+        : `No te duermas sin tu rutina ${routineName}`;
       await notificationsService.sendToUser(userId, title, body, { kind });
       await notificationsService.saveNotification(userId, title, body, kind);
     })
   );
 
-  console.log(`[notification.job] Recordatorios enviados a ${userIds.length} usuario(s).`);
+  console.log(`[notification.job] Recordatorios enviados a ${userRoutineMap.size} usuario(s).`);
 }
 
 // Corre cada minuto; solo actúa cuando la hora coincide con uno de los horarios fijos
