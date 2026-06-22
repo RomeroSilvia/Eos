@@ -1,12 +1,14 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
+import type { RealtimeChannel } from '@supabase/supabase-js';
 import { useRouter, type Href } from 'expo-router';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Card } from '@/components/Card';
 import { colors } from '@/constants/colors';
 import { routes } from '@/constants/routes';
+import { prepareSupabaseRealtimeClient } from '@/services/supabase';
 import { getMyPatients, type SpecialistPatient } from '@/services/specialist';
 
 export default function SpecialistConsultationsScreen() {
@@ -15,18 +17,24 @@ export default function SpecialistConsultationsScreen() {
   const [loading, setLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
 
-  const loadConsultations = useCallback(async () => {
-    setLoading(true);
-    setHasError(false);
+  const loadConsultations = useCallback(async (options: { silent?: boolean } = {}) => {
+    if (!options.silent) {
+      setLoading(true);
+      setHasError(false);
+    }
 
     try {
       const response = await getMyPatients();
       setPatients(response.filter((patient) => patient.status === 'active' && Boolean(patient.relationId)));
     } catch {
-      setPatients([]);
-      setHasError(true);
+      if (!options.silent) {
+        setPatients([]);
+        setHasError(true);
+      }
     } finally {
-      setLoading(false);
+      if (!options.silent) {
+        setLoading(false);
+      }
     }
   }, []);
 
@@ -35,6 +43,42 @@ export default function SpecialistConsultationsScreen() {
       void loadConsultations();
     }, [loadConsultations])
   );
+
+  useEffect(() => {
+    let channel: RealtimeChannel | null = null;
+    let isMounted = true;
+
+    void (async () => {
+      const supabase = await prepareSupabaseRealtimeClient();
+
+      if (!supabase || !isMounted) {
+        return;
+      }
+
+      channel = supabase
+        .channel('specialist-consultations-unread')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'chat_messages'
+          },
+          () => {
+            void loadConsultations({ silent: true });
+          }
+        )
+        .subscribe();
+    })();
+
+    return () => {
+      isMounted = false;
+
+      if (channel) {
+        void channel.unsubscribe();
+      }
+    };
+  }, [loadConsultations]);
 
   const consultations = useMemo(() => {
     return [...patients].sort((a, b) => {
@@ -96,6 +140,7 @@ function ConsultationCard({ patient, onPress }: { patient: SpecialistPatient; on
               <Text numberOfLines={1} style={styles.patientName}>
                 {patient.fullName}
               </Text>
+              <UnreadBadge count={patient.unreadCount ?? 0} />
               <Text style={styles.timeText}>{formatTime(patient.lastActivityAt)}</Text>
             </View>
 
@@ -115,6 +160,18 @@ function ConsultationCard({ patient, onPress }: { patient: SpecialistPatient; on
         </View>
       </Card>
     </Pressable>
+  );
+}
+
+function UnreadBadge({ count }: { count: number }) {
+  if (count <= 0) {
+    return null;
+  }
+
+  return (
+    <View style={styles.unreadBadge}>
+      <Text style={styles.unreadBadgeText}>{count > 99 ? '99+' : count}</Text>
+    </View>
   );
 }
 
@@ -284,6 +341,20 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     fontSize: 12,
     fontWeight: '700'
+  },
+  unreadBadge: {
+    alignItems: 'center',
+    backgroundColor: colors.secondary,
+    borderRadius: 9,
+    height: 18,
+    justifyContent: 'center',
+    minWidth: 18,
+    paddingHorizontal: 5
+  },
+  unreadBadgeText: {
+    color: colors.surface,
+    fontSize: 10,
+    fontWeight: '900'
   },
   skinText: {
     color: colors.textSecondary,
