@@ -11,6 +11,7 @@ async function uploadProductImage(
   userId: string
 ): Promise<string | null> {
   const path = `products/${userId}/${Date.now()}.${source.ext}`;
+  console.log('[products.controller] uploadProductImage — bucket:', PRODUCT_IMAGES_BUCKET, 'path:', path, 'bufferLen:', source.buffer.length, 'mimetype:', source.mimetype);
   const { error } = await (supabase as any).storage
     .from(PRODUCT_IMAGES_BUCKET)
     .upload(path, source.buffer, { contentType: source.mimetype, upsert: true });
@@ -19,15 +20,21 @@ async function uploadProductImage(
     return null;
   }
   const { data } = (supabase as any).storage.from(PRODUCT_IMAGES_BUCKET).getPublicUrl(path);
-  return (data as { publicUrl: string }).publicUrl ?? null;
+  const publicUrl = (data as { publicUrl: string }).publicUrl ?? null;
+  console.log('[products.controller] uploadProductImage — URL pública:', publicUrl);
+  return publicUrl;
 }
 
 function resolveImageSource(
   file: Express.Multer.File | undefined,
   body: Record<string, unknown>
 ): { buffer: Buffer; mimetype: string; ext: string } | null {
+  console.log('[products.controller] resolveImageSource — req.file:', file ? { fieldname: file.fieldname, originalname: file.originalname, mimetype: file.mimetype, bufferLen: file.buffer?.length } : 'undefined');
+  console.log('[products.controller] resolveImageSource — body keys:', Object.keys(body), 'imageBase64Len:', typeof body.imageBase64 === 'string' ? body.imageBase64.length : 'N/A');
+
   if (file?.buffer?.length) {
     const ext = (file.originalname.split('.').pop() ?? 'jpg').toLowerCase();
+    console.log('[products.controller] usando req.file (multer), ext:', ext);
     return { buffer: file.buffer, mimetype: file.mimetype, ext };
   }
   const base64 = body.imageBase64;
@@ -36,8 +43,10 @@ function resolveImageSource(
   if (typeof base64 === 'string' && base64.length > 0) {
     const buffer = Buffer.from(base64, 'base64');
     const ext = (filename.split('.').pop() ?? 'jpg').toLowerCase();
+    console.log('[products.controller] usando imageBase64, bufferLen:', buffer.length, 'ext:', ext);
     return { buffer, mimetype: mimeType, ext };
   }
+  console.log('[products.controller] sin imagen disponible → image_url será null');
   return null;
 }
 

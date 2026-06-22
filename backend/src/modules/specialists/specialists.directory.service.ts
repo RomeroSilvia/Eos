@@ -1,6 +1,7 @@
 import { ApiError } from '../../utils/ApiError';
 import { specialistsDirectoryRepository } from './specialists.directory.repository';
 import { routinesService } from '../routines/routines.service';
+import { notificationsService } from '../notifications/notifications.service';
 import { ALLOWED_SPECIALTIES, type AllowedSpecialty } from './specialists.constants';
 
 type SearchFilters = {
@@ -288,7 +289,7 @@ export const specialistsDirectoryService = {
     const timeOfDay = normalizeRoutineTimeOfDay(input.timeOfDay);
 
     try {
-      return await routinesService.createRoutine({
+      const routine = await routinesService.createRoutine({
         user_id: input.clientId,
         assigned_by: specialistId,
         name,
@@ -296,6 +297,13 @@ export const specialistsDirectoryService = {
         time_of_day: timeOfDay,
         is_active: input.isActive ?? true
       });
+
+      const title = 'Nueva rutina asignada';
+      const body = `Tu especialista te asignó la rutina "${name}".`;
+      await notificationsService.sendToUser(input.clientId, title, body, { kind: 'routine-assigned' });
+      await notificationsService.saveNotification(input.clientId, title, body, 'routine-assigned');
+
+      return routine;
     } catch (error) {
       if (isMissingAssignedByColumnError(error)) {
         console.error('[specialists.assignRoutineToPatient] Missing DB column routines.assigned_by. Apply migration database/e2_m4_assigned_routines.sql', {

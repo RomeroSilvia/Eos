@@ -12,14 +12,15 @@ Proyecto académico — UTN, cuarto año, Aplicaciones Móviles.
 - expo-router (navegación basada en archivos)
 - expo-secure-store (almacenamiento de tokens JWT)
 - expo-notifications (notificaciones locales y push)
-- expo-image-picker (fotos de productos)
+- expo-image-picker (selección de fotos)
+- expo-image-manipulator (compresión de imágenes antes del upload)
 - @react-native-async-storage/async-storage
 - @react-native-google-signin/google-signin
 
 **Backend**
 - Node.js + Express 4 + TypeScript
-- Supabase (PostgreSQL + Auth + Storage)
-- multer (subida de imágenes)
+- Supabase (PostgreSQL + Auth + Storage + Realtime)
+- multer (subida de imágenes multipart)
 - node-cron (scheduler de recordatorios push)
 - Jest + ts-jest (tests)
 
@@ -43,7 +44,7 @@ npm start              # Expo en modo desarrollo
 Variables de entorno del frontend (`.env`):
 
 ```
-EXPO_PUBLIC_API_URL=http://localhost:3000/api
+EXPO_PUBLIC_API_URL=http://<ip-de-tu-maquina>:3000/api
 EXPO_PUBLIC_USE_MOCKS=false
 EXPO_PUBLIC_SUPABASE_URL=<tu-url-supabase>
 EXPO_PUBLIC_SUPABASE_ANON_KEY=<tu-anon-key>
@@ -67,7 +68,18 @@ PORT=3000
 SUPABASE_URL=<tu-url-supabase>
 SUPABASE_ANON_KEY=<tu-anon-key>
 SUPABASE_SERVICE_ROLE_KEY=<tu-service-role-key>
-CORS_ORIGIN=http://localhost:8081
+CORS_ORIGIN=http://<ip-de-tu-maquina>:8081
+```
+
+### Health checks
+
+```
+GET http://localhost:3000/api/health
+GET http://localhost:3000/api/routines/health
+GET http://localhost:3000/api/products/health
+GET http://localhost:3000/api/progress/health
+GET http://localhost:3000/api/notifications/health
+GET http://localhost:3000/api/specialists/health
 ```
 
 ## Migraciones de base de datos — Entrega 2
@@ -137,18 +149,27 @@ create policy "Usuarios actualizan sus propias notificaciones"
 
 ## Módulos verticales — Entrega 2
 
-### Módulo 2 — Push Notifications 
+### Módulo 1 — Apple Sign-In y Actualización de Perfil de Piel
+
+Implementado:
+
+- Columna `role` en `profiles` sincronizada desde `user_metadata` de Supabase Auth al registrar y loguear.
+- Navegación diferenciada por rol: `user` → `(tabs)`, `specialist` verificado → `(tabs-specialist)`, `specialist` pendiente/rechazado → `/specialist-status`, `center_admin` → `(tabs-admin)`.
+- Actualización de tipo de piel desde el perfil sin necesidad de repetir el quiz completo.
+
+### Módulo 2 — Push Notifications
 
 Implementado:
 
 - Registro y desregistro de tokens de dispositivo (`push_tokens`).
-- Cron job que envía recordatorios push a las 08:00 y 21:00 a usuarios con rutinas activas.
-- Mensajes personalizados con el nombre de la rutina: mañana (`Buen día ☀️ Hora de empezar tu rutina <nombre>`) y noche (`No te duermas sin tu rutina <nombre>`).
-- Historial de notificaciones persistido en `notification_history` (backend es la fuente de verdad).
+- Cron job que envía notificaciones push a las 08:00 y 21:00 a usuarios con rutinas activas y token registrado. Mensajes personalizados con el nombre de la rutina.
+- Historial de notificaciones persistido en `notification_history` (el backend es la fuente de verdad).
 - Endpoints `GET /api/notifications` y `PATCH /api/notifications/:id/read`.
 - Pantalla in-app con loading state, agrupación por día (Hoy / Ayer / fecha) y tabs Todas / No leídas.
-- `BellButton` muestra el punto rojo solo cuando hay notificaciones sin leer (caché de 30 s).
-- `RemindersSection` — componente reutilizable en home y perfil: muestra las rutinas activas con ícono sol (mañana) o luna (noche) y horario. Al tocar navega a la tab de rutinas.
+- `BellButton` con punto rojo que se refresca al volver a foco en cada tab (caché de 30 s compartida entre instancias).
+- Tipos de notificación soportados: `streak`, `routine-morning`, `routine-evening`, `product-reminder`, `routine-assigned`, `new-message`.
+- `RemindersSection` — componente reutilizable en home y perfil: muestra las rutinas activas con ícono sol/luna y horario.
+- `notificationsService.sendToUser()` — función interna para que otros módulos envíen notificaciones y las persistan en historial.
 
 ### Módulo 3 — Roles y Registro de Especialistas
 
@@ -156,7 +177,7 @@ Implementado:
 
 - Registro con roles `user` y `specialist`; `center_admin` bloqueado en registro público.
 - Middleware `authenticate` y `requireRole`.
-- Flujo de registro de especialista con foto de DNI, número de matrícula y foto del título.
+- Flujo de registro de especialista con foto de DNI, número de matrícula y foto del título; compresión y validación de tamaño antes del upload.
 - Estados de matrícula: `pending`, `verified`, `rejected`.
 - Panel de administrador para aprobar o rechazar especialistas.
 - Storage privado para documentos con signed URLs temporales.
@@ -167,22 +188,23 @@ Implementado:
 Implementado:
 
 - Columna `assigned_by` en `routines` que referencia al especialista que asignó la rutina.
-- RLS en Supabase: los especialistas solo pueden crear/editar/eliminar rutinas de sus pacientes activos (`client_specialist_relations.status = 'active'`).
+- RLS en Supabase: los especialistas solo pueden crear/editar/eliminar rutinas de sus pacientes activos.
 - Migración idempotente en `database/e2_m4_assigned_routines.sql`.
-- `SpecialistHomeCard` en home: muestra especialista vinculado o CTA para buscar uno, con loading y error state.
+- Notificación push + registro en historial al cliente cuando un especialista le asigna una rutina (`routine-assigned`).
+- Directorio de especialistas verificados con filtros por especialidad y nombre.
+- `SpecialistHomeCard` en home: muestra especialista vinculado o CTA para buscar uno.
 - `AppHeader` — componente de navegación reutilizable con breadcrumb.
-- Pantalla `app/settings.tsx` — configuración de perfil (nombre), contraseña, toggle de notificaciones y re-test de piel (solo para `user`).
+- Pantalla `app/settings.tsx` — configuración de perfil, contraseña, toggle de notificaciones y re-test de piel.
 
-### Módulo 5 — Chat con Medios y Realtime 
+### Módulo 5 — Chat con Medios y Realtime
 
 Implementado:
 
 - Bucket `chat-media` en Supabase Storage (privado, límite 15 MB, formatos JPEG/PNG/WebP).
 - Columnas de medios en `chat_messages`: `message_type` (`text` | `image`), `media_path`, `media_mime_type`, `media_size`.
-- Constraints de integridad por tipo de mensaje.
-- Publicación de `chat_messages` en `supabase_realtime` para actualizaciones en tiempo real.
-- Chat actualizado con envío de imágenes via `expo-image-picker`, separadores de fecha y soporte de videollamada.
-- Corrección de políticas de storage para acceso admin a documentos de especialistas.
+- Publicación de `chat_messages` en Supabase Realtime para actualizaciones en tiempo real.
+- Chat con envío de imágenes via `expo-image-picker`, separadores de fecha y soporte de videollamada.
+- Notificación push al destinatario al recibir un mensaje nuevo (`new-message`).
 
 ## Documentación adicional
 
@@ -215,5 +237,3 @@ npm run supabase -- link --project-ref <PROJECT_REF>
 npm run supabase:db:push
 npm run supabase:types -- --project-id <PROJECT_ID> > backend/src/database/database.types.ts
 ```
-
-Si aparece "Supabase CLI no esta instalado", no uses `npm install -g supabase`: ejecuta `npm install` en la raiz y volve a correr el comando con `npm run supabase -- ...` o `npx supabase ...`.

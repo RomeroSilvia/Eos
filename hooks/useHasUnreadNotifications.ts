@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { getNotifications } from '@/services/notifications';
 
 // Caché compartida entre todas las instancias del hook para no hacer N llamadas paralelas
@@ -22,9 +22,9 @@ async function fetchHasUnread(): Promise<boolean> {
 export function useHasUnreadNotifications() {
   const [hasUnread, setHasUnread] = useState<boolean>(cachedHasUnread ?? false);
 
-  useEffect(() => {
+  const refresh = useCallback((force = false) => {
     const now = Date.now();
-    if (cachedHasUnread !== null && now - cacheTimestamp < CACHE_TTL_MS) {
+    if (!force && cachedHasUnread !== null && now - cacheTimestamp < CACHE_TTL_MS) {
       setHasUnread(cachedHasUnread);
       return;
     }
@@ -36,7 +36,7 @@ export function useHasUnreadNotifications() {
     });
   }, []);
 
-  return hasUnread;
+  return { hasUnread, refresh };
 }
 
 export function invalidateUnreadCache() {

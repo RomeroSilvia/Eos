@@ -6,6 +6,10 @@ export const supabase = createClient<Database>(
   env.supabaseUrl!,
   env.supabaseServiceRoleKey!,
   {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false
+    },
     db: {
       schema: 'public'
     }

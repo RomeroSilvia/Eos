@@ -1,3 +1,4 @@
+import * as ImageManipulator from 'expo-image-manipulator';
 import * as ImagePicker from 'expo-image-picker';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
@@ -54,8 +55,7 @@ export default function NewProductScreen() {
   const [brand, setBrand] = useState<ProductBrand>((initialBrand as ProductBrand) ?? 'other');
   const [imageUri, setImageUri] = useState<string | null>(null);
   const [imageBase64, setImageBase64] = useState<string | null>(null);
-  const [imageMimeType, setImageMimeType] = useState<string | null>(null);
-  const [imageFilename, setImageFilename] = useState<string | null>(null);
+  const [compressingImage, setCompressingImage] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const displayImage = imageUri ?? initialImageUrl ?? null;
@@ -68,15 +68,28 @@ export default function NewProductScreen() {
         mediaTypes: 'images',
         allowsEditing: true,
         aspect: [1, 1],
-        base64: true,
         quality: 0.8,
       });
       if (!result.canceled) {
         const asset = result.assets[0];
-        setImageUri(asset.uri);
-        setImageBase64(asset.base64 ?? null);
-        setImageMimeType(asset.mimeType ?? null);
-        setImageFilename(asset.fileName ?? null);
+        console.log('[products/create] picker OK', { uri: asset.uri, mimeType: asset.mimeType, fileSize: asset.fileSize, mode: isEditMode ? 'edit' : 'create' });
+        setCompressingImage(true);
+        try {
+          const compressed = await ImageManipulator.manipulateAsync(
+            asset.uri,
+            [{ resize: { width: 1280 } }],
+            { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG, base64: true }
+          );
+          console.log('[products/create] compresión OK', { uri: compressed.uri, base64Len: compressed.base64?.length ?? 0 });
+          setImageUri(compressed.uri);
+          setImageBase64(compressed.base64 ?? null);
+        } catch (err) {
+          console.error('[products/create] compresión falló, usando URI original:', err);
+          setImageUri(asset.uri);
+          setImageBase64(null);
+        } finally {
+          setCompressingImage(false);
+        }
       }
     } catch (error) {
       console.error('[handlePickImage]', error);
@@ -85,6 +98,7 @@ export default function NewProductScreen() {
 
   const handleSave = async () => {
     if (!name.trim()) return;
+    console.log('[products/create] handleSave', { mode: isEditMode ? 'edit' : 'create', hasImageUri: !!imageUri, hasBase64: !!imageBase64, base64Len: imageBase64?.length ?? 0 });
     setLoading(true);
     try {
       if (isEditMode) {
@@ -95,8 +109,8 @@ export default function NewProductScreen() {
           brand,
           imageUri: imageUri ?? undefined,
           imageBase64: imageBase64 ?? undefined,
-          imageMimeType: imageMimeType ?? undefined,
-          imageFilename: imageFilename ?? undefined,
+          imageMimeType: imageBase64 ? 'image/jpeg' : undefined,
+          imageFilename: imageBase64 ? 'product.jpg' : undefined,
         });
       } else {
         await createProduct({
@@ -106,8 +120,8 @@ export default function NewProductScreen() {
           brand,
           imageUri: imageUri ?? undefined,
           imageBase64: imageBase64 ?? undefined,
-          imageMimeType: imageMimeType ?? undefined,
-          imageFilename: imageFilename ?? undefined,
+          imageMimeType: imageBase64 ? 'image/jpeg' : undefined,
+          imageFilename: imageBase64 ? 'product.jpg' : undefined,
         });
       }
       const returnParam = returnTo ? `&returnTo=${returnTo}` : '';
@@ -180,19 +194,21 @@ export default function NewProductScreen() {
               ))}
             </View>
 
-            <Pressable onPress={handlePickImage} style={styles.photoBox}>
+            <Pressable disabled={compressingImage} onPress={handlePickImage} style={styles.photoBox}>
               {displayImage ? (
                 <Image source={{ uri: displayImage }} style={styles.photoPreview} />
               ) : (
                 <>
                   <Text style={styles.photoPlaceholder}>🖼</Text>
-                  <Text style={styles.photoLabel}>Foto del producto</Text>
+                  <Text style={styles.photoLabel}>
+                    {compressingImage ? 'Procesando imagen...' : 'Foto del producto'}
+                  </Text>
                 </>
               )}
             </Pressable>
 
             <Button
-              disabled={!name.trim() || loading}
+              disabled={!name.trim() || loading || compressingImage}
               onPress={handleSave}
               style={styles.button}
             >
