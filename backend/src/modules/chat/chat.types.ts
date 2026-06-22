@@ -3,10 +3,10 @@ export type ChatMessageRow = {
   relation_id: string;
   sender_id: string;
   content: string;
-  message_type: 'text' | 'image';
-  media_path: string | null;
-  media_mime_type: string | null;
-  media_size: number | null;
+  message_type?: 'text' | 'image' | null;
+  media_path?: string | null;
+  media_mime_type?: string | null;
+  media_size?: number | null;
   read_at: string | null;
   created_at: string;
 };

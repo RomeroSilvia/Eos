@@ -47,6 +47,7 @@ export type SpecialistPatient = {
   skinType: string | null;
   skinProfile: PatientSkinProfile | null;
   profileImageUrl?: string | null;
+  unreadCount?: number;
   lastActivityAt: string | null;
 };
 

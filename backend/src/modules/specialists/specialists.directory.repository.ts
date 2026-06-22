@@ -67,6 +67,10 @@ type RoutineStepProductWithProduct = Pick<RoutineStepProductRow, 'step_id' | 'pr
   product: Pick<ProductRow, 'id' | 'name' | 'brand' | 'category'> | null;
 };
 
+type UnreadChatMessageRow = {
+  relation_id: string;
+};
+
 export const specialistsDirectoryRepository = {
   findVerifiedSpecialists: async (filters: { specialty?: string; name?: string }): Promise<VerifiedSpecialistProfile[]> => {
     const db = supabase as any;
@@ -376,6 +380,36 @@ export const specialistsDirectoryRepository = {
     }
 
     return latestLogByUserId;
+  },
+
+  findUnreadChatCountsByRelationIds: async (
+    relationIds: string[],
+    readerId: string
+  ): Promise<Map<string, number>> => {
+    if (relationIds.length === 0) {
+      return new Map<string, number>();
+    }
+
+    const db = supabase as any;
+
+    const { data, error } = await db
+      .from('chat_messages')
+      .select('relation_id')
+      .in('relation_id', relationIds)
+      .neq('sender_id', readerId)
+      .is('read_at', null);
+
+    if (error) {
+      return new Map<string, number>();
+    }
+
+    const countsByRelationId = new Map<string, number>();
+
+    for (const row of (data ?? []) as UnreadChatMessageRow[]) {
+      countsByRelationId.set(row.relation_id, (countsByRelationId.get(row.relation_id) ?? 0) + 1);
+    }
+
+    return countsByRelationId;
   },
 
   findRoutinesByUserId: async (userId: string): Promise<RoutineRow[]> => {

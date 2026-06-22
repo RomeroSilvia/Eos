@@ -2,13 +2,10 @@ import { Router, type RequestHandler } from 'express';
 import multer, { MulterError } from 'multer';
 import { authenticate } from '../../middlewares/auth.middleware';
 import { ApiError } from '../../utils/ApiError';
-import {
-  ALLOWED_IMAGE_MIME_TYPES,
-  MAX_CHAT_IMAGE_SIZE_BYTES,
-  MAX_CHAT_IMAGE_SIZE_MB
-} from './chat.constants';
+import { MAX_CHAT_IMAGE_SIZE_BYTES, MAX_CHAT_IMAGE_SIZE_MB } from './chat.constants';
 import {
 	chatHealth,
+  getMessageById,
 	getMessages,
 	startVideoCall,
 	markMessagesAsRead,
@@ -23,12 +20,7 @@ const upload = multer({
     fileSize: MAX_CHAT_IMAGE_SIZE_BYTES,
     files: 1
   },
-  fileFilter: (_req, file, callback) => {
-    if (!ALLOWED_IMAGE_MIME_TYPES.includes(file.mimetype)) {
-      callback(new ApiError(400, 'Formato no permitido. Usa JPG, PNG o WEBP.'));
-      return;
-    }
-
+  fileFilter: (_req, _file, callback) => {
     callback(null, true);
   }
 });
@@ -54,6 +46,7 @@ const handleChatImageUpload: RequestHandler = (req, res, next) => {
 };
 
 chatRouter.get('/messages', getMessages);
+chatRouter.get('/messages/:messageId', getMessageById);
 chatRouter.post('/messages', handleChatImageUpload, sendMessage);
 chatRouter.post('/video-call', startVideoCall);
 chatRouter.post('/media', uploadMediaMessage);
