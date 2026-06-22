@@ -101,6 +101,15 @@ export const chatRepository = {
     if (error) throw error;
   },
 
+  deleteMessagesByRelationId: async (relationId: string): Promise<void> => {
+    const { error } = await supabase
+      .from('chat_messages')
+      .delete()
+      .eq('relation_id', relationId);
+
+    if (error) throw error;
+  },
+
   uploadFile: async (input: UploadFileInput): Promise<void> => {
     const { error } = await supabase.storage.from(input.bucket).upload(input.path, input.buffer, {
       contentType: input.contentType,

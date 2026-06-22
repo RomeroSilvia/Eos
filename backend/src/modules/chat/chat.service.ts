@@ -161,6 +161,16 @@ export const chatService = {
     return {
       relationId: relation.id
     };
+  },
+
+  clearMessages: async (input: ResolveRelationInput) => {
+    const relation = await resolveRelation(input);
+
+    await chatRepository.deleteMessagesByRelationId(relation.id);
+
+    return {
+      relationId: relation.id
+    };
   }
 };
 
