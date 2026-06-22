@@ -80,8 +80,7 @@ export const specialistsDirectoryRepository = {
         profiles!inner(id, full_name, role)
       `
       )
-      .eq('license_status', 'verified')
-      .eq('profiles.role', 'specialist');
+      .eq('license_status', 'verified');
 
     if (filters.specialty) {
       query = query.eq('specialty', filters.specialty);
@@ -122,7 +121,6 @@ export const specialistsDirectoryRepository = {
       )
       .eq('user_id', userId)
       .eq('license_status', 'verified')
-      .eq('profiles.role', 'specialist')
       .maybeSingle();
 
     if (error) throw error;

@@ -42,6 +42,13 @@ jest.mock('../../routines/routines.service', () => ({
   }
 }));
 
+jest.mock('../../notifications/notifications.service', () => ({
+  notificationsService: {
+    sendToUser: jest.fn().mockResolvedValue(undefined),
+    saveNotification: jest.fn().mockResolvedValue(undefined)
+  }
+}));
+
 const mockedRepository = jest.mocked(specialistsDirectoryRepository);
 
 const { routinesService } = jest.requireMock('../../routines/routines.service') as {

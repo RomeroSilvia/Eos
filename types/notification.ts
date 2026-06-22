@@ -1,4 +1,4 @@
-export type AppNotificationKind = 'streak' | 'routine-morning' | 'routine-evening' | 'product-reminder';
+export type AppNotificationKind = 'streak' | 'routine-morning' | 'routine-evening' | 'product-reminder' | 'routine-assigned' | 'new-message';
 
 export type AppNotification = {
   id: string;
