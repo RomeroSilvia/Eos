@@ -20,6 +20,7 @@ export type ChatMessage = {
   sender_id: string;
   content: string;
   message_type?: 'text' | 'image';
+  mediaPath?: string | null;
   mediaUrl?: string | null;
   mediaAvailable?: boolean;
   media_mime_type?: string | null;
@@ -33,7 +34,9 @@ type RawChatMessage = Partial<ChatMessage> & {
   senderId?: string;
   messageType?: 'text' | 'image';
   media_url?: string | null;
+  media_path?: string | null;
   mediaUrl?: string | null;
+  mediaPath?: string | null;
   mediaAvailable?: boolean;
   media_mime_type?: string | null;
   mediaMimeType?: string | null;
@@ -123,6 +126,14 @@ export async function getChatMessageById(params: {
   return normalizeChatSendResponse(response);
 }
 
+export async function getChatImageSignedUrl(params: {
+  messageId: string;
+  relationId?: string;
+}): Promise<string | null> {
+  const response = await getChatMessageById(params);
+  return response.message.mediaUrl ?? null;
+}
+
 export async function sendChatMessage(payload: {
   content: string;
   relationId?: string;
@@ -170,6 +181,14 @@ export async function markChatAsRead(relationId?: string): Promise<void> {
   });
 }
 
+export async function clearChatMessages(relationId?: string): Promise<{ relationId: string }> {
+  return apiRequest<{ relationId: string }>({
+    path: '/chat/messages',
+    method: 'DELETE',
+    body: JSON.stringify({ relationId })
+  });
+}
+
 export async function startChatVideoCall(payload: {
   relationId?: string;
 } = {}): Promise<ChatVideoCallResponse> {
@@ -181,7 +200,7 @@ export async function startChatVideoCall(payload: {
 }
 
 export function parseChatMessage(message: ChatMessage): ChatParsedPayload {
-  if (message.message_type === 'image' || Boolean(message.mediaUrl)) {
+  if (message.message_type === 'image' || Boolean(message.mediaUrl) || Boolean(message.mediaPath)) {
     return {
       kind: 'image',
       text: getImageMessageText(message.content),
@@ -242,7 +261,12 @@ export function normalizeChatMessage(message: RawChatMessage): ChatMessage {
     relation_id: relationId,
     sender_id: senderId,
     content,
-    message_type: normalizeMessageType(message.message_type ?? message.messageType, message.media_url ?? message.mediaUrl),
+    message_type: normalizeMessageType(
+      message.message_type ?? message.messageType,
+      message.media_url ?? message.mediaUrl,
+      message.mediaPath ?? message.media_path
+    ),
+    mediaPath: normalizeNullableString(message.mediaPath ?? message.media_path),
     mediaUrl: normalizeNullableString(message.mediaUrl ?? message.media_url),
     mediaAvailable: typeof message.mediaAvailable === 'boolean' ? message.mediaAvailable : undefined,
     media_mime_type: normalizeNullableString(message.media_mime_type ?? message.mediaMimeType),
@@ -279,12 +303,16 @@ function normalizeParticipant(participant?: RawChatParticipant | null): ChatPart
   };
 }
 
-function normalizeMessageType(type: unknown, mediaUrl: unknown): 'text' | 'image' | undefined {
+function normalizeMessageType(type: unknown, mediaUrl: unknown, mediaPath?: unknown): 'text' | 'image' | undefined {
   if (type === 'text' || type === 'image') {
     return type;
   }
 
   if (typeof mediaUrl === 'string' && mediaUrl.trim()) {
+    return 'image';
+  }
+
+  if (typeof mediaPath === 'string' && mediaPath.trim()) {
     return 'image';
   }
 

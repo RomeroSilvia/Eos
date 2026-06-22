@@ -97,6 +97,19 @@ export const markMessagesAsRead: RequestHandler = asyncHandler(async (req, res) 
   res.json(result);
 });
 
+export const clearMessages: RequestHandler = asyncHandler(async (req, res) => {
+  const relationId = (req.body as { relationId?: unknown } | undefined)?.relationId
+    ?? (typeof req.query.relationId === 'string' ? req.query.relationId : undefined);
+
+  const result = await chatService.clearMessages({
+    userId: req.user.id,
+    role: req.user.role ?? 'user',
+    relationId: typeof relationId === 'string' ? relationId : undefined
+  });
+
+  res.json(result);
+});
+
 export const uploadMediaMessage: RequestHandler = asyncHandler(async (_req, _res) => {
   throw new ApiError(410, 'Usa POST /chat/messages para enviar imagenes.');
 });

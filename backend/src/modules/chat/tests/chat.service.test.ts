@@ -12,6 +12,7 @@ jest.mock('../chat.repository', () => ({
     findMessageById: jest.fn(),
     createMessage: jest.fn(),
     markMessagesAsRead: jest.fn(),
+    deleteMessagesByRelationId: jest.fn(),
     uploadFile: jest.fn(),
     deleteFile: jest.fn(),
     createSignedUrl: jest.fn(),
@@ -466,6 +467,117 @@ describe('chatService', () => {
 
       expect(result.messages[0].mediaUrl).toBeNull();
       expect(result.messages[0].mediaAvailable).toBe(false);
+    });
+  });
+
+  describe('clearMessages', () => {
+    it('vacia mensajes solo despues de validar la relacion activa del usuario', async () => {
+      mockedRepository.findRelationById.mockResolvedValue(buildRelation());
+      mockedRepository.deleteMessagesByRelationId.mockResolvedValue(undefined);
+
+      const result = await chatService.clearMessages({
+        userId: 'user-1',
+        role: 'user',
+        relationId: 'relation-1'
+      });
+
+      expect(mockedRepository.deleteMessagesByRelationId).toHaveBeenCalledWith('relation-1');
+      expect(result).toEqual({ relationId: 'relation-1' });
+    });
+
+    it('rechaza vaciar mensajes de una relacion ajena', async () => {
+      mockedRepository.findRelationById.mockResolvedValue({
+        id: 'relation-1',
+        client_id: 'other-user',
+        specialist_id: 'specialist-1',
+        status: 'active'
+      });
+
+      await expect(
+        chatService.clearMessages({
+          userId: 'user-1',
+          role: 'user',
+          relationId: 'relation-1'
+        })
+      ).rejects.toMatchObject({
+        statusCode: 403
+      } as Partial<ApiError>);
+      expect(mockedRepository.deleteMessagesByRelationId).not.toHaveBeenCalled();
+    });
+
+    it('usa la relacion activa del cliente si no se envia relationId', async () => {
+      mockedRepository.findActiveRelationByClientId.mockResolvedValue({
+        id: 'relation-2',
+        client_id: 'user-2',
+        specialist_id: 'specialist-2',
+        status: 'active'
+      });
+      mockedRepository.deleteMessagesByRelationId.mockResolvedValue(undefined);
+
+      const result = await chatService.clearMessages({
+        userId: 'user-2',
+        role: 'user'
+      });
+
+      expect(mockedRepository.findActiveRelationByClientId).toHaveBeenCalledWith('user-2');
+      expect(mockedRepository.deleteMessagesByRelationId).toHaveBeenCalledWith('relation-2');
+      expect(result).toEqual({ relationId: 'relation-2' });
+    });
+  });
+
+  describe('markAsRead', () => {
+    it('marca como leidos solo mensajes de la relacion activa donde el sender es otro usuario', async () => {
+      mockedRepository.findRelationById.mockResolvedValue(buildRelation());
+      mockedRepository.markMessagesAsRead.mockResolvedValue(undefined);
+
+      const result = await chatService.markAsRead({
+        userId: 'user-1',
+        role: 'user',
+        relationId: 'relation-1'
+      });
+
+      expect(mockedRepository.markMessagesAsRead).toHaveBeenCalledWith('relation-1', 'user-1');
+      expect(result).toEqual({ relationId: 'relation-1' });
+    });
+
+    it('usa la relacion activa del cliente cuando no se envia relationId', async () => {
+      mockedRepository.findActiveRelationByClientId.mockResolvedValue({
+        id: 'relation-55',
+        client_id: 'user-55',
+        specialist_id: 'specialist-55',
+        status: 'active'
+      });
+      mockedRepository.markMessagesAsRead.mockResolvedValue(undefined);
+
+      const result = await chatService.markAsRead({
+        userId: 'user-55',
+        role: 'user'
+      });
+
+      expect(mockedRepository.findActiveRelationByClientId).toHaveBeenCalledWith('user-55');
+      expect(mockedRepository.markMessagesAsRead).toHaveBeenCalledWith('relation-55', 'user-55');
+      expect(result).toEqual({ relationId: 'relation-55' });
+    });
+
+    it('rechaza marcar leidos en una relacion ajena', async () => {
+      mockedRepository.findRelationById.mockResolvedValue({
+        id: 'relation-1',
+        client_id: 'other-user',
+        specialist_id: 'specialist-1',
+        status: 'active'
+      });
+
+      await expect(
+        chatService.markAsRead({
+          userId: 'user-1',
+          role: 'user',
+          relationId: 'relation-1'
+        })
+      ).rejects.toMatchObject({
+        statusCode: 403
+      } as Partial<ApiError>);
+
+      expect(mockedRepository.markMessagesAsRead).not.toHaveBeenCalled();
     });
   });
 });

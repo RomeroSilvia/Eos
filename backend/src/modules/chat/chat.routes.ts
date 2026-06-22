@@ -4,13 +4,14 @@ import { authenticate } from '../../middlewares/auth.middleware';
 import { ApiError } from '../../utils/ApiError';
 import { MAX_CHAT_IMAGE_SIZE_BYTES, MAX_CHAT_IMAGE_SIZE_MB } from './chat.constants';
 import {
-	chatHealth,
+  clearMessages,
+  chatHealth,
   getMessageById,
-	getMessages,
-	startVideoCall,
-	markMessagesAsRead,
-	sendMessage,
-	uploadMediaMessage
+  getMessages,
+  startVideoCall,
+  markMessagesAsRead,
+  sendMessage,
+  uploadMediaMessage
 } from './chat.controller';
 
 export const chatRouter = Router();
@@ -51,6 +52,7 @@ chatRouter.post('/messages', handleChatImageUpload, sendMessage);
 chatRouter.post('/video-call', startVideoCall);
 chatRouter.post('/media', uploadMediaMessage);
 chatRouter.patch('/messages/read', markMessagesAsRead);
+chatRouter.delete('/messages', clearMessages);
 
 function mapChatImageUploadError(error: unknown): Error {
   if (error instanceof ApiError) {
