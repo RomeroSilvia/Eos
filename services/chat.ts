@@ -1,7 +1,9 @@
 import { apiRequest } from '@/services/api/client';
+import { Platform } from 'react-native';
 
 export const MAX_CHAT_IMAGE_SIZE_MB = 15;
 export const MAX_CHAT_IMAGE_SIZE_BYTES = MAX_CHAT_IMAGE_SIZE_MB * 1024 * 1024;
+const IMAGE_MESSAGE_EMPTY_CONTENT = '__eos_chat_image__';
 
 export type ChatMessageKind = 'text' | 'image' | 'call_invite' | 'call_ended';
 
@@ -18,6 +20,7 @@ export type ChatMessage = {
   sender_id: string;
   content: string;
   message_type?: 'text' | 'image';
+  mediaPath?: string | null;
   mediaUrl?: string | null;
   mediaAvailable?: boolean;
   media_mime_type?: string | null;
@@ -31,7 +34,9 @@ type RawChatMessage = Partial<ChatMessage> & {
   senderId?: string;
   messageType?: 'text' | 'image';
   media_url?: string | null;
+  media_path?: string | null;
   mediaUrl?: string | null;
+  mediaPath?: string | null;
   mediaAvailable?: boolean;
   media_mime_type?: string | null;
   mediaMimeType?: string | null;
@@ -98,6 +103,37 @@ export async function getChatMessages(params: {
   return normalizeChatMessagesResponse(response);
 }
 
+export async function getChatMessageById(params: {
+  messageId: string;
+  relationId?: string;
+}): Promise<ChatSendResponse> {
+  const query = new URLSearchParams();
+
+  if (params.relationId) {
+    query.set('relationId', params.relationId);
+  }
+
+  const queryString = query.toString();
+  const path = queryString
+    ? `/chat/messages/${encodeURIComponent(params.messageId)}?${queryString}`
+    : `/chat/messages/${encodeURIComponent(params.messageId)}`;
+
+  const response = await apiRequest<RawChatSendResponse>({
+    path,
+    method: 'GET'
+  });
+
+  return normalizeChatSendResponse(response);
+}
+
+export async function getChatImageSignedUrl(params: {
+  messageId: string;
+  relationId?: string;
+}): Promise<string | null> {
+  const response = await getChatMessageById(params);
+  return response.message.mediaUrl ?? null;
+}
+
 export async function sendChatMessage(payload: {
   content: string;
   relationId?: string;
@@ -126,7 +162,7 @@ export async function sendChatImage(payload: {
     formData.append('content', payload.content.trim());
   }
 
-  formData.append('image', payload.file as unknown as Blob);
+  await appendImageFile(formData, payload.file);
 
   const response = await apiRequest<RawChatSendResponse>({
     path: '/chat/messages',
@@ -145,6 +181,14 @@ export async function markChatAsRead(relationId?: string): Promise<void> {
   });
 }
 
+export async function clearChatMessages(relationId?: string): Promise<{ relationId: string }> {
+  return apiRequest<{ relationId: string }>({
+    path: '/chat/messages',
+    method: 'DELETE',
+    body: JSON.stringify({ relationId })
+  });
+}
+
 export async function startChatVideoCall(payload: {
   relationId?: string;
 } = {}): Promise<ChatVideoCallResponse> {
@@ -156,10 +200,10 @@ export async function startChatVideoCall(payload: {
 }
 
 export function parseChatMessage(message: ChatMessage): ChatParsedPayload {
-  if (message.message_type === 'image' || Boolean(message.mediaUrl)) {
+  if (message.message_type === 'image' || Boolean(message.mediaUrl) || Boolean(message.mediaPath)) {
     return {
       kind: 'image',
-      text: message.content || undefined,
+      text: getImageMessageText(message.content),
       url: message.mediaUrl ?? undefined
     };
   }
@@ -173,10 +217,12 @@ export function parseChatMessage(message: ChatMessage): ChatParsedPayload {
 
     if (parsed.kind === 'image' || parsed.kind === 'call_invite' || parsed.kind === 'call_ended') {
       if (parsed.kind === 'image') {
+        const parsedUrl = typeof parsed.url === 'string' ? parsed.url : undefined;
+
         return {
           kind: 'image',
-          text: message.content,
-          url: message.mediaUrl ?? undefined
+          text: getImageMessageText(message.content),
+          url: message.mediaUrl ?? parsedUrl
         };
       }
 
@@ -215,7 +261,12 @@ export function normalizeChatMessage(message: RawChatMessage): ChatMessage {
     relation_id: relationId,
     sender_id: senderId,
     content,
-    message_type: normalizeMessageType(message.message_type ?? message.messageType, message.media_url ?? message.mediaUrl),
+    message_type: normalizeMessageType(
+      message.message_type ?? message.messageType,
+      message.media_url ?? message.mediaUrl,
+      message.mediaPath ?? message.media_path
+    ),
+    mediaPath: normalizeNullableString(message.mediaPath ?? message.media_path),
     mediaUrl: normalizeNullableString(message.mediaUrl ?? message.media_url),
     mediaAvailable: typeof message.mediaAvailable === 'boolean' ? message.mediaAvailable : undefined,
     media_mime_type: normalizeNullableString(message.media_mime_type ?? message.mediaMimeType),
@@ -252,12 +303,16 @@ function normalizeParticipant(participant?: RawChatParticipant | null): ChatPart
   };
 }
 
-function normalizeMessageType(type: unknown, mediaUrl: unknown): 'text' | 'image' | undefined {
+function normalizeMessageType(type: unknown, mediaUrl: unknown, mediaPath?: unknown): 'text' | 'image' | undefined {
   if (type === 'text' || type === 'image') {
     return type;
   }
 
   if (typeof mediaUrl === 'string' && mediaUrl.trim()) {
+    return 'image';
+  }
+
+  if (typeof mediaPath === 'string' && mediaPath.trim()) {
     return 'image';
   }
 
@@ -286,4 +341,38 @@ function normalizeNullableNumber(value: unknown): number | null {
   }
 
   return null;
+}
+
+function getImageMessageText(content: string): string | undefined {
+  if (!content || content === IMAGE_MESSAGE_EMPTY_CONTENT) {
+    return undefined;
+  }
+
+  return content;
+}
+
+async function appendImageFile(
+  formData: FormData,
+  file: { uri: string; name: string; type: string }
+): Promise<void> {
+  const normalizedType = normalizeImageMimeType(file.type);
+
+  if (Platform.OS === 'web') {
+    const response = await fetch(file.uri);
+    const blob = await response.blob();
+    const type = normalizeImageMimeType(blob.type) || normalizedType;
+    const imageFile = new File([blob], file.name, { type });
+    formData.append('image', imageFile);
+    return;
+  }
+
+  formData.append('image', { ...file, type: normalizedType } as unknown as Blob);
+}
+
+function normalizeImageMimeType(mimeType?: string | null): string {
+  if (mimeType === 'image/jpg') {
+    return 'image/jpeg';
+  }
+
+  return mimeType || 'image/jpeg';
 }

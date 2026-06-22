@@ -62,6 +62,19 @@ export const chatRepository = {
     return (data ?? []).reverse();
   },
 
+  findMessageById: async (relationId: string, messageId: string): Promise<ChatMessageRow | null> => {
+    const { data, error } = await supabase
+      .from('chat_messages')
+      .select('*')
+      .eq('id', messageId)
+      .eq('relation_id', relationId)
+      .maybeSingle();
+
+    if (error) throw error;
+
+    return data;
+  },
+
   createMessage: async (payload: ChatMessageInsert): Promise<ChatMessageRow> => {
     const db = supabase as any;
 
@@ -84,6 +97,15 @@ export const chatRepository = {
       .eq('relation_id', relationId)
       .is('read_at', null)
       .neq('sender_id', readerId);
+
+    if (error) throw error;
+  },
+
+  deleteMessagesByRelationId: async (relationId: string): Promise<void> => {
+    const { error } = await supabase
+      .from('chat_messages')
+      .delete()
+      .eq('relation_id', relationId);
 
     if (error) throw error;
   },

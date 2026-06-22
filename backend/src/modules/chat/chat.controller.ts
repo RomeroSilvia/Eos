@@ -23,6 +23,24 @@ export const getMessages: RequestHandler = asyncHandler(async (req, res) => {
   res.json(result);
 });
 
+export const getMessageById: RequestHandler = asyncHandler(async (req, res) => {
+  const relationId = typeof req.query.relationId === 'string' ? req.query.relationId : undefined;
+  const messageId = typeof req.params.messageId === 'string' ? req.params.messageId : '';
+
+  if (!messageId) {
+    throw new ApiError(400, 'messageId es requerido.');
+  }
+
+  const result = await chatService.getMessageById({
+    userId: req.user.id,
+    role: req.user.role ?? 'user',
+    relationId,
+    messageId
+  });
+
+  res.json(result);
+});
+
 export const sendMessage: RequestHandler = asyncHandler(async (req, res) => {
   const relationId = (req.body as { relationId?: unknown }).relationId;
   const content = (req.body as { content?: unknown }).content;
@@ -71,6 +89,19 @@ export const markMessagesAsRead: RequestHandler = asyncHandler(async (req, res) 
   const relationId = (req.body as { relationId?: unknown }).relationId;
 
   const result = await chatService.markAsRead({
+    userId: req.user.id,
+    role: req.user.role ?? 'user',
+    relationId: typeof relationId === 'string' ? relationId : undefined
+  });
+
+  res.json(result);
+});
+
+export const clearMessages: RequestHandler = asyncHandler(async (req, res) => {
+  const relationId = (req.body as { relationId?: unknown } | undefined)?.relationId
+    ?? (typeof req.query.relationId === 'string' ? req.query.relationId : undefined);
+
+  const result = await chatService.clearMessages({
     userId: req.user.id,
     role: req.user.role ?? 'user',
     relationId: typeof relationId === 'string' ? relationId : undefined

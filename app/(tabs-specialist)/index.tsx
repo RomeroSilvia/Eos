@@ -63,6 +63,10 @@ export default function SpecialistHomeScreen() {
       .sort((a, b) => getDateTime(b.lastActivityAt) - getDateTime(a.lastActivityAt))
       .slice(0, 3);
   }, [activePatients]);
+  const unreadConsultationsCount = useMemo(
+    () => activePatients.reduce((total, patient) => total + (patient.unreadCount ?? 0), 0),
+    [activePatients]
+  );
   const specialistName = getDisplayName(homeState.status?.full_name);
 
   return (
@@ -149,6 +153,7 @@ export default function SpecialistHomeScreen() {
                       <Text style={styles.consultationName}>{consultation.fullName}</Text>
                       <Text style={styles.consultationReason}>{formatSkinType(consultation.skinType)}</Text>
                     </View>
+                    <UnreadBadge count={consultation.unreadCount ?? 0} />
                     <View style={styles.timePill}>
                       <Text style={styles.timeText}>{formatLastActivity(consultation.lastActivityAt)}</Text>
                     </View>
@@ -185,6 +190,28 @@ function StateCard({
     <View style={styles.stateCard}>
       {showSpinner ? <ActivityIndicator color={colors.primary} /> : <Ionicons color={colors.primaryDark} name={icon} size={30} />}
       <Text style={styles.emptyText}>{message}</Text>
+    </View>
+  );
+}
+
+function UnreadBadge({
+  count,
+  variant = 'inline'
+}: {
+  count: number;
+  variant?: 'inline' | 'corner' | 'floating';
+}) {
+  if (count <= 0) {
+    return null;
+  }
+
+  return (
+    <View style={[
+      styles.unreadBadge,
+      variant === 'corner' && styles.unreadBadgeCorner,
+      variant === 'floating' && styles.unreadBadgeFloating
+    ]}>
+      <Text style={styles.unreadBadgeText}>{count > 99 ? '99+' : count}</Text>
     </View>
   );
 }
@@ -316,6 +343,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginTop: 12,
     minHeight: 40,
+    position: 'relative',
     width: 147
   },
   primaryButtonText: {
@@ -345,7 +373,8 @@ const styles = StyleSheet.create({
     flex: 1,
     gap: 8,
     justifyContent: 'center',
-    minHeight: 84
+    minHeight: 84,
+    position: 'relative'
   },
   quickLabel: {
     color: colors.textPrimary,
@@ -452,6 +481,30 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     fontSize: 12,
     fontWeight: '800'
+  },
+  unreadBadge: {
+    alignItems: 'center',
+    backgroundColor: colors.secondary,
+    borderRadius: 9,
+    height: 18,
+    justifyContent: 'center',
+    minWidth: 18,
+    paddingHorizontal: 5
+  },
+  unreadBadgeCorner: {
+    position: 'absolute',
+    right: 12,
+    top: 10
+  },
+  unreadBadgeFloating: {
+    position: 'absolute',
+    right: -6,
+    top: -6
+  },
+  unreadBadgeText: {
+    color: colors.surface,
+    fontSize: 10,
+    fontWeight: '900'
   },
   emptyBox: {
     alignItems: 'center',

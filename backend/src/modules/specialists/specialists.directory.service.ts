@@ -115,9 +115,11 @@ export const specialistsDirectoryService = {
     }
 
     const clientIds = [...new Set(relations.map((relation) => relation.client_id))];
+    const relationIds = relations.map((relation) => relation.id);
     const clients = await specialistsDirectoryRepository.findProfilesByIds(clientIds);
     const latestSkinProfiles = await specialistsDirectoryRepository.findLatestSkinProfilesByUserIds(clientIds);
     const latestRoutineLogs = await specialistsDirectoryRepository.findLatestRoutineLogsByUserIds(clientIds);
+    const unreadCounts = await specialistsDirectoryRepository.findUnreadChatCountsByRelationIds(relationIds, specialistId);
     const photos = await Promise.all(
       clients.map(async (client) => ({
         clientId: client.id,
@@ -151,6 +153,7 @@ export const specialistsDirectoryService = {
             }
           : null,
         profileImageUrl: photoByClientId.get(client.id) ?? null,
+        unreadCount: unreadCounts.get(relationByClientId.get(client.id)!.id) ?? 0,
         lastActivityAt: resolveLastActivityAt(relationByClientId.get(client.id)!, latestRoutineLogs.get(client.id))
       }));
   },
