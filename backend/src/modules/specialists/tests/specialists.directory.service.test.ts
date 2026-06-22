@@ -25,6 +25,7 @@ jest.mock('../specialists.directory.repository', () => ({
     findProfilesByIds: jest.fn(),
     findLatestSkinProfilesByUserIds: jest.fn(),
     findLatestRoutineLogsByUserIds: jest.fn(),
+    findUnreadChatCountsByRelationIds: jest.fn(),
     findProfilePhotoById: jest.fn(),
     findRoutinesByUserId: jest.fn(),
     findRecentRoutineLogsByUserId: jest.fn(),
@@ -69,6 +70,7 @@ describe('specialistsDirectoryService', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockedRepository.findSpecialistProfileIdentityByUserId.mockResolvedValue(null);
+    mockedRepository.findUnreadChatCountsByRelationIds.mockResolvedValue(new Map());
   });
 
   describe('searchSpecialists', () => {
@@ -222,6 +224,9 @@ describe('specialistsDirectoryService', () => {
           created_at: '2026-05-02T10:00:00.000Z'
         }]
       ] as any));
+      mockedRepository.findUnreadChatCountsByRelationIds.mockResolvedValue(new Map([
+        ['relation-1', 2]
+      ]));
       mockedRepository.findProfilePhotoById.mockResolvedValue(null);
 
       const result = await specialistsDirectoryService.getMyPatients('specialist-1');
@@ -233,6 +238,7 @@ describe('specialistsDirectoryService', () => {
           relationId: 'relation-1',
           status: 'active',
           skinType: 'mixed',
+          unreadCount: 2,
           lastActivityAt: '2026-05-02'
         })
       ]);

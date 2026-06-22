@@ -1,6 +1,6 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocalSearchParams } from 'expo-router';
-import { AppState, Alert, FlatList, Image, Linking, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, AppState, Alert, FlatList, Image, Linking, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import type { RealtimeChannel } from '@supabase/supabase-js';
@@ -12,6 +12,7 @@ import { colors } from '@/constants/colors';
 import { ApiClientError, getFriendlyErrorMessage } from '@/services/api/client';
 import { getCurrentProfile } from '@/services/auth';
 import {
+  getChatMessageById,
   getChatMessages,
   MAX_CHAT_IMAGE_SIZE_BYTES,
   markChatAsRead,
@@ -56,6 +57,7 @@ export default function ChatScreen() {
   const [isSending, setIsSending] = useState(false);
   const [selectedImage, setSelectedImage] = useState<SelectedChatImage | null>(null);
   const [failedImageIds, setFailedImageIds] = useState<Set<string>>(new Set());
+  const [imageLoadingIds, setImageLoadingIds] = useState<Set<string>>(new Set());
   const [localImageUrisById, setLocalImageUrisById] = useState<Record<string, string>>({});
   const [relationId, setRelationId] = useState<string | undefined>(relationIdFromParams);
   const [myUserId, setMyUserId] = useState<string | null>(null);
@@ -75,6 +77,7 @@ export default function ChatScreen() {
     setParticipant(null);
     setLocalImageUrisById({});
     setFailedImageIds(new Set());
+    setImageLoadingIds(new Set());
     failedImageUrlByIdRef.current.clear();
   }, [relationIdFromParams]);
 
@@ -84,6 +87,7 @@ export default function ChatScreen() {
       failedImageUrlByIdRef.current.get(nextMessage.id) !== nextMessage.mediaUrl
     ) {
       setFailedImageIds((prev) => removeFailedImageId(prev, nextMessage.id));
+      setImageLoadingIds((prev) => removeImageLoadingId(prev, nextMessage.id));
     }
 
     setMessages((prev) => {
@@ -101,6 +105,7 @@ export default function ChatScreen() {
 
     if (idsWithNewMediaUrl.length > 0) {
       setFailedImageIds((prev) => removeFailedImageIds(prev, idsWithNewMediaUrl));
+      setImageLoadingIds((prev) => removeImageLoadingIds(prev, idsWithNewMediaUrl));
     }
 
     setMessages((prev) => mergeChatMessages(prev, incoming, failedImageUrlByIdRef.current));
@@ -177,19 +182,41 @@ export default function ChatScreen() {
     }
   }, [markChatAsReadInBackground, relationId, relationIdFromParams, mergeMessages]);
 
+  const refreshSingleMessageSilently = useCallback(async (messageId: string, nextRelationId = relationId) => {
+    try {
+      const response = await getChatMessageById({
+        messageId,
+        relationId: nextRelationId
+      });
+
+      setRelationId(response.relationId);
+      mergeMessages([response.message]);
+      markChatAsReadInBackground(response.relationId);
+    } catch {
+      // Fallback silencioso para no romper la UX del chat.
+    }
+  }, [markChatAsReadInBackground, mergeMessages, relationId]);
+
   const handleImageError = useCallback((messageId: string, url: string) => {
+    setImageLoadingIds((prev) => removeImageLoadingId(prev, messageId));
+
     if (failedImageUrlByIdRef.current.get(messageId) !== url) {
       failedImageUrlByIdRef.current.set(messageId, url);
-      void syncMessagesSilently();
+      void refreshSingleMessageSilently(messageId);
       return;
     }
 
     setFailedImageIds((prev) => new Set(prev).add(messageId));
-  }, [syncMessagesSilently]);
+  }, [refreshSingleMessageSilently]);
+
+  const handleImageLoadStart = useCallback((messageId: string) => {
+    setImageLoadingIds((prev) => new Set(prev).add(messageId));
+  }, []);
 
   const handleImageLoad = useCallback((messageId: string) => {
     failedImageUrlByIdRef.current.delete(messageId);
     setFailedImageIds((prev) => removeFailedImageId(prev, messageId));
+    setImageLoadingIds((prev) => removeImageLoadingId(prev, messageId));
   }, []);
 
   useEffect(() => {
@@ -272,10 +299,11 @@ export default function ChatScreen() {
           },
           (payload) => {
             const nextMessage = normalizeChatMessage(payload.new as Partial<ChatMessage>);
+            const parsedPayload = parseChatMessage(nextMessage);
             appendMessage(nextMessage);
 
-            if (nextMessage.message_type === 'image' && !nextMessage.mediaUrl) {
-              void syncMessagesSilently(relationId);
+            if (parsedPayload.kind === 'image' && !parsedPayload.url) {
+              void refreshSingleMessageSilently(nextMessage.id, relationId);
             }
 
             if (nextMessage.sender_id !== myUserIdRef.current) {
@@ -300,7 +328,7 @@ export default function ChatScreen() {
         void channel.unsubscribe();
       }
     };
-  }, [appendMessage, markChatAsReadInBackground, relationId, syncMessagesSilently]);
+  }, [appendMessage, markChatAsReadInBackground, refreshSingleMessageSilently, relationId]);
 
   async function handleSend() {
     if ((!messageText.trim() && !selectedImage) || isSending) {
@@ -341,7 +369,7 @@ export default function ChatScreen() {
       shouldScrollToEndRef.current = true;
 
       if (isImageMessage && !response.message.mediaUrl) {
-        await syncMessagesSilently(response.relationId);
+        await refreshSingleMessageSilently(response.message.id, response.relationId);
       }
     } catch (error) {
       Alert.alert('Chat', getFriendlyErrorMessage(error, 'No pudimos enviar el mensaje.'));
@@ -449,8 +477,8 @@ export default function ChatScreen() {
   }, [orderedMessages]);
 
   const chatListExtraData = useMemo(
-    () => ({ failedImageIds, localImageUrisById, myUserId }),
-    [failedImageIds, localImageUrisById, myUserId]
+    () => ({ failedImageIds, imageLoadingIds, localImageUrisById, myUserId }),
+    [failedImageIds, imageLoadingIds, localImageUrisById, myUserId]
   );
 
   const handleContentSizeChange = useCallback(() => {
@@ -470,6 +498,7 @@ export default function ChatScreen() {
     const message = item.message;
     const isMine = myUserId === message.sender_id;
     const imageFailed = failedImageIds.has(message.id);
+    const isImageLoading = imageLoadingIds.has(message.id);
     const localImageUri = localImageUrisById[message.id];
     const parsed = parseChatMessage(message);
     const imageUri = imageFailed ? localImageUri : parsed.url ?? localImageUri;
@@ -477,15 +506,17 @@ export default function ChatScreen() {
     return (
       <ChatMessageBubble
         imageUri={imageUri}
+        isImageLoading={isImageLoading}
         isLocalImage={Boolean(imageUri && imageUri === localImageUri)}
         isMine={isMine}
         message={message}
         onImageError={handleImageError}
         onImageLoad={handleImageLoad}
+        onImageLoadStart={handleImageLoadStart}
         parsed={parsed}
       />
     );
-  }, [failedImageIds, handleImageError, handleImageLoad, localImageUrisById, myUserId]);
+  }, [failedImageIds, handleImageError, handleImageLoad, handleImageLoadStart, imageLoadingIds, localImageUrisById, myUserId]);
 
   return (
     <SafeAreaView style={styles.screen}>
@@ -587,21 +618,25 @@ const ChatDateSeparator = memo(function ChatDateSeparator({ label }: { label: st
 
 type ChatMessageBubbleProps = {
   imageUri?: string;
+  isImageLoading: boolean;
   isLocalImage: boolean;
   isMine: boolean;
   message: ChatMessage;
   onImageError: (messageId: string, url: string) => void;
   onImageLoad: (messageId: string) => void;
+  onImageLoadStart: (messageId: string) => void;
   parsed: ChatParsedPayload;
 };
 
 const ChatMessageBubble = memo(function ChatMessageBubble({
   imageUri,
+  isImageLoading,
   isLocalImage,
   isMine,
   message,
   onImageError,
   onImageLoad,
+  onImageLoadStart,
   parsed
 }: ChatMessageBubbleProps) {
   return (
@@ -616,13 +651,24 @@ const ChatMessageBubble = memo(function ChatMessageBubble({
             <Text style={[styles.bubbleText, isMine ? styles.mineText : styles.theirsText]}>{parsed.text}</Text>
           ) : null}
           {imageUri ? (
-            <Image
-              source={{ cache: isLocalImage ? 'default' : 'reload', uri: imageUri }}
-              onLoad={() => onImageLoad(message.id)}
-              onError={() => onImageError(message.id, imageUri)}
-              resizeMode="cover"
-              style={styles.chatImage}
-            />
+            <View style={styles.chatImageWrap}>
+              <Image
+                source={{ cache: isLocalImage ? 'default' : 'reload', uri: imageUri }}
+                onLoadStart={() => onImageLoadStart(message.id)}
+                onLoad={() => onImageLoad(message.id)}
+                onError={() => onImageError(message.id, imageUri)}
+                resizeMode="cover"
+                style={styles.chatImage}
+              />
+              {isImageLoading ? (
+                <View style={styles.chatImageLoadingOverlay}>
+                  <ActivityIndicator color={isMine ? colors.surface : colors.primaryDark} size="small" />
+                  <Text style={[styles.chatImageLoadingText, isMine ? styles.mineTextSoft : styles.theirsTextSoft]}>
+                    Cargando imagen...
+                  </Text>
+                </View>
+              ) : null}
+            </View>
           ) : (
             <View style={[styles.imageFallback, isMine ? styles.imageFallbackMine : styles.imageFallbackTheirs]}>
               <Ionicons color={isMine ? colors.surface : colors.textMuted} name="image-outline" size={22} />
@@ -840,6 +886,23 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     height: 180,
     width: 220
+  },
+  chatImageWrap: {
+    borderRadius: 10,
+    height: 180,
+    overflow: 'hidden',
+    width: 220
+  },
+  chatImageLoadingOverlay: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.25)',
+    gap: 6,
+    justifyContent: 'center',
+    ...StyleSheet.absoluteFillObject
+  },
+  chatImageLoadingText: {
+    fontSize: 12,
+    fontWeight: '700'
   },
   imageFallback: {
     alignItems: 'center',
@@ -1116,11 +1179,37 @@ function areChatMessageBubblePropsEqual(
     current.parsed.url === next.parsed.url &&
     current.parsed.title === next.parsed.title &&
     current.imageUri === next.imageUri &&
+    current.isImageLoading === next.isImageLoading &&
     current.isLocalImage === next.isLocalImage &&
     current.isMine === next.isMine &&
     current.onImageError === next.onImageError &&
-    current.onImageLoad === next.onImageLoad
+    current.onImageLoad === next.onImageLoad &&
+    current.onImageLoadStart === next.onImageLoadStart
   );
+}
+
+function removeImageLoadingId(current: Set<string>, id: string): Set<string> {
+  if (!current.has(id)) {
+    return current;
+  }
+
+  const next = new Set(current);
+  next.delete(id);
+  return next;
+}
+
+function removeImageLoadingIds(current: Set<string>, ids: string[]): Set<string> {
+  if (!ids.some((id) => current.has(id))) {
+    return current;
+  }
+
+  const next = new Set(current);
+
+  for (const id of ids) {
+    next.delete(id);
+  }
+
+  return next;
 }
 
 function removeFailedImageId(current: Set<string>, id: string): Set<string> {

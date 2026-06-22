@@ -9,6 +9,7 @@ jest.mock('../chat.repository', () => ({
     findActiveRelationByClientId: jest.fn(),
     findRelationById: jest.fn(),
     findMessages: jest.fn(),
+    findMessageById: jest.fn(),
     createMessage: jest.fn(),
     markMessagesAsRead: jest.fn(),
     uploadFile: jest.fn(),
@@ -239,7 +240,82 @@ describe('chatService', () => {
           bucket: 'chat-media'
         })
       );
+      expect(mockedRepository.createMessage).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message_type: 'image',
+          content: '__eos_chat_image__'
+        })
+      );
+      expect(result.message.content).toBe('');
       expect(result.message.mediaAvailable).toBe(true);
+    });
+
+    it('acepta imagen valida aunque el cliente la envie como application/octet-stream', async () => {
+      mockedRepository.findRelationById.mockResolvedValue(buildRelation());
+      mockedRepository.uploadFile.mockResolvedValue(undefined);
+      mockedRepository.createSignedUrl.mockResolvedValue('https://signed.local/image');
+      mockedRepository.createMessage.mockImplementation(async (payload) => ({
+        id: 'message-image-1',
+        relation_id: payload.relation_id,
+        sender_id: payload.sender_id,
+        content: payload.content,
+        message_type: 'image',
+        media_path: payload.media_path ?? null,
+        media_mime_type: payload.media_mime_type ?? null,
+        media_size: payload.media_size ?? null,
+        read_at: null,
+        created_at: '2026-06-19T12:20:00.000Z'
+      }));
+
+      await chatService.sendMediaMessage({
+        userId: 'user-1',
+        role: 'user',
+        relationId: 'relation-1',
+        file: buildImageFile({ mimetype: 'application/octet-stream', originalname: 'foto' })
+      });
+
+      expect(mockedRepository.uploadFile).toHaveBeenCalledWith(
+        expect.objectContaining({
+          contentType: 'image/jpeg',
+          path: expect.stringMatching(/\.jpg$/)
+        })
+      );
+      expect(mockedRepository.createMessage).toHaveBeenCalledWith(
+        expect.objectContaining({
+          media_mime_type: 'image/jpeg'
+        })
+      );
+    });
+
+    it('normaliza image/jpg como image/jpeg', async () => {
+      mockedRepository.findRelationById.mockResolvedValue(buildRelation());
+      mockedRepository.uploadFile.mockResolvedValue(undefined);
+      mockedRepository.createSignedUrl.mockResolvedValue('https://signed.local/image');
+      mockedRepository.createMessage.mockImplementation(async (payload) => ({
+        id: 'message-image-1',
+        relation_id: payload.relation_id,
+        sender_id: payload.sender_id,
+        content: payload.content,
+        message_type: 'image',
+        media_path: payload.media_path ?? null,
+        media_mime_type: payload.media_mime_type ?? null,
+        media_size: payload.media_size ?? null,
+        read_at: null,
+        created_at: '2026-06-19T12:20:00.000Z'
+      }));
+
+      await chatService.sendMediaMessage({
+        userId: 'user-1',
+        role: 'user',
+        relationId: 'relation-1',
+        file: buildImageFile({ mimetype: 'image/jpg' })
+      });
+
+      expect(mockedRepository.uploadFile).toHaveBeenCalledWith(
+        expect.objectContaining({
+          contentType: 'image/jpeg'
+        })
+      );
     });
 
     it('rechaza imagen mayor a 15 MB', async () => {
@@ -303,7 +379,7 @@ describe('chatService', () => {
       expect('media_path' in result.message).toBe(false);
     });
 
-    it('limpia el archivo subido si falla la insercion en DB', async () => {
+    it('limpia el archivo subido y devuelve error controlado si falla la insercion en DB', async () => {
       mockedRepository.findRelationById.mockResolvedValue(buildRelation());
       mockedRepository.uploadFile.mockResolvedValue(undefined);
       mockedRepository.createMessage.mockRejectedValue(new Error('db failed'));
@@ -316,11 +392,33 @@ describe('chatService', () => {
           relationId: 'relation-1',
           file: buildImageFile()
         })
-      ).rejects.toThrow('db failed');
+      ).rejects.toMatchObject({
+        statusCode: 500,
+        message: 'No pudimos enviar la imagen. Intentá nuevamente.'
+      } as Partial<ApiError>);
       expect(mockedRepository.deleteFile).toHaveBeenCalledWith(
         'chat-media',
         expect.stringMatching(/^relation-1\/user-1\/.+\.jpg$/)
       );
+    });
+
+    it('devuelve error controlado si falla la subida a Storage', async () => {
+      mockedRepository.findRelationById.mockResolvedValue(buildRelation());
+      mockedRepository.uploadFile.mockRejectedValue(new Error('bucket not found'));
+
+      await expect(
+        chatService.sendMediaMessage({
+          userId: 'user-1',
+          role: 'user',
+          relationId: 'relation-1',
+          file: buildImageFile()
+        })
+      ).rejects.toMatchObject({
+        statusCode: 500,
+        message: 'No pudimos enviar la imagen. Intentá nuevamente.'
+      } as Partial<ApiError>);
+      expect(mockedRepository.createMessage).not.toHaveBeenCalled();
+      expect(mockedRepository.deleteFile).not.toHaveBeenCalled();
     });
   });
 

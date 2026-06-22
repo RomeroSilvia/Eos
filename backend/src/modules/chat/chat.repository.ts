@@ -62,6 +62,19 @@ export const chatRepository = {
     return (data ?? []).reverse();
   },
 
+  findMessageById: async (relationId: string, messageId: string): Promise<ChatMessageRow | null> => {
+    const { data, error } = await supabase
+      .from('chat_messages')
+      .select('*')
+      .eq('id', messageId)
+      .eq('relation_id', relationId)
+      .maybeSingle();
+
+    if (error) throw error;
+
+    return data;
+  },
+
   createMessage: async (payload: ChatMessageInsert): Promise<ChatMessageRow> => {
     const db = supabase as any;
 
