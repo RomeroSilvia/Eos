@@ -131,16 +131,6 @@ export default function SpecialistsScreen() {
         </Card>
 
         <Card style={styles.card}>
-          <Text style={styles.cardTitle}>Sos especialista?</Text>
-          <Text style={styles.description}>
-            Si queres registrarte o revisar el estado de tu matricula, segui desde esta opcion.
-          </Text>
-          <Button onPress={() => router.push('/specialist-status' as never)} style={styles.button}>
-            Ver estado de especialista
-          </Button>
-        </Card>
-
-        <Card style={styles.card}>
           <Text style={styles.cardTitle}>Mi especialista</Text>
           {mySpecialist ? (
             <View style={styles.mySpecialistCard}>
@@ -290,10 +280,6 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     fontSize: 14,
     lineHeight: 20
-  },
-  button: {
-    marginTop: 4,
-    alignSelf: 'flex-start'
   },
   input: {
     backgroundColor: colors.surface,

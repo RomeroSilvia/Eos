@@ -25,11 +25,6 @@ import {
   type SpecialistSpecialty
 } from '@/services/specialist';
 
-const roleOptions: { label: string; value: 'user' | 'specialist' }[] = [
-  { label: 'No, soy usuario', value: 'user' },
-  { label: 'Si, soy especialista', value: 'specialist' }
-];
-
 const specialtyOptions: { label: string; value: SpecialistSpecialty }[] = [
   { label: 'Dermatologo/a', value: 'dermatologo' },
   { label: 'Cosmetologo/a', value: 'cosmetologo' }
@@ -66,7 +61,6 @@ export default function RegisterScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [role, setRole] = useState<'user' | 'specialist'>(mode === 'specialist' ? 'specialist' : 'user');
-  const [isRoleMenuOpen, setIsRoleMenuOpen] = useState(false);
   const [specialty, setSpecialty] = useState<SpecialistSpecialty>('dermatologo');
   const [isSpecialtyMenuOpen, setIsSpecialtyMenuOpen] = useState(false);
   const [licenseNumber, setLicenseNumber] = useState('');
@@ -393,35 +387,6 @@ export default function RegisterScreen() {
             </>
           ) : null}
 
-          {mode ? null : (
-            <>
-              <FieldLabel text="Tipo de cuenta" />
-              <Pressable style={styles.selectInput} onPress={() => setIsRoleMenuOpen((current) => !current)}>
-                <Text style={styles.selectText}>{getRoleLabel(role)}</Text>
-                <Ionicons color="#495057" name="chevron-down" size={20} />
-              </Pressable>
-              {errors.role ? <Text style={styles.errorText}>{errors.role}</Text> : null}
-
-              {isRoleMenuOpen ? (
-                <View style={styles.roleMenu}>
-                  {roleOptions.map((option) => (
-                    <Pressable
-                      key={option.value}
-                      onPress={() => {
-                        setRole(option.value);
-                        setErrors((current) => ({ ...current, role: undefined, form: undefined }));
-                        setIsRoleMenuOpen(false);
-                      }}
-                      style={styles.roleOption}
-                    >
-                      <Text style={styles.roleOptionText}>{option.label}</Text>
-                    </Pressable>
-                  ))}
-                </View>
-              ) : null}
-            </>
-          )}
-
           {role === 'specialist' ? (
             <SpecialistFields
               compressingDocument={compressingDocument}
@@ -747,10 +712,6 @@ function buildSpecialistUsername(fullName: string, email: string): string {
     .replace(/^_+|_+$/g, '');
 
   return nameUsername ? `@${nameUsername}` : `@${emailUsername || 'especialista'}`;
-}
-
-function getRoleLabel(value: 'user' | 'specialist'): string {
-  return roleOptions.find((option) => option.value === value)?.label ?? roleOptions[0].label;
 }
 
 function getSpecialtyLabel(value: SpecialistSpecialty): string {

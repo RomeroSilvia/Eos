@@ -14,7 +14,8 @@ const ICON_BY_KIND: Record<AppNotificationKind, keyof typeof Ionicons.glyphMap> 
   'routine-evening': 'moon',
   'product-reminder': 'flask-outline',
   'routine-assigned': 'leaf',
-  'new-message': 'chatbubble-outline'
+  'new-message': 'chatbubble-outline',
+  chat: 'mail-outline'
 };
 
 const BACKGROUND_BY_KIND: Record<AppNotificationKind, string> = {
@@ -23,7 +24,8 @@ const BACKGROUND_BY_KIND: Record<AppNotificationKind, string> = {
   'routine-evening': colors.primary,
   'product-reminder': colors.secondary,
   'routine-assigned': colors.primaryDark,
-  'new-message': colors.secondary
+  'new-message': colors.secondary,
+  chat: colors.primaryDark
 };
 
 export function NotificationListItem({ notification, onPress }: NotificationListItemProps) {

@@ -18,6 +18,7 @@ import { Card } from '@/components/Card';
 import { colors } from '@/constants/colors';
 import { routes } from '@/constants/routes';
 import { getMyPatients, type PatientRelationStatus, type SpecialistPatient } from '@/services/specialist';
+import { formatSkinType } from '@/utils/skinType';
 
 type StatusFilter = 'all' | 'active' | 'inactive';
 
@@ -162,7 +163,7 @@ function PatientCard({ patient, onPress }: { patient: SpecialistPatient; onPress
         <View style={styles.patientDetails}>
           <View style={styles.detailRow}>
             <Ionicons color={colors.primaryDark} name="water-outline" size={16} />
-            <Text style={styles.detailText}>Tipo de piel: {formatSkinType(patient.skinType, false)}</Text>
+            <Text style={styles.detailText}>{formatSkinType(patient.skinType)}</Text>
           </View>
           <View style={styles.detailRow}>
             <Ionicons color={colors.primaryDark} name="time-outline" size={16} />
@@ -218,27 +219,6 @@ function normalizeText(value: string): string {
 function getInitials(fullName: string): string {
   const parts = fullName.trim().split(/\s+/).slice(0, 2);
   return parts.map((part) => part[0]?.toUpperCase()).join('') || 'P';
-}
-
-function formatSkinType(skinType: string | null, withPrefix = true): string {
-  if (!skinType || skinType === 'not_defined' || skinType === 'undefined' || skinType === 'unknown') {
-    return withPrefix ? 'Piel no registrada' : 'No registrada';
-  }
-
-  const labels: Record<string, string> = {
-    normal: 'normal',
-    dry: 'seca',
-    oily: 'grasa',
-    mixed: 'mixta',
-    sensitive: 'sensible'
-  };
-  const label = labels[skinType] ?? skinType;
-
-  return withPrefix ? `Piel ${label}` : capitalize(label);
-}
-
-function capitalize(value: string): string {
-  return value.charAt(0).toUpperCase() + value.slice(1);
 }
 
 function formatDate(value: string | null): string {

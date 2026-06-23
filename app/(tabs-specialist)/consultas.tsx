@@ -10,6 +10,7 @@ import { colors } from '@/constants/colors';
 import { routes } from '@/constants/routes';
 import { prepareSupabaseRealtimeClient } from '@/services/supabase';
 import { getMyPatients, type SpecialistPatient } from '@/services/specialist';
+import { formatSkinType } from '@/utils/skinType';
 
 export default function SpecialistConsultationsScreen() {
   const router = useRouter();
@@ -195,22 +196,6 @@ function StateMessage({
 function getInitials(fullName: string): string {
   const parts = fullName.trim().split(/\s+/).slice(0, 2);
   return parts.map((part) => part[0]?.toUpperCase()).join('') || 'P';
-}
-
-function formatSkinType(skinType: string | null): string {
-  if (!skinType || skinType === 'not_defined' || skinType === 'undefined' || skinType === 'unknown') {
-    return 'Piel no registrada';
-  }
-
-  const labels: Record<string, string> = {
-    normal: 'normal',
-    dry: 'seca',
-    oily: 'grasa',
-    mixed: 'mixta',
-    sensitive: 'sensible'
-  };
-
-  return `Piel ${labels[skinType] ?? skinType}`;
 }
 
 function formatTime(value: string | null): string {
