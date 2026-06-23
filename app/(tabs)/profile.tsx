@@ -37,21 +37,6 @@ export default function ProfileScreen() {
     }, [loadMySpecialist])
   );
 
-  const [isLoggingOut, setIsLoggingOut] = useState(false);
-
-  const handleLogout = async () => {
-    setIsLoggingOut(true);
-
-    try {
-      await logout();
-      router.replace('/landing');
-    } catch {
-      Alert.alert('Perfil', 'No pudimos cerrar sesion. Intenta nuevamente.');
-    } finally {
-      setIsLoggingOut(false);
-    }
-  };
-
   const handleUnlink = () => {
     Alert.alert(
       'Desvincular especialista',
