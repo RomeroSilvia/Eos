@@ -61,14 +61,14 @@ No hace falta instalar Supabase CLI globalmente. La raiz del proyecto tiene `sup
 
 ```bash
 npm install
-npm run supabase -- --version
+npm run supabase:local -- --version
 ```
 
 Para vincular el proyecto y correr migraciones:
 
 ```bash
-npm run supabase -- login
-npm run supabase -- link --project-ref <PROJECT_REF>
+npm run supabase:local -- login
+npm run supabase:local -- link --project-ref <PROJECT_REF>
 npm run supabase:db:push
 ```
 
@@ -84,4 +84,4 @@ Tambien se puede usar `npx` directamente:
 npx supabase gen types typescript --project-id <PROJECT_ID> --schema public > backend/src/database/database.types.ts
 ```
 
-Si aparece "Supabase CLI no esta instalado", no uses `npm install -g supabase`. Ejecuta `npm install` en la raiz y volve a correr el comando con `npm run supabase -- ...` o `npx supabase ...`.
+Si aparece "Supabase CLI no esta instalado", no uses `npm install -g supabase`. Ejecuta `npm install` en la raiz y volve a correr el comando con `npm run supabase:local -- ...` o `npx supabase ...`.

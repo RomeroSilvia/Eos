@@ -143,7 +143,9 @@ export const specialistsDirectoryService = {
         fullName: client.full_name,
         email: client.email,
         status: relationByClientId.get(client.id)!.status,
-        skinType: normalizeSkinType(client.skin_type ?? latestSkinProfiles.get(client.id)?.skin_type),
+        skinType:
+          normalizeSkinType(client.skin_type) ??
+          normalizeSkinType(latestSkinProfiles.get(client.id)?.skin_type),
         skinProfile: latestSkinProfiles.get(client.id)
           ? {
               ageRange: latestSkinProfiles.get(client.id)!.age_range,
@@ -200,7 +202,9 @@ export const specialistsDirectoryService = {
       fullName: client.full_name,
       email: client.email,
       status: relation.status,
-      skinType: normalizeSkinType(client.skin_type ?? latestSkinProfile?.skin_type),
+      skinType:
+        normalizeSkinType(client.skin_type) ??
+        normalizeSkinType(latestSkinProfile?.skin_type),
       skinProfile: latestSkinProfile
         ? {
             ageRange: latestSkinProfile.age_range,

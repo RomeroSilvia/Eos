@@ -344,6 +344,38 @@ describe('specialistsDirectoryService', () => {
 
       expect(result[0].skinType).toBeNull();
     });
+
+    it('usa el diagnostico del quiz cuando el perfil tiene not_defined', async () => {
+      mockedRepository.findRelationsBySpecialistIds.mockResolvedValue([
+        {
+          id: 'relation-1',
+          client_id: 'client-1',
+          specialist_id: 'specialist-1',
+          status: 'active',
+          created_at: '2026-05-10T10:00:00.000Z'
+        }
+      ] as any);
+      mockedRepository.findProfilesByIds.mockResolvedValue([
+        { id: 'client-1', full_name: 'Camila Rodriguez', email: 'camila@example.com', skin_type: 'not_defined' }
+      ] as any);
+      mockedRepository.findLatestSkinProfilesByUserIds.mockResolvedValue(new Map([
+        ['client-1', {
+          user_id: 'client-1',
+          skin_type: 'Mixta',
+          age_range: '25-30',
+          main_goal: 'Hidratar',
+          imperfections: 'Manchas',
+          routine_steps: 'Cinco pasos',
+          created_at: '2026-05-11T10:00:00.000Z'
+        }]
+      ] as any));
+      mockedRepository.findLatestRoutineLogsByUserIds.mockResolvedValue(new Map());
+      mockedRepository.findProfilePhotoById.mockResolvedValue(null);
+
+      const result = await specialistsDirectoryService.getMyPatients('specialist-1');
+
+      expect(result[0].skinType).toBe('Mixta');
+    });
   });
 
   describe('getMyPatientDetail', () => {
@@ -365,7 +397,7 @@ describe('specialistsDirectoryService', () => {
         created_at: '2026-05-01T10:00:00.000Z'
       } as any);
       mockedRepository.findProfilesByIds.mockResolvedValue([
-        { id: 'client-1', full_name: 'Camila Rodriguez', email: 'camila@example.com', skin_type: null }
+        { id: 'client-1', full_name: 'Camila Rodriguez', email: 'camila@example.com', skin_type: 'not_defined' }
       ] as any);
       mockedRepository.findLatestSkinProfilesByUserIds.mockResolvedValue(new Map([
         ['client-1', {

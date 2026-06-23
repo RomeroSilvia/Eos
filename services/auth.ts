@@ -140,9 +140,18 @@ export async function getCurrentProfile(): Promise<UserProfile> {
 }
 
 export async function logout(): Promise<void> {
-  await unregisterPushToken();
-  await deleteStoredItem(sessionKey);
-  await deleteStoredItem(accessTokenKey);
+  try {
+    await unregisterPushToken();
+  } catch (error) {
+    if (process.env.NODE_ENV !== 'production') {
+      console.warn('[auth/logout] No se pudieron limpiar las notificaciones.', error);
+    }
+  }
+
+  await Promise.all([
+    deleteStoredItem(sessionKey),
+    deleteStoredItem(accessTokenKey)
+  ]);
 }
 
 export async function changePassword(newPassword: string): Promise<void> {

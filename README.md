@@ -226,14 +226,14 @@ No hace falta instalar Supabase CLI globalmente. El proyecto usa la CLI como dev
 
 ```bash
 npm install
-npm run supabase -- --version
+npm run supabase:local -- --version
 ```
 
 Comandos utiles:
 
 ```bash
-npm run supabase -- login
-npm run supabase -- link --project-ref <PROJECT_REF>
+npm run supabase:local -- login
+npm run supabase:local -- link --project-ref <PROJECT_REF>
 npm run supabase:db:push
 npm run supabase:types -- --project-id <PROJECT_ID> > backend/src/database/database.types.ts
 ```
