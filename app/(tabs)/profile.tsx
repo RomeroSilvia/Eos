@@ -10,6 +10,7 @@ import { RemindersSection } from '@/components/RemindersSection';
 import { colors } from '@/constants/colors';
 import { useProfile } from '@/hooks/useProfile';
 import { logout } from '@/services/auth';
+import { formatSkinType } from '@/utils/skinType';
 import { getMySpecialist, unlinkSpecialist } from '@/services/specialist';
 import type { MySpecialist } from '@/services/specialist';
 import { useCallback, useState } from 'react';
@@ -35,6 +36,21 @@ export default function ProfileScreen() {
       void loadMySpecialist();
     }, [loadMySpecialist])
   );
+
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+
+  const handleLogout = async () => {
+    setIsLoggingOut(true);
+
+    try {
+      await logout();
+      router.replace('/landing');
+    } catch {
+      Alert.alert('Perfil', 'No pudimos cerrar sesion. Intenta nuevamente.');
+    } finally {
+      setIsLoggingOut(false);
+    }
+  };
 
   const handleUnlink = () => {
     Alert.alert(
@@ -85,7 +101,7 @@ export default function ProfileScreen() {
           </View>
           <View>
             <Text style={styles.name}>{profile?.name ?? 'Marta'}</Text>
-            <Text style={styles.meta}>Piel mixta · Usuario</Text>
+            <Text style={styles.meta}>{formatSkinType(profile?.skinType)} · {formatRole(profile?.role)}</Text>
           </View>
         </Card>
         <Card style={styles.settings}>
@@ -152,11 +168,17 @@ export default function ProfileScreen() {
           onPress={handleLogout}
           style={({ pressed }) => [styles.logoutButton, pressed && styles.pressed, isLoggingOut && styles.disabled]}
         >
-          <Text style={styles.logoutText}>{isLoggingOut ? 'Cerrando...' : 'Cerrar sesión'}</Text>
+          <Text style={styles.logoutText}>{isLoggingOut ? 'Cerrando...' : 'Cerrar sesion'}</Text>
         </Pressable>
       </ScrollView>
     </SafeAreaView>
   );
+}
+
+function formatRole(role?: string | null): string {
+  if (role === 'specialist') return 'Especialista';
+  if (role === 'center_admin') return 'Admin';
+  return 'Usuario';
 }
 
 function getSpecialtyLabel(specialty: MySpecialist['specialty']): string {

@@ -605,9 +605,10 @@ async function notifyRecipient(
 ): Promise<void> {
   const recipientUserId = relation.client_id === senderId ? relation.specialist_id : relation.client_id;
 
-  await notificationsService.sendToUser(recipientUserId, title, body, {
-    type: 'chat'
-  });
+  await Promise.all([
+    notificationsService.sendToUser(recipientUserId, title, body, { type: 'chat' }),
+    notificationsService.saveNotification(recipientUserId, title, body, 'chat')
+  ]);
 }
 
 function notifyRecipientInBackground(

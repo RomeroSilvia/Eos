@@ -116,6 +116,7 @@ export const specialistsDirectoryService = {
 
     const clientIds = [...new Set(relations.map((relation) => relation.client_id))];
     const relationIds = relations.map((relation) => relation.id);
+
     const clients = await specialistsDirectoryRepository.findProfilesByIds(clientIds);
     const latestSkinProfiles = await specialistsDirectoryRepository.findLatestSkinProfilesByUserIds(clientIds);
     const latestRoutineLogs = await specialistsDirectoryRepository.findLatestRoutineLogsByUserIds(clientIds);

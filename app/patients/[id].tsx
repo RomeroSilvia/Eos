@@ -12,6 +12,7 @@ import {
   type PatientRoutineHistoryItem,
   type SpecialistPatientDetail
 } from '@/services/specialist';
+import { formatSkinType } from '@/utils/skinType';
 
 export default function PatientDetailScreen() {
   const router = useRouter();
@@ -270,22 +271,6 @@ function uniqueProducts(products: PatientRoutine['steps'][number]['products']) {
 function getInitials(fullName: string): string {
   const parts = fullName.trim().split(/\s+/).slice(0, 2);
   return parts.map((part) => part[0]?.toUpperCase()).join('') || 'P';
-}
-
-function formatSkinType(skinType: string | null): string {
-  if (!skinType || skinType === 'not_defined' || skinType === 'undefined' || skinType === 'unknown') {
-    return 'No registrado';
-  }
-
-  const labels: Record<string, string> = {
-    normal: 'Normal',
-    dry: 'Seca',
-    oily: 'Grasa',
-    mixed: 'Mixta',
-    sensitive: 'Sensible'
-  };
-
-  return labels[skinType] ?? skinType;
 }
 
 function formatRelationStatus(status: string): string {
