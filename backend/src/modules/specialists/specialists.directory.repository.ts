@@ -73,42 +73,64 @@ type UnreadChatMessageRow = {
 
 export const specialistsDirectoryRepository = {
   findVerifiedSpecialists: async (filters: { specialty?: string; name?: string }): Promise<VerifiedSpecialistProfile[]> => {
-    const db = supabase as any;
-
-    let query = db
+    const { data: specialistData, error: specialistError } = await supabase
       .from(TABLE_NAMES.specialistProfiles)
-      .select(
-        `
-        specialty,
-        license_status,
-        profiles!inner(id, full_name, role)
-      `
-      )
+      .select('user_id, specialty, license_status')
       .eq('license_status', 'verified');
 
-    if (filters.specialty) {
-      query = query.eq('specialty', filters.specialty);
+    if (specialistError) throw specialistError;
+
+    if (!specialistData || specialistData.length === 0) {
+      return [];
     }
+
+    let rows = specialistData;
+
+    if (filters.specialty) {
+      rows = rows.filter((row) => row.specialty === filters.specialty);
+    }
+
+    if (rows.length === 0) {
+      return [];
+    }
+
+    const userIds = rows.map((row) => row.user_id);
+
+    const db = supabase as any;
+
+    let profileQuery = db
+      .from(TABLE_NAMES.profiles)
+      .select('id, full_name, role')
+      .in('id', userIds);
 
     if (filters.name) {
-      query = query.ilike('profiles.full_name', `%${filters.name}%`);
+      profileQuery = profileQuery.ilike('full_name', `%${filters.name}%`);
     }
 
-    const { data, error } = await query;
+    const { data: profileData, error: profileError } = await profileQuery;
 
-    if (error) throw error;
+    if (profileError) throw profileError;
 
-    return (data ?? []).map((row: any) => ({
-      profile: {
-        id: row.profiles.id,
-        full_name: row.profiles.full_name,
-        role: row.profiles.role
-      },
-      specialistProfile: {
-        specialty: row.specialty,
-        license_status: row.license_status
-      }
-    }));
+    const profileById = new Map<string, { id: string; full_name: string; role: string }>(
+      (profileData ?? []).map((p: any) => [p.id as string, p])
+    );
+
+    return rows
+      .filter((row) => profileById.has(row.user_id))
+      .map((row) => {
+        const profile = profileById.get(row.user_id)!;
+        return {
+          profile: {
+            id: profile.id,
+            full_name: profile.full_name,
+            role: profile.role
+          },
+          specialistProfile: {
+            specialty: row.specialty,
+            license_status: row.license_status
+          }
+        };
+      });
   },
 
   findVerifiedSpecialistByUserId: async (userId: string): Promise<SpecialistWithPrivateProfile | null> => {
@@ -288,8 +310,7 @@ export const specialistsDirectoryRepository = {
     const { data, error } = await db
       .from(TABLE_NAMES.profiles)
       .select('id, full_name, email, skin_type')
-      .in('id', userIds)
-      .eq('role', 'user');
+      .in('id', userIds);
 
     if (error) throw error;
     return data ?? [];
@@ -300,10 +321,8 @@ export const specialistsDirectoryRepository = {
       return new Map<string, PatientSkinProfileRow>();
     }
 
-    const db = supabase as any;
-
-    const { data, error } = await db
-      .from(TABLE_NAMES.skinProfiles)
+    const { data, error } = await supabase
+      .from(TABLE_NAMES.skinProfiles as 'skin_profiles')
       .select('user_id, skin_type, age_range, main_goal, imperfections, routine_steps, created_at')
       .in('user_id', userIds)
       .order('created_at', { ascending: false });

@@ -3,7 +3,6 @@ import { useFocusEffect, useRouter, type Href } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { BellButton } from '@/components/BellButton';
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
 import { colors } from '@/constants/colors';
@@ -71,12 +70,10 @@ export default function SpecialistProfileScreen() {
     <SafeAreaView edges={['top', 'left', 'right']} style={styles.screen}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.titleRow}>
-          <View>
-            <Text style={styles.title}>Perfil</Text>
-            <Text style={styles.subtitle}>Tu información profesional en EOS.</Text>
-          </View>
-          <BellButton />
+          <Text style={styles.title}>Perfil</Text>
+          <Text style={styles.subtitle}>Tu información profesional en EOS.</Text>
         </View>
+
 
         {isLoading ? (
           <StateCard icon="hourglass-outline" message="Cargando perfil profesional..." showSpinner />
@@ -293,9 +290,6 @@ const styles = StyleSheet.create({
     paddingBottom: 116
   },
   titleRow: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
     paddingTop: 8
   },
   title: {

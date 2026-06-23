@@ -5,6 +5,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors } from '@/constants/colors';
+import { formatSkinType } from '@/utils/skinType';
 import {
   getMyPatients,
   getSpecialistStatus,
@@ -227,22 +228,6 @@ function getDisplayName(fullName?: string | null): string {
 function getInitials(fullName: string): string {
   const parts = fullName.trim().split(/\s+/).slice(0, 2);
   return parts.map((part) => part[0]?.toUpperCase()).join('') || 'P';
-}
-
-function formatSkinType(skinType: string | null): string {
-  if (!skinType || skinType === 'not_defined' || skinType === 'undefined' || skinType === 'unknown') {
-    return 'Piel no registrada';
-  }
-
-  const labels: Record<string, string> = {
-    normal: 'Piel normal',
-    dry: 'Piel seca',
-    oily: 'Piel grasa',
-    mixed: 'Piel mixta',
-    sensitive: 'Piel sensible'
-  };
-
-  return labels[skinType] ?? skinType;
 }
 
 function formatLastActivity(value: string | null): string {

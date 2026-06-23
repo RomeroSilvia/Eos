@@ -50,6 +50,15 @@ export const saveQuiz: RequestHandler = async (req, res, next) => {
       throw new ApiError(statusCode, error.message);
     }
 
+    const normalizedSkinType = normalizeSkinTypeToEnglish(normalizedBody.skinType);
+
+    if (normalizedSkinType) {
+      await supabase
+        .from('profiles')
+        .update({ skin_type: normalizedSkinType })
+        .eq('id', req.user.id);
+    }
+
     res.status(201).json({
       message: 'Skin profile created',
       skinProfile: data
@@ -84,3 +93,20 @@ export const getQuizProfile: RequestHandler = async (req, res, next) => {
     next(error);
   }
 };
+
+function normalizeSkinTypeToEnglish(value: string): string | null {
+  const map: Record<string, string> = {
+    Normal: 'normal',
+    Mixta: 'mixed',
+    Seca: 'dry',
+    Grasa: 'oily',
+    Sensible: 'sensitive',
+    normal: 'normal',
+    mixed: 'mixed',
+    dry: 'dry',
+    oily: 'oily',
+    sensitive: 'sensitive'
+  };
+
+  return map[value] ?? null;
+}
