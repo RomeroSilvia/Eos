@@ -1,9 +1,10 @@
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
+import { router, type Href } from 'expo-router';
 import { useCallback } from 'react';
 import { Pressable, StyleSheet, View, type ViewStyle } from 'react-native';
 import { colors } from '@/constants/colors';
+import { routes } from '@/constants/routes';
 import { useHasUnreadNotifications } from '@/hooks/useHasUnreadNotifications';
 
 type Props = {
@@ -18,7 +19,7 @@ export function BellButton({ style }: Props) {
   }, [refresh]));
 
   return (
-    <Pressable onPress={() => router.push('/notifications')} style={[styles.button, style]}>
+    <Pressable onPress={() => router.push(routes.notifications as Href)} style={[styles.button, style]}>
       <Ionicons color={colors.textPrimary} name="notifications-outline" size={24} />
       {hasUnread && <View style={styles.dot} />}
     </Pressable>

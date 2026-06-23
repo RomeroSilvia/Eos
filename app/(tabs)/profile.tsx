@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { useRouter, type Href } from 'expo-router';
-import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BellButton } from '@/components/BellButton';
 import { Button } from '@/components/Button';
@@ -9,6 +9,7 @@ import { Card } from '@/components/Card';
 import { RemindersSection } from '@/components/RemindersSection';
 import { colors } from '@/constants/colors';
 import { useProfile } from '@/hooks/useProfile';
+import { logout } from '@/services/auth';
 import { getMySpecialist, unlinkSpecialist } from '@/services/specialist';
 import type { MySpecialist } from '@/services/specialist';
 import { useCallback, useState } from 'react';
@@ -17,6 +18,7 @@ export default function ProfileScreen() {
   const router = useRouter();
   const { profile } = useProfile();
   const [mySpecialist, setMySpecialist] = useState<MySpecialist | null>(null);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [unlinking, setUnlinking] = useState(false);
 
   const loadMySpecialist = useCallback(async () => {
@@ -56,6 +58,19 @@ export default function ProfileScreen() {
       ]
     );
   };
+
+  async function handleLogout() {
+    setIsLoggingOut(true);
+
+    try {
+      await logout();
+      router.replace('/landing');
+    } catch {
+      Alert.alert('Perfil', 'No pudimos cerrar sesion. Intenta nuevamente.');
+    } finally {
+      setIsLoggingOut(false);
+    }
+  }
 
   return (
     <SafeAreaView edges={['top', 'left', 'right']} style={styles.screen}>
@@ -130,6 +145,15 @@ export default function ProfileScreen() {
         </Card>
 
         <RemindersSection />
+
+        <Pressable
+          accessibilityRole="button"
+          disabled={isLoggingOut}
+          onPress={handleLogout}
+          style={({ pressed }) => [styles.logoutButton, pressed && styles.pressed, isLoggingOut && styles.disabled]}
+        >
+          <Text style={styles.logoutText}>{isLoggingOut ? 'Cerrando...' : 'Cerrar sesión'}</Text>
+        </Pressable>
       </ScrollView>
     </SafeAreaView>
   );
@@ -280,5 +304,25 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     fontSize: 13,
     flex: 1
+  },
+  logoutButton: {
+    alignItems: 'center',
+    backgroundColor: colors.secondarySoft,
+    borderColor: colors.secondaryLight,
+    borderRadius: 18,
+    borderWidth: 1,
+    justifyContent: 'center',
+    minHeight: 46
+  },
+  logoutText: {
+    color: colors.secondaryDark,
+    fontSize: 15,
+    fontWeight: '900'
+  },
+  pressed: {
+    opacity: 0.78
+  },
+  disabled: {
+    opacity: 0.5
   }
 });
