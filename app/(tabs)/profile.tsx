@@ -19,6 +19,7 @@ export default function ProfileScreen() {
   const router = useRouter();
   const { profile } = useProfile();
   const [mySpecialist, setMySpecialist] = useState<MySpecialist | null>(null);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [unlinking, setUnlinking] = useState(false);
 
   const loadMySpecialist = useCallback(async () => {
@@ -73,6 +74,19 @@ export default function ProfileScreen() {
       ]
     );
   };
+
+  async function handleLogout() {
+    setIsLoggingOut(true);
+
+    try {
+      await logout();
+      router.replace('/landing');
+    } catch {
+      Alert.alert('Perfil', 'No pudimos cerrar sesion. Intenta nuevamente.');
+    } finally {
+      setIsLoggingOut(false);
+    }
+  }
 
   return (
     <SafeAreaView edges={['top', 'left', 'right']} style={styles.screen}>
