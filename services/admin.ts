@@ -9,6 +9,7 @@ export type PendingSpecialist = {
   licenseNumber: string;
   licenseStatus: 'pending' | 'verified' | 'rejected' | string;
   rejectionReason: string | null;
+  centerId: string | null;
   createdAt: string | null;
 };
 
@@ -66,6 +67,19 @@ export async function rejectSpecialist(
     licenseStatus: 'rejected',
     rejectionReason
   });
+}
+
+export async function assignSpecialistCenter(
+  specialistProfileId: string,
+  centerId: string | null
+): Promise<PendingSpecialist> {
+  const response = await apiRequest<UpdateSpecialistStatusResponse>({
+    path: `/admin/specialists/${specialistProfileId}/center`,
+    method: 'PATCH',
+    body: JSON.stringify({ centerId })
+  });
+
+  return response.specialist;
 }
 
 export function getAdminErrorMessage(error: unknown): string {
