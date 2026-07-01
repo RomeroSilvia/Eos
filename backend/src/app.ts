@@ -3,6 +3,7 @@ import express from 'express';
 import { env } from './config/env';
 import { adminRouter } from './modules/admin/admin.routes';
 import { authRouter } from './modules/auth/auth.routes';
+import { centersRouter } from './modules/centers/centers.routes';
 import { chatRouter } from './modules/chat/chat.routes';
 import { notificationsRouter } from './modules/notifications/notifications.routes';
 import { productsRouter } from './modules/products/products.routes';
@@ -36,6 +37,7 @@ app.get('/api/health', (_req, res) => {
 
 app.use('/api/auth', authRouter);
 app.use('/api/admin', adminRouter);
+app.use('/api/centers', centersRouter);
 app.use('/api/routines', routinesRouter);
 app.use('/api/products', productsRouter);
 app.use('/api/progress', progressRouter);
