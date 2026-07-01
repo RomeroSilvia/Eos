@@ -10,7 +10,9 @@ export const TABLE_NAMES = {
   routineLogs: 'routine_logs',
   routineStepLogs: 'routine_step_logs',
   pushTokens: 'push_tokens',
-  notificationHistory: 'notification_history'
+  notificationHistory: 'notification_history',
+  centers: 'centers',
+  centerAdmins: 'center_admins'
 } as const;
 
 export type TableName = (typeof TABLE_NAMES)[keyof typeof TABLE_NAMES];
