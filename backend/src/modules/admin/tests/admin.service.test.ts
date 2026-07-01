@@ -110,6 +110,7 @@ describe('adminService', () => {
       license_status: 'verified',
       rejection_reason: null
     });
+    expect(mockedEnsureCenterAccess).not.toHaveBeenCalled();
     expect(result.licenseStatus).toBe('verified');
     expect(result.rejectionReason).toBeNull();
   });
@@ -132,6 +133,7 @@ describe('adminService', () => {
       license_status: 'rejected',
       rejection_reason: 'Documento ilegible'
     });
+    expect(mockedEnsureCenterAccess).not.toHaveBeenCalled();
     expect(result.licenseStatus).toBe('rejected');
     expect(result.rejectionReason).toBe('Documento ilegible');
   });
