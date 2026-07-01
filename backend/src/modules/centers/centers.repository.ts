@@ -10,6 +10,15 @@ type CenterMutation = {
   updated_at?: string;
 };
 
+type SpecialistCenterStatsRow = {
+  id: string;
+  license_status: string;
+};
+
+type ClientRelationRow = {
+  client_id: string;
+};
+
 export const centersRepository = {
   findActiveByAdminId: async (adminUserId: string): Promise<CenterRow[]> => {
     const db = supabase as any;
@@ -120,5 +129,32 @@ export const centersRepository = {
 
     if (error) throw error;
     return updated;
+  },
+
+  findSpecialistStatsByCenterId: async (centerId: string): Promise<SpecialistCenterStatsRow[]> => {
+    const db = supabase as any;
+    const { data, error } = await db
+      .from(TABLE_NAMES.specialistProfiles)
+      .select('id, license_status')
+      .eq('center_id', centerId);
+
+    if (error) throw error;
+    return data ?? [];
+  },
+
+  findActiveClientRelationsBySpecialistIds: async (specialistIds: string[]): Promise<ClientRelationRow[]> => {
+    if (specialistIds.length === 0) {
+      return [];
+    }
+
+    const db = supabase as any;
+    const { data, error } = await db
+      .from(TABLE_NAMES.clientSpecialistRelations)
+      .select('client_id')
+      .in('specialist_id', specialistIds)
+      .eq('status', 'active');
+
+    if (error) throw error;
+    return data ?? [];
   }
 };

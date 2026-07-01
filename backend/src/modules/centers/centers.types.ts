@@ -26,6 +26,13 @@ export type CenterSummary = {
   updatedAt: string;
 };
 
+export type CenterDashboardSummary = {
+  specialistsTotal: number;
+  specialistsVerified: number;
+  specialistsPending: number;
+  clientsTotal: number;
+};
+
 export type CreateCenterInput = {
   name?: unknown;
   address?: unknown;

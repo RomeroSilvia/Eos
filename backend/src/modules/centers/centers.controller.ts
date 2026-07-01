@@ -19,6 +19,12 @@ export const updateCenter: RequestHandler = asyncHandler(async (req, res) => {
   res.json({ center });
 });
 
+export const getCenterDashboard: RequestHandler = asyncHandler(async (req, res) => {
+  const centerId = getCenterId(req.params.centerId);
+  const dashboard = await centersService.getDashboard(req.user.id, centerId);
+  res.json(dashboard);
+});
+
 export const deleteCenter: RequestHandler = asyncHandler(async (req, res) => {
   const centerId = getCenterId(req.params.centerId);
   await centersService.deleteCenter(req.user.id, centerId);

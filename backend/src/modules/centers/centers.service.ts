@@ -1,6 +1,13 @@
 import { ApiError } from '../../utils/ApiError';
+import { env } from '../../config/env';
 import { centersRepository } from './centers.repository';
-import type { CenterRow, CenterSummary, CreateCenterInput, UpdateCenterInput } from './centers.types';
+import type {
+  CenterDashboardSummary,
+  CenterRow,
+  CenterSummary,
+  CreateCenterInput,
+  UpdateCenterInput
+} from './centers.types';
 
 type NormalizedCenterPayload = {
   name?: string;
@@ -18,10 +25,14 @@ export const centersService = {
     const payload = normalizeCreateInput(input);
     await ensureActiveNameIsAvailable(payload.name);
 
-    const center = await centersRepository.create(payload);
-    await centersRepository.createAdminAssignment(adminUserId, center.id);
+    try {
+      const center = await centersRepository.create(payload);
+      await centersRepository.createAdminAssignment(adminUserId, center.id);
 
-    return toCenterSummary(center);
+      return toCenterSummary(center);
+    } catch (error) {
+      throw mapCreateCenterError(error);
+    }
   },
 
   updateCenter: async (
@@ -57,6 +68,21 @@ export const centersService = {
     if (!deleted) {
       throw new ApiError(404, 'Centro no encontrado o inactivo.');
     }
+  },
+
+  getDashboard: async (adminUserId: string, centerId: string): Promise<CenterDashboardSummary> => {
+    const center = await ensureAdminCanAccessActiveCenter(adminUserId, centerId);
+    const specialists = await centersRepository.findSpecialistStatsByCenterId(center.id);
+    const specialistIds = specialists.map((specialist) => specialist.id);
+    const relations = await centersRepository.findActiveClientRelationsBySpecialistIds(specialistIds);
+    const clientIds = new Set(relations.map((relation) => relation.client_id));
+
+    return {
+      specialistsTotal: specialists.length,
+      specialistsVerified: specialists.filter((specialist) => specialist.license_status === 'verified').length,
+      specialistsPending: specialists.filter((specialist) => specialist.license_status === 'pending').length,
+      clientsTotal: clientIds.size
+    };
   }
 };
 
@@ -156,6 +182,55 @@ function normalizeDisplayText(value: string): string {
 
 function normalizeNameForComparison(value: string): string {
   return normalizeDisplayText(value).toLocaleLowerCase('es-AR');
+}
+
+function mapCreateCenterError(error: unknown): ApiError {
+  if (error instanceof ApiError) {
+    return error;
+  }
+
+  logCentersError('create-center', error);
+
+  const message = getErrorMessage(error).toLowerCase();
+
+  if (
+    message.includes('duplicate') ||
+    message.includes('unique') ||
+    message.includes('already exists')
+  ) {
+    return new ApiError(409, 'Ya existe un centro activo con ese nombre.');
+  }
+
+  if (
+    message.includes('row-level security') ||
+    message.includes('permission denied') ||
+    message.includes('not authorized') ||
+    message.includes('violates foreign key constraint')
+  ) {
+    return new ApiError(403, 'No tenés permiso para crear este centro.');
+  }
+
+  return new ApiError(500, 'No pudimos crear el centro. Intentá nuevamente.');
+}
+
+function logCentersError(context: string, error: unknown): void {
+  if (env.nodeEnv !== 'development') return;
+
+  console.error('[centers:error]', {
+    context,
+    errorName: error instanceof Error ? error.name : typeof error,
+    errorMessage: getErrorMessage(error)
+  });
+}
+
+function getErrorMessage(error: unknown): string {
+  if (error instanceof Error) return error.message;
+
+  if (typeof error === 'object' && error !== null && 'message' in error) {
+    return String((error as { message?: unknown }).message ?? '');
+  }
+
+  return String(error ?? '');
 }
 
 function toCenterSummary(center: CenterRow): CenterSummary {
