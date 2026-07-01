@@ -1,5 +1,6 @@
 import { ApiError } from '../../../utils/ApiError';
 import { supabase } from '../../../config/supabase';
+import { ensureAdminCanAccessActiveCenter } from '../../centers/centers.service';
 import { adminRepository } from '../admin.repository';
 import { adminService, normalizeSpecialistDocumentPath } from '../admin.service';
 
@@ -13,14 +14,21 @@ jest.mock('../../../config/supabase', () => ({
 
 jest.mock('../admin.repository', () => ({
   adminRepository: {
+    findSpecialistById: jest.fn(),
     findPendingSpecialists: jest.fn(),
     findProfilesByIds: jest.fn(),
     findSpecialistDocumentsById: jest.fn(),
+    updateSpecialistCenter: jest.fn(),
     updateSpecialistStatus: jest.fn()
   }
 }));
 
+jest.mock('../../centers/centers.service', () => ({
+  ensureAdminCanAccessActiveCenter: jest.fn()
+}));
+
 const mockedRepo = jest.mocked(adminRepository);
+const mockedEnsureCenterAccess = jest.mocked(ensureAdminCanAccessActiveCenter);
 const mockedStorageFrom = supabase.storage.from as jest.Mock;
 let mockedCreateSignedUrl: jest.Mock;
 let mockedList: jest.Mock;
@@ -33,6 +41,7 @@ function makeSpecialist(overrides = {}) {
     license_number: 'MN-12345',
     license_status: 'pending',
     rejection_reason: null,
+    center_id: null,
     created_at: '2026-06-19T12:00:00.000Z',
     ...overrides
   };
@@ -79,6 +88,7 @@ describe('adminService', () => {
         licenseNumber: 'MN-12345',
         licenseStatus: 'pending',
         rejectionReason: null,
+        centerId: null,
         createdAt: '2026-06-19T12:00:00.000Z'
       }
     ]);
@@ -177,6 +187,118 @@ describe('adminService', () => {
       statusCode: 409,
       message: 'La solicitud ya fue procesada.'
     });
+  });
+
+  it('asigna especialista a centro valido', async () => {
+    mockedRepo.findSpecialistById.mockResolvedValue(makeSpecialist());
+    mockedEnsureCenterAccess.mockResolvedValue({
+      id: 'center-1',
+      name: 'Centro Norte',
+      address: null,
+      phone: null,
+      is_active: true,
+      created_at: '2026-07-01T12:00:00.000Z',
+      updated_at: '2026-07-01T12:00:00.000Z'
+    });
+    mockedRepo.updateSpecialistCenter.mockResolvedValue(makeSpecialist({ center_id: 'center-1' }));
+    mockedRepo.findProfilesByIds.mockResolvedValue([
+      { id: 'user-1', full_name: 'Marta Lopez', email: 'marta@example.com' }
+    ]);
+
+    const result = await adminService.updateSpecialistCenter('admin-1', 'specialist-profile-1', {
+      centerId: 'center-1'
+    });
+
+    expect(mockedRepo.findSpecialistById).toHaveBeenCalledWith('specialist-profile-1');
+    expect(mockedEnsureCenterAccess).toHaveBeenCalledWith('admin-1', 'center-1');
+    expect(mockedRepo.updateSpecialistCenter).toHaveBeenCalledWith('specialist-profile-1', {
+      center_id: 'center-1'
+    });
+    expect(result.centerId).toBe('center-1');
+  });
+
+  it('desasocia especialista con centerId null', async () => {
+    mockedRepo.findSpecialistById.mockResolvedValue(makeSpecialist({ center_id: 'center-1' }));
+    mockedEnsureCenterAccess.mockResolvedValue({
+      id: 'center-1',
+      name: 'Centro Norte',
+      address: null,
+      phone: null,
+      is_active: true,
+      created_at: '2026-07-01T12:00:00.000Z',
+      updated_at: '2026-07-01T12:00:00.000Z'
+    });
+    mockedRepo.updateSpecialistCenter.mockResolvedValue(makeSpecialist({ center_id: null }));
+    mockedRepo.findProfilesByIds.mockResolvedValue([
+      { id: 'user-1', full_name: 'Marta Lopez', email: 'marta@example.com' }
+    ]);
+
+    const result = await adminService.updateSpecialistCenter('admin-1', 'specialist-profile-1', {
+      centerId: null
+    });
+
+    expect(mockedEnsureCenterAccess).toHaveBeenCalledWith('admin-1', 'center-1');
+    expect(mockedRepo.updateSpecialistCenter).toHaveBeenCalledWith('specialist-profile-1', {
+      center_id: null
+    });
+    expect(result.centerId).toBeNull();
+  });
+
+  it('body invalido al asignar centro devuelve 400', async () => {
+    await expect(
+      adminService.updateSpecialistCenter('admin-1', 'specialist-profile-1', {
+        centerId: ''
+      })
+    ).rejects.toMatchObject({
+      statusCode: 400,
+      message: 'centerId debe ser un string o null.'
+    });
+    expect(mockedRepo.findSpecialistById).not.toHaveBeenCalled();
+  });
+
+  it('admin sin acceso al centro recibe 403', async () => {
+    mockedRepo.findSpecialistById.mockResolvedValue(makeSpecialist());
+    mockedEnsureCenterAccess.mockRejectedValue(new ApiError(403, 'No tenés permiso para gestionar este centro.'));
+
+    await expect(
+      adminService.updateSpecialistCenter('admin-1', 'specialist-profile-1', {
+        centerId: 'center-2'
+      })
+    ).rejects.toMatchObject({
+      statusCode: 403,
+      message: 'No tenés permiso para gestionar este centro.'
+    });
+    expect(mockedRepo.updateSpecialistCenter).not.toHaveBeenCalled();
+  });
+
+  it('especialista inexistente devuelve 404', async () => {
+    mockedRepo.findSpecialistById.mockResolvedValue(null);
+
+    await expect(
+      adminService.updateSpecialistCenter('admin-1', 'specialist-inexistente', {
+        centerId: 'center-1'
+      })
+    ).rejects.toMatchObject({
+      statusCode: 404,
+      message: 'Especialista no encontrado.'
+    });
+    expect(mockedEnsureCenterAccess).not.toHaveBeenCalled();
+    expect(mockedRepo.updateSpecialistCenter).not.toHaveBeenCalled();
+  });
+
+  it('centro inexistente o inactivo devuelve 404', async () => {
+    mockedRepo.findSpecialistById.mockResolvedValue(makeSpecialist());
+    mockedEnsureCenterAccess.mockRejectedValue(new ApiError(404, 'Centro no encontrado o inactivo.'));
+
+    await expect(
+      adminService.updateSpecialistCenter('admin-1', 'specialist-profile-1', {
+        centerId: 'center-inactivo'
+      })
+    ).rejects.toMatchObject({
+      statusCode: 404,
+      message: 'Centro no encontrado o inactivo.'
+    });
+    expect(mockedRepo.updateSpecialistCenter).not.toHaveBeenCalled();
   });
 
   it('center_admin puede obtener signed URLs temporales', async () => {

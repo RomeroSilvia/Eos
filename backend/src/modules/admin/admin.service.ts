@@ -1,6 +1,7 @@
 ﻿import { ApiError } from '../../utils/ApiError';
 import { supabase } from '../../config/supabase';
 import { env } from '../../config/env';
+import { ensureAdminCanAccessActiveCenter } from '../centers/centers.service';
 import {
   adminRepository,
   type AdminProfileRow,
@@ -19,6 +20,7 @@ export type AdminSpecialistSummary = {
   licenseNumber: string;
   licenseStatus: string;
   rejectionReason: string | null;
+  centerId: string | null;
   createdAt: string;
 };
 
@@ -41,6 +43,11 @@ type DocumentSigningResult = AdminSpecialistDocument & {
 type UpdateSpecialistStatusBody = {
   licenseStatus?: unknown;
   rejectionReason?: unknown;
+  centerId?: unknown;
+};
+
+type UpdateSpecialistCenterBody = {
+  centerId?: unknown;
 };
 
 export const adminService = {
@@ -56,24 +63,62 @@ export const adminService = {
 
   updateSpecialistStatus: async (
     specialistProfileId: string,
-    body: UpdateSpecialistStatusBody
+    body: UpdateSpecialistStatusBody,
+    adminUserId?: string
   ): Promise<AdminSpecialistSummary> => {
     const licenseStatus = normalizeLicenseStatus(body.licenseStatus);
     const rejectionReason = normalizeRejectionReason(body.rejectionReason);
+    const centerId = normalizeOptionalCenterId(body);
 
     if (licenseStatus === 'rejected' && !rejectionReason) {
       throw new ApiError(400, 'El motivo de rechazo es obligatorio.');
     }
 
+    if (centerId !== undefined) {
+      await validateTargetCenter(adminUserId, centerId);
+    }
+
     const updated = await adminRepository.updateSpecialistStatus(specialistProfileId, {
       license_status: licenseStatus,
-      rejection_reason: licenseStatus === 'verified' ? null : rejectionReason
+      rejection_reason: licenseStatus === 'verified' ? null : rejectionReason,
+      ...(centerId !== undefined ? { center_id: centerId } : {})
     });
 
     if (!updated) {
       throw new ApiError(409, 'La solicitud ya fue procesada.');
     }
 
+    const profiles = await adminRepository.findProfilesByIds([updated.user_id]);
+    return toAdminSpecialistSummary(updated, profiles[0]);
+  },
+
+  updateSpecialistCenter: async (
+    adminUserId: string,
+    specialistProfileId: string,
+    body: UpdateSpecialistCenterBody
+  ): Promise<AdminSpecialistSummary> => {
+    const centerId = normalizeRequiredCenterId(body);
+    const specialist = await adminRepository.findSpecialistById(specialistProfileId);
+
+    if (!specialist) {
+      throw new ApiError(404, 'Especialista no encontrado.');
+    }
+
+    if (centerId !== null) {
+      await ensureAdminCanAccessActiveCenter(adminUserId, centerId);
+    } else if (specialist.center_id) {
+      await ensureAdminCanAccessActiveCenter(adminUserId, specialist.center_id);
+    }
+
+    const updated = await adminRepository.updateSpecialistCenter(specialist.id, {
+      center_id: centerId
+    });
+
+    if (!updated) {
+      throw new ApiError(404, 'Especialista no encontrado.');
+    }
+
+    // TODO: registrar auditoria best-effort cuando exista el modulo M4.
     const profiles = await adminRepository.findProfilesByIds([updated.user_id]);
     return toAdminSpecialistSummary(updated, profiles[0]);
   },
@@ -125,6 +170,46 @@ function normalizeRejectionReason(value: unknown): string | null {
   return trimmedValue || null;
 }
 
+function normalizeOptionalCenterId(body: UpdateSpecialistStatusBody): string | null | undefined {
+  if (!Object.prototype.hasOwnProperty.call(body, 'centerId')) {
+    return undefined;
+  }
+
+  return normalizeCenterId(body.centerId);
+}
+
+function normalizeRequiredCenterId(body: UpdateSpecialistCenterBody): string | null {
+  if (!Object.prototype.hasOwnProperty.call(body, 'centerId')) {
+    throw new ApiError(400, 'centerId es requerido.');
+  }
+
+  return normalizeCenterId(body.centerId);
+}
+
+function normalizeCenterId(value: unknown): string | null {
+  if (value === null) {
+    return null;
+  }
+
+  if (typeof value !== 'string' || value.trim().length === 0) {
+    throw new ApiError(400, 'centerId debe ser un string o null.');
+  }
+
+  return value.trim();
+}
+
+async function validateTargetCenter(adminUserId: string | undefined, centerId: string | null): Promise<void> {
+  if (centerId === null) {
+    return;
+  }
+
+  if (!adminUserId) {
+    throw new ApiError(403, 'No tenés permiso para gestionar este centro.');
+  }
+
+  await ensureAdminCanAccessActiveCenter(adminUserId, centerId);
+}
+
 function toAdminSpecialistSummary(
   specialist: AdminSpecialistProfileRow,
   profile?: AdminProfileRow
@@ -138,6 +223,7 @@ function toAdminSpecialistSummary(
     licenseNumber: specialist.license_number,
     licenseStatus: specialist.license_status,
     rejectionReason: specialist.rejection_reason,
+    centerId: specialist.center_id,
     createdAt: specialist.created_at
   };
 }

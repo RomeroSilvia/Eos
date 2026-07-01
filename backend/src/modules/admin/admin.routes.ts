@@ -1,7 +1,12 @@
 import { Router } from 'express';
 import { authenticate } from '../../middlewares/auth.middleware';
 import { requireRole } from '../../middlewares/requireRole.middleware';
-import { getSpecialistDocuments, listPendingSpecialists, updateSpecialistStatus } from './admin.controller';
+import {
+  getSpecialistDocuments,
+  listPendingSpecialists,
+  updateSpecialistCenter,
+  updateSpecialistStatus
+} from './admin.controller';
 
 export const adminRouter = Router();
 
@@ -10,6 +15,13 @@ adminRouter.get(
   authenticate,
   requireRole('center_admin'),
   listPendingSpecialists
+);
+
+adminRouter.patch(
+  '/specialists/:specialistId/center',
+  authenticate,
+  requireRole('center_admin'),
+  updateSpecialistCenter
 );
 
 adminRouter.patch(

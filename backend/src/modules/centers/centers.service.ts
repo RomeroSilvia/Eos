@@ -29,8 +29,7 @@ export const centersService = {
     centerId: string,
     input: UpdateCenterInput
   ): Promise<CenterSummary> => {
-    const center = await getActiveCenterOrThrow(centerId);
-    await ensureAdminCanAccessCenter(adminUserId, center.id);
+    const center = await ensureAdminCanAccessActiveCenter(adminUserId, centerId);
 
     const payload = normalizeUpdateInput(input);
 
@@ -51,8 +50,7 @@ export const centersService = {
   },
 
   deleteCenter: async (adminUserId: string, centerId: string): Promise<void> => {
-    const center = await getActiveCenterOrThrow(centerId);
-    await ensureAdminCanAccessCenter(adminUserId, center.id);
+    const center = await ensureAdminCanAccessActiveCenter(adminUserId, centerId);
 
     const deleted = await centersRepository.softDelete(center.id);
 
@@ -61,6 +59,12 @@ export const centersService = {
     }
   }
 };
+
+export async function ensureAdminCanAccessActiveCenter(adminUserId: string, centerId: string): Promise<CenterRow> {
+  const center = await getActiveCenterOrThrow(centerId);
+  await ensureAdminCanAccessCenter(adminUserId, center.id);
+  return center;
+}
 
 async function getActiveCenterOrThrow(centerId: string): Promise<CenterRow> {
   const center = await centersRepository.findById(centerId);
