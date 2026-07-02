@@ -10,6 +10,10 @@ export type PendingSpecialist = {
   licenseStatus: 'pending' | 'verified' | 'rejected' | string;
   rejectionReason: string | null;
   centerId: string | null;
+  center: {
+    id: string;
+    name: string;
+  } | null;
   createdAt: string | null;
 };
 
@@ -40,6 +44,15 @@ type SpecialistDocumentsResponse = {
 export async function getPendingSpecialists(): Promise<PendingSpecialist[]> {
   const response = await apiRequest<PendingSpecialistsResponse>({
     path: '/admin/specialists/pending',
+    method: 'GET'
+  });
+
+  return response.specialists;
+}
+
+export async function getAdminSpecialists(): Promise<PendingSpecialist[]> {
+  const response = await apiRequest<PendingSpecialistsResponse>({
+    path: '/admin/specialists',
     method: 'GET'
   });
 
