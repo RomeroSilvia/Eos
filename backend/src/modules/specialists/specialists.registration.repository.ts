@@ -11,6 +11,10 @@ export type SpecialistStatus = {
   specialty: SpecialistSpecialty | null;
   license_number: string | null;
   full_name: string | null;
+  center: {
+    id: string;
+    name: string;
+  } | null;
 };
 
 export const specialistsRegistrationRepository = {

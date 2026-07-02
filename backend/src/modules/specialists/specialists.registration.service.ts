@@ -116,19 +116,28 @@ export const specialistsRegistrationService = {
         rejection_reason: null,
         specialty: null,
         license_number: null,
-        full_name: fullName
+        full_name: fullName,
+        center: null
       };
     }
+
+    const center = await specialistsSharedRepository.findActiveCenterById(getSpecialistCenterId(profile));
 
     return {
       license_status: profile.license_status as SpecialistStatus['license_status'],
       rejection_reason: profile.rejection_reason,
       specialty: profile.specialty as SpecialistSpecialty,
       license_number: profile.license_number,
-      full_name: fullName
+      full_name: fullName,
+      center
     };
   }
 };
+
+function getSpecialistCenterId(profile: unknown): string | null {
+  const centerId = (profile as { center_id?: unknown }).center_id;
+  return typeof centerId === 'string' && centerId.trim() ? centerId : null;
+}
 
 function normalizeRequiredString(value: unknown, fieldName: string): string {
   if (typeof value !== 'string' || !value.trim()) {

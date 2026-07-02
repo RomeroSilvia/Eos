@@ -119,6 +119,7 @@ export default function SpecialistProfileScreen() {
               <Text style={styles.sectionTitle}>Datos profesionales</Text>
               <InfoRow label="Especialidad" value={getSpecialtyLabel(status?.specialty)} />
               <InfoRow label="Matrícula" value={status?.license_number ?? 'No registrada'} />
+              <InfoRow label="Centro" value={getCenterLabel(status?.center)} />
               <InfoRow label="Estado" value={getLicenseStatusLabel(status?.license_status)} />
               {status?.license_status === 'rejected' && status.rejection_reason ? (
                 <View style={styles.rejectionBox}>
@@ -231,6 +232,10 @@ function getLicenseStatusLabel(status?: string | null): string {
   if (status === 'pending') return 'Pendiente';
   if (status === 'rejected') return 'Rechazado';
   return 'No enviado';
+}
+
+function getCenterLabel(center?: { name: string } | null): string {
+  return center?.name ? `Centro: ${center.name}` : 'Centro: Sin centro asignado';
 }
 
 function getStatusContent(status: SpecialistStatus): {

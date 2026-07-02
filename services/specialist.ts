@@ -16,6 +16,10 @@ export type SpecialistLicenseStatus =
   | (string & {});
 export type SpecialistSpecialty = 'dermatologo' | 'cosmetologo';
 export type SpecialistDocumentMimeType = typeof SPECIALIST_DOCUMENT_ALLOWED_MIME_TYPES[number];
+export type SpecialistCenter = {
+  id: string;
+  name: string;
+};
 
 export type SpecialistStatus = {
   license_status: SpecialistLicenseStatus;
@@ -23,6 +27,7 @@ export type SpecialistStatus = {
   specialty: SpecialistSpecialty | null;
   license_number: string | null;
   full_name: string | null;
+  center: SpecialistCenter | null;
 } | null;
 
 export type MySpecialist = {
@@ -30,12 +35,14 @@ export type MySpecialist = {
   fullName: string;
   email: string | null;
   specialty: SpecialistSpecialty | null;
+  center: SpecialistCenter | null;
 };
 
 export type SpecialistDirectoryItem = {
   id: string;
   fullName: string;
   specialty: SpecialistSpecialty;
+  center: SpecialistCenter | null;
 };
 
 export type SpecialistPatient = {
@@ -123,6 +130,7 @@ type SpecialistsSearchResponse = {
     id: string;
     fullName: string;
     specialty: SpecialistSpecialty;
+    center?: SpecialistCenter | null;
   }[];
 };
 
@@ -133,6 +141,7 @@ type MySpecialistResponse = {
       fullName: string;
       email: string | null;
       specialty: SpecialistSpecialty;
+      center?: SpecialistCenter | null;
     };
   } | null;
 };
@@ -155,6 +164,7 @@ type RawSpecialistStatus = {
   licenseNumber?: unknown;
   full_name?: unknown;
   fullName?: unknown;
+  center?: unknown;
 };
 
 type SpecialistRegisterPayload = {
@@ -241,7 +251,8 @@ export async function getMySpecialist(): Promise<MySpecialist | null> {
       id: specialist.id,
       fullName: specialist.fullName,
       email: specialist.email ?? null,
-      specialty: specialist.specialty
+      specialty: specialist.specialty,
+      center: normalizeSpecialistCenter(specialist.center)
     };
   } catch (error) {
     if (hasHttpStatus(error, 401) || hasHttpStatus(error, 403) || hasHttpStatus(error, 404)) {
@@ -263,7 +274,10 @@ export async function getSpecialists(filters: {
     method: 'GET'
   });
 
-  return response.specialists;
+  return response.specialists.map((specialist) => ({
+    ...specialist,
+    center: normalizeSpecialistCenter(specialist.center)
+  }));
 }
 
 export function buildSpecialistsPath(filters: {
@@ -355,7 +369,8 @@ function normalizeSpecialistStatusResponse(response: SpecialistStatusResponse | 
     rejection_reason: getOptionalString(rawProfile.rejection_reason ?? rawProfile.rejectionReason),
     specialty: getSpecialty(rawProfile.specialty),
     license_number: getOptionalString(rawProfile.license_number ?? rawProfile.licenseNumber),
-    full_name: getOptionalString(rawProfile.full_name ?? rawProfile.fullName)
+    full_name: getOptionalString(rawProfile.full_name ?? rawProfile.fullName),
+    center: normalizeSpecialistCenter(rawProfile.center)
   };
 }
 
@@ -369,6 +384,22 @@ function getSpecialty(value: unknown): SpecialistSpecialty | null {
   }
 
   return null;
+}
+
+function normalizeSpecialistCenter(value: unknown): SpecialistCenter | null {
+  if (!value || typeof value !== 'object') {
+    return null;
+  }
+
+  const center = value as { id?: unknown; name?: unknown };
+  const id = getOptionalString(center.id);
+  const name = getOptionalString(center.name);
+
+  if (!id || !name) {
+    return null;
+  }
+
+  return { id, name };
 }
 
 async function appendImageToFormData(
