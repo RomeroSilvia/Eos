@@ -25,6 +25,22 @@ export const getCenterDashboard: RequestHandler = asyncHandler(async (req, res) 
   res.json(dashboard);
 });
 
+export const listCenterSpecialists: RequestHandler = asyncHandler(async (req, res) => {
+  const centerId = getCenterId(req.params.centerId);
+  const specialists = await centersService.listCenterSpecialists(req.user.id, centerId);
+  res.json({ specialists });
+});
+
+export const uploadCenterImage: RequestHandler = asyncHandler(async (req, res) => {
+  const centerId = getCenterId(req.params.centerId);
+  const center = await centersService.uploadCenterImage(
+    req.user.id,
+    centerId,
+    req.file as Express.Multer.File | undefined
+  );
+  res.json({ center });
+});
+
 export const deleteCenter: RequestHandler = asyncHandler(async (req, res) => {
   const centerId = getCenterId(req.params.centerId);
   await centersService.deleteCenter(req.user.id, centerId);
