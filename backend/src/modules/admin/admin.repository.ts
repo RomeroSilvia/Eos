@@ -24,6 +24,11 @@ export type AdminProfileRow = {
   email: string | null;
 };
 
+export type AdminCenterRow = {
+  id: string;
+  name: string;
+};
+
 export type SpecialistStatusUpdate = {
   license_status: 'verified' | 'rejected';
   rejection_reason: string | null;
@@ -35,6 +40,17 @@ export type SpecialistCenterUpdate = {
 };
 
 export const adminRepository = {
+  findAllSpecialists: async (): Promise<AdminSpecialistProfileRow[]> => {
+    const db = supabase as any;
+    const { data, error } = await db
+      .from(TABLE_NAMES.specialistProfiles)
+      .select('id, user_id, specialty, license_number, license_status, rejection_reason, center_id, created_at')
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    return data ?? [];
+  },
+
   findPendingSpecialists: async (): Promise<AdminSpecialistProfileRow[]> => {
     const db = supabase as any;
     const { data, error } = await db
@@ -42,6 +58,22 @@ export const adminRepository = {
       .select('id, user_id, specialty, license_number, license_status, rejection_reason, center_id, created_at')
       .eq('license_status', 'pending')
       .order('created_at', { ascending: true });
+
+    if (error) throw error;
+    return data ?? [];
+  },
+
+  findActiveCentersByIds: async (centerIds: string[]): Promise<AdminCenterRow[]> => {
+    if (centerIds.length === 0) {
+      return [];
+    }
+
+    const db = supabase as any;
+    const { data, error } = await db
+      .from(TABLE_NAMES.centers)
+      .select('id, name')
+      .in('id', centerIds)
+      .eq('is_active', true);
 
     if (error) throw error;
     return data ?? [];

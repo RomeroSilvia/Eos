@@ -5,7 +5,8 @@ import { ensureAdminCanAccessActiveCenter } from '../centers/centers.service';
 import {
   adminRepository,
   type AdminProfileRow,
-  type AdminSpecialistProfileRow
+  type AdminSpecialistProfileRow,
+  type AdminCenterRow
 } from './admin.repository';
 
 const SPECIALIST_DOCS_BUCKET = 'specialist-docs';
@@ -21,6 +22,10 @@ export type AdminSpecialistSummary = {
   licenseStatus: string;
   rejectionReason: string | null;
   centerId: string | null;
+  center: {
+    id: string;
+    name: string;
+  } | null;
   createdAt: string;
 };
 
@@ -51,6 +56,24 @@ type UpdateSpecialistCenterBody = {
 };
 
 export const adminService = {
+  listSpecialists: async (): Promise<AdminSpecialistSummary[]> => {
+    const specialists = await adminRepository.findAllSpecialists();
+    const profiles = await adminRepository.findProfilesByIds(
+      [...new Set(specialists.map((specialist) => specialist.user_id))]
+    );
+    const centers = await adminRepository.findActiveCentersByIds(
+      [...new Set(specialists.map((specialist) => specialist.center_id).filter((id): id is string => Boolean(id)))]
+    );
+    const profilesById = new Map(profiles.map((profile) => [profile.id, profile]));
+    const centersById = new Map(centers.map((center) => [center.id, center]));
+
+    return specialists.map((specialist) => toAdminSpecialistSummary(
+      specialist,
+      profilesById.get(specialist.user_id),
+      centersById.get(specialist.center_id ?? '')
+    ));
+  },
+
   listPendingSpecialists: async (): Promise<AdminSpecialistSummary[]> => {
     const specialists = await adminRepository.findPendingSpecialists();
     const profiles = await adminRepository.findProfilesByIds(
@@ -88,8 +111,11 @@ export const adminService = {
       throw new ApiError(409, 'La solicitud ya fue procesada.');
     }
 
-    const profiles = await adminRepository.findProfilesByIds([updated.user_id]);
-    return toAdminSpecialistSummary(updated, profiles[0]);
+    const [profiles, centers] = await Promise.all([
+      adminRepository.findProfilesByIds([updated.user_id]),
+      adminRepository.findActiveCentersByIds(updated.center_id ? [updated.center_id] : [])
+    ]);
+    return toAdminSpecialistSummary(updated, profiles[0], centers[0]);
   },
 
   updateSpecialistCenter: async (
@@ -119,8 +145,11 @@ export const adminService = {
     }
 
     // TODO: registrar auditoria best-effort cuando exista el modulo M4.
-    const profiles = await adminRepository.findProfilesByIds([updated.user_id]);
-    return toAdminSpecialistSummary(updated, profiles[0]);
+    const [profiles, centers] = await Promise.all([
+      adminRepository.findProfilesByIds([updated.user_id]),
+      adminRepository.findActiveCentersByIds(updated.center_id ? [updated.center_id] : [])
+    ]);
+    return toAdminSpecialistSummary(updated, profiles[0], centers[0]);
   },
 
   getSpecialistDocuments: async (specialistProfileId: string): Promise<AdminSpecialistDocuments> => {
@@ -212,7 +241,8 @@ async function validateTargetCenter(adminUserId: string | undefined, centerId: s
 
 function toAdminSpecialistSummary(
   specialist: AdminSpecialistProfileRow,
-  profile?: AdminProfileRow
+  profile?: AdminProfileRow,
+  center?: AdminCenterRow
 ): AdminSpecialistSummary {
   return {
     specialistProfileId: specialist.id,
@@ -224,6 +254,12 @@ function toAdminSpecialistSummary(
     licenseStatus: specialist.license_status,
     rejectionReason: specialist.rejection_reason,
     centerId: specialist.center_id,
+    center: center
+      ? {
+          id: center.id,
+          name: center.name
+        }
+      : null,
     createdAt: specialist.created_at
   };
 }

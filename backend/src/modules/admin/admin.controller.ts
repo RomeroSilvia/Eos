@@ -7,6 +7,11 @@ export const listPendingSpecialists = asyncHandler(async (_req: Request, res: Re
   res.json({ specialists });
 });
 
+export const listSpecialists = asyncHandler(async (_req: Request, res: Response) => {
+  const specialists = await adminService.listSpecialists();
+  res.json({ specialists });
+});
+
 export const updateSpecialistStatus = asyncHandler(async (req: Request, res: Response) => {
   const specialistProfileId = String(req.params.specialistProfileId);
   const specialist = await adminService.updateSpecialistStatus(specialistProfileId, req.body, req.user.id);

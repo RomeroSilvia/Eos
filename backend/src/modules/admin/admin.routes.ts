@@ -3,12 +3,20 @@ import { authenticate } from '../../middlewares/auth.middleware';
 import { requireRole } from '../../middlewares/requireRole.middleware';
 import {
   getSpecialistDocuments,
+  listSpecialists,
   listPendingSpecialists,
   updateSpecialistCenter,
   updateSpecialistStatus
 } from './admin.controller';
 
 export const adminRouter = Router();
+
+adminRouter.get(
+  '/specialists',
+  authenticate,
+  requireRole('center_admin'),
+  listSpecialists
+);
 
 adminRouter.get(
   '/specialists/pending',
