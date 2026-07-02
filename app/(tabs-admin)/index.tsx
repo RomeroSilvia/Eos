@@ -69,6 +69,8 @@ export default function AdminHomeScreen() {
     void loadSpecialists();
   }, [loadSpecialists]);
 
+  const activeCenters = centers.filter((center) => center.isActive);
+
   async function handleApprove(specialist: PendingSpecialist) {
     setActionId(specialist.specialistProfileId);
 
@@ -257,7 +259,8 @@ export default function AdminHomeScreen() {
               <SpecialistRequestCard
                 key={specialist.specialistProfileId}
                 disabled={actionId === specialist.specialistProfileId}
-                centerName={getCenterName(centers, specialist.centerId)}
+                centerActionLabel={specialist.centerId ? 'Cambiar centro' : 'Asignar centro'}
+                centerName={getCenterName(activeCenters, specialist.centerId)}
                 onApprove={() => handleApprove(specialist)}
                 onAssignCenter={() => openAssignCenterModal(specialist)}
                 onViewDocuments={() => openDocumentsModal(specialist)}
@@ -346,7 +349,7 @@ export default function AdminHomeScreen() {
                 label="Sin centro"
                 onPress={() => handleAssignCenter(null)}
               />
-              {centers.map((center) => (
+              {activeCenters.map((center) => (
                 <CenterOption
                   active={assigningSpecialist?.centerId === center.id}
                   disabled={actionId === assigningSpecialist?.specialistProfileId}
@@ -357,9 +360,17 @@ export default function AdminHomeScreen() {
               ))}
             </View>
 
-            {centers.length === 0 ? (
-              <Text style={styles.stateText}>No hay centros activos disponibles.</Text>
+            {activeCenters.length === 0 ? (
+              <Text style={styles.stateText}>Primero crea un centro.</Text>
             ) : null}
+
+            <Pressable
+              disabled={actionId === assigningSpecialist?.specialistProfileId}
+              onPress={() => setAssigningSpecialist(null)}
+              style={styles.secondaryButton}
+            >
+              <Text style={styles.secondaryButtonText}>Cancelar</Text>
+            </Pressable>
           </View>
         </View>
       </Modal>
@@ -437,6 +448,7 @@ export default function AdminHomeScreen() {
 }
 
 function SpecialistRequestCard({
+  centerActionLabel,
   centerName,
   disabled,
   onApprove,
@@ -445,6 +457,7 @@ function SpecialistRequestCard({
   onReject,
   specialist
 }: {
+  centerActionLabel: string;
   centerName: string;
   disabled: boolean;
   onApprove: () => void;
@@ -469,13 +482,18 @@ function SpecialistRequestCard({
         <MetaItem label="Especialidad" value={getSpecialtyLabel(specialist.specialty)} />
         <MetaItem label="Matrícula" value={specialist.licenseNumber} />
         <MetaItem label="Fecha" value={formatDate(specialist.createdAt)} />
-        <MetaItem label="Centro" value={centerName} />
       </View>
 
-      <Pressable disabled={disabled} onPress={onAssignCenter} style={[styles.documentButton, disabled && styles.disabled]}>
-        <Ionicons color={colors.primary} name="business-outline" size={18} />
-        <Text style={styles.documentButtonText}>Asignar centro</Text>
-      </Pressable>
+      <View style={styles.centerAssignment}>
+        <View style={styles.centerAssignmentCopy}>
+          <Text style={styles.centerAssignmentLabel}>Centro actual</Text>
+          <Text style={styles.centerAssignmentValue}>{centerName}</Text>
+        </View>
+        <Pressable disabled={disabled} onPress={onAssignCenter} style={[styles.centerAssignmentButton, disabled && styles.disabled]}>
+          <Ionicons color={colors.primary} name="business-outline" size={18} />
+          <Text style={styles.centerAssignmentButtonText}>{centerActionLabel}</Text>
+        </Pressable>
+      </View>
 
       <Pressable disabled={disabled} onPress={onViewDocuments} style={[styles.documentButton, disabled && styles.disabled]}>
         <Ionicons color={colors.primary} name="images-outline" size={18} />
@@ -555,7 +573,7 @@ function CenterOption({
 }
 
 function getCenterName(centers: Center[], centerId: string | null): string {
-  if (!centerId) return 'Sin centro';
+  if (!centerId) return 'Sin centro asignado';
   return centers.find((center) => center.id === centerId)?.name ?? 'Centro no disponible';
 }
 
@@ -807,6 +825,43 @@ const styles = StyleSheet.create({
     minHeight: 44
   },
   documentButtonText: {
+    color: colors.primary,
+    fontSize: 15,
+    fontWeight: '900'
+  },
+  centerAssignment: {
+    alignItems: 'stretch',
+    backgroundColor: colors.primarySuperLight,
+    borderColor: colors.border,
+    borderRadius: 10,
+    borderWidth: 1,
+    gap: 12,
+    padding: 12
+  },
+  centerAssignmentCopy: {
+    gap: 3
+  },
+  centerAssignmentLabel: {
+    color: colors.textSecondary,
+    fontSize: 12,
+    fontWeight: '800'
+  },
+  centerAssignmentValue: {
+    color: colors.textPrimary,
+    fontSize: 16,
+    fontWeight: '900'
+  },
+  centerAssignmentButton: {
+    alignItems: 'center',
+    borderColor: colors.primary,
+    borderRadius: 8,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: 8,
+    justifyContent: 'center',
+    minHeight: 44
+  },
+  centerAssignmentButtonText: {
     color: colors.primary,
     fontSize: 15,
     fontWeight: '900'
