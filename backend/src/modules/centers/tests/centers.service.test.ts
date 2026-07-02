@@ -8,11 +8,17 @@ jest.mock('../centers.repository', () => ({
     createAdminAssignment: jest.fn(),
     findActiveCenters: jest.fn(),
     findActiveClientRelationsBySpecialistIds: jest.fn(),
+    findActiveByAdminId: jest.fn(),
     findAdminAssignment: jest.fn(),
     findById: jest.fn(),
+    findProfilesByIds: jest.fn(),
+    findSpecialistCountsByCenterIds: jest.fn(),
+    findSpecialistsByCenterId: jest.fn(),
     findSpecialistStatsByCenterId: jest.fn(),
+    getPublicUrl: jest.fn(),
     softDelete: jest.fn(),
-    update: jest.fn()
+    update: jest.fn(),
+    uploadFile: jest.fn()
   }
 }));
 
@@ -24,6 +30,9 @@ function makeCenter(overrides = {}) {
     name: 'Centro Norte',
     address: 'Av. Siempre Viva 123',
     phone: '1111-2222',
+    city: 'CABA',
+    province: 'Buenos Aires',
+    image_url: 'https://cdn.local/center.jpg',
     is_active: true,
     created_at: '2026-07-01T12:00:00.000Z',
     updated_at: '2026-07-01T12:00:00.000Z',
@@ -47,22 +56,29 @@ describe('centersService', () => {
     jest.clearAllMocks();
     mockedRepo.findActiveCenters.mockResolvedValue([]);
     mockedRepo.findAdminAssignment.mockResolvedValue(makeAssignment());
+    mockedRepo.findSpecialistCountsByCenterIds.mockResolvedValue(new Map());
   });
 
-  it('crea centro valido', async () => {
+  it('crea centro valido con ciudad provincia e imagen', async () => {
     mockedRepo.create.mockResolvedValue(makeCenter());
     mockedRepo.createAdminAssignment.mockResolvedValue(undefined);
 
     const result = await centersService.createCenter('admin-1', {
       name: '  Centro   Norte  ',
       address: ' Av. Siempre Viva 123 ',
-      phone: ' 1111-2222 '
+      phone: ' 1111-2222 ',
+      city: ' CABA ',
+      province: ' Buenos   Aires ',
+      imageUrl: ' https://cdn.local/center.jpg '
     });
 
     expect(mockedRepo.create).toHaveBeenCalledWith({
       name: 'Centro Norte',
       address: 'Av. Siempre Viva 123',
-      phone: '1111-2222'
+      phone: '1111-2222',
+      city: 'CABA',
+      province: 'Buenos Aires',
+      image_url: 'https://cdn.local/center.jpg'
     });
     expect(mockedRepo.createAdminAssignment).toHaveBeenCalledWith('admin-1', 'center-1');
     expect(result).toEqual({
@@ -70,7 +86,11 @@ describe('centersService', () => {
       name: 'Centro Norte',
       address: 'Av. Siempre Viva 123',
       phone: '1111-2222',
+      city: 'CABA',
+      province: 'Buenos Aires',
+      imageUrl: 'https://cdn.local/center.jpg',
       isActive: true,
+      specialistsCount: 0,
       createdAt: '2026-07-01T12:00:00.000Z',
       updatedAt: '2026-07-01T12:00:00.000Z'
     });
@@ -98,27 +118,57 @@ describe('centersService', () => {
     expect(mockedRepo.create).not.toHaveBeenCalled();
   });
 
-  it('edita centro', async () => {
+  it('edita centro con ciudad provincia e imagen', async () => {
     mockedRepo.findById.mockResolvedValue(makeCenter());
     mockedRepo.update.mockResolvedValue(makeCenter({
       name: 'Centro Sur',
       address: null,
-      phone: '3333-4444'
+      phone: '3333-4444',
+      city: 'La Plata',
+      province: 'Buenos Aires',
+      image_url: 'https://cdn.local/sur.jpg'
     }));
 
     const result = await centersService.updateCenter('admin-1', 'center-1', {
       name: 'Centro Sur',
       address: null,
-      phone: '3333-4444'
+      phone: '3333-4444',
+      city: 'La Plata',
+      province: 'Buenos Aires',
+      imageUrl: 'https://cdn.local/sur.jpg'
     });
 
     expect(mockedRepo.findAdminAssignment).toHaveBeenCalledWith('admin-1', 'center-1');
     expect(mockedRepo.update).toHaveBeenCalledWith('center-1', expect.objectContaining({
       name: 'Centro Sur',
       address: null,
-      phone: '3333-4444'
+      phone: '3333-4444',
+      city: 'La Plata',
+      province: 'Buenos Aires',
+      image_url: 'https://cdn.local/sur.jpg'
     }));
     expect(result.name).toBe('Centro Sur');
+    expect(result.city).toBe('La Plata');
+    expect(result.imageUrl).toBe('https://cdn.local/sur.jpg');
+  });
+
+  it('lista centros con cantidad de especialistas asignados', async () => {
+    mockedRepo.findActiveByAdminId.mockResolvedValue([
+      makeCenter({ id: 'center-1' }),
+      makeCenter({ id: 'center-2', name: 'Centro Sur' })
+    ]);
+    mockedRepo.findSpecialistCountsByCenterIds.mockResolvedValue(new Map([
+      ['center-1', 2],
+      ['center-2', 1]
+    ]));
+
+    const result = await centersService.listCenters('admin-1');
+
+    expect(mockedRepo.findSpecialistCountsByCenterIds).toHaveBeenCalledWith(['center-1', 'center-2']);
+    expect(result).toEqual([
+      expect.objectContaining({ id: 'center-1', specialistsCount: 2 }),
+      expect.objectContaining({ id: 'center-2', specialistsCount: 1 })
+    ]);
   });
 
   it('baja centro con soft delete', async () => {
@@ -183,4 +233,143 @@ describe('centersService', () => {
     });
     expect(mockedRepo.findSpecialistStatsByCenterId).not.toHaveBeenCalled();
   });
+
+  it('lista especialistas asignados al centro', async () => {
+    mockedRepo.findById.mockResolvedValue(makeCenter());
+    mockedRepo.findSpecialistsByCenterId.mockResolvedValue([
+      {
+        id: 'specialist-profile-1',
+        user_id: 'user-1',
+        specialty: 'dermatologo',
+        license_status: 'verified',
+        center_id: 'center-1'
+      },
+      {
+        id: 'specialist-profile-2',
+        user_id: 'user-2',
+        specialty: 'cosmetologo',
+        license_status: 'pending',
+        center_id: 'center-1'
+      }
+    ]);
+    mockedRepo.findProfilesByIds.mockResolvedValue([
+      { id: 'user-1', full_name: 'Ana Perez', email: 'ana@example.com' },
+      { id: 'user-2', full_name: 'Luz Gomez', email: null }
+    ]);
+
+    const result = await centersService.listCenterSpecialists('admin-1', 'center-1');
+
+    expect(mockedRepo.findSpecialistsByCenterId).toHaveBeenCalledWith('center-1');
+    expect(mockedRepo.findProfilesByIds).toHaveBeenCalledWith(['user-1', 'user-2']);
+    expect(result).toEqual([
+      {
+        specialistProfileId: 'specialist-profile-1',
+        userId: 'user-1',
+        name: 'Ana Perez',
+        email: 'ana@example.com',
+        specialty: 'dermatologo',
+        licenseStatus: 'verified',
+        centerId: 'center-1'
+      },
+      {
+        specialistProfileId: 'specialist-profile-2',
+        userId: 'user-2',
+        name: 'Luz Gomez',
+        email: null,
+        specialty: 'cosmetologo',
+        licenseStatus: 'pending',
+        centerId: 'center-1'
+      }
+    ]);
+  });
+
+  it('rechaza imagen con tipo invalido', async () => {
+    mockedRepo.findById.mockResolvedValue(makeCenter());
+
+    await expect(
+      centersService.uploadCenterImage('admin-1', 'center-1', makeImageFile({
+        mimetype: 'application/pdf',
+        buffer: validJpegBuffer()
+      }))
+    ).rejects.toMatchObject({
+      statusCode: 400
+    });
+    await expect(
+      centersService.uploadCenterImage('admin-1', 'center-1', makeImageFile({
+        mimetype: 'application/pdf',
+        buffer: validJpegBuffer()
+      }))
+    ).rejects.toThrow('Formato no permitido');
+    expect(mockedRepo.uploadFile).not.toHaveBeenCalled();
+  });
+
+  it('rechaza imagen mayor a 5MB', async () => {
+    mockedRepo.findById.mockResolvedValue(makeCenter());
+
+    await expect(
+      centersService.uploadCenterImage('admin-1', 'center-1', makeImageFile({
+        size: 5 * 1024 * 1024 + 1
+      }))
+    ).rejects.toMatchObject({
+      statusCode: 413,
+      message: 'La imagen no puede superar los 5 MB.'
+    });
+    expect(mockedRepo.uploadFile).not.toHaveBeenCalled();
+  });
+
+  it('devuelve error amigable si falla storage', async () => {
+    mockedRepo.findById.mockResolvedValue(makeCenter());
+    mockedRepo.uploadFile.mockRejectedValue(new Error('bucket not found'));
+
+    await expect(
+      centersService.uploadCenterImage('admin-1', 'center-1', makeImageFile())
+    ).rejects.toMatchObject({
+      statusCode: 500
+    });
+    await expect(
+      centersService.uploadCenterImage('admin-1', 'center-1', makeImageFile())
+    ).rejects.toThrow('No pudimos subir la imagen del centro');
+    expect(mockedRepo.update).not.toHaveBeenCalled();
+  });
+
+  it('sube imagen valida y guarda imageUrl en el centro', async () => {
+    mockedRepo.findById.mockResolvedValue(makeCenter());
+    mockedRepo.uploadFile.mockResolvedValue(undefined);
+    mockedRepo.getPublicUrl.mockReturnValue('https://cdn.local/center-1/image.jpg');
+    mockedRepo.update.mockResolvedValue(makeCenter({ image_url: 'https://cdn.local/center-1/image.jpg' }));
+
+    const result = await centersService.uploadCenterImage('admin-1', 'center-1', makeImageFile());
+
+    expect(mockedRepo.uploadFile).toHaveBeenCalledWith(expect.objectContaining({
+      bucket: 'center-images',
+      buffer: validJpegBuffer(),
+      contentType: 'image/jpeg'
+    }));
+    expect(mockedRepo.update).toHaveBeenCalledWith('center-1', expect.objectContaining({
+      image_url: 'https://cdn.local/center-1/image.jpg'
+    }));
+    expect(result.imageUrl).toBe('https://cdn.local/center-1/image.jpg');
+  });
 });
+
+function validJpegBuffer(): Buffer {
+  return Buffer.from([0xff, 0xd8, 0xff, 0x00]);
+}
+
+function makeImageFile(overrides: Partial<Express.Multer.File> = {}): Express.Multer.File {
+  const buffer = overrides.buffer ?? validJpegBuffer();
+
+  return {
+    fieldname: 'image',
+    originalname: 'center.jpg',
+    encoding: '7bit',
+    mimetype: 'image/jpeg',
+    buffer,
+    size: buffer.length,
+    stream: undefined as never,
+    destination: '',
+    filename: '',
+    path: '',
+    ...overrides
+  };
+}
