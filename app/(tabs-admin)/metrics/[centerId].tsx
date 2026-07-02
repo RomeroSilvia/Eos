@@ -1,6 +1,6 @@
 ﻿import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Image,
@@ -14,40 +14,57 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Card } from '@/components/Card';
 import { colors } from '@/constants/colors';
 import {
+  getCenterDashboard,
   getCenters,
   getCentersErrorMessage,
-  type Center
+  type Center,
+  type CenterDashboard
 } from '@/services/centers';
 
-export default function AdminMetricsScreen() {
+export default function CenterMetricsDetailScreen() {
   const router = useRouter();
-  const [centers, setCenters] = useState<Center[]>([]);
+  const params = useLocalSearchParams<{ centerId?: string | string[] }>();
+  const centerId = useMemo(() => {
+    const value = params.centerId;
+    return Array.isArray(value) ? value[0] : value;
+  }, [params.centerId]);
+  const [center, setCenter] = useState<Center | null>(null);
+  const [dashboard, setDashboard] = useState<CenterDashboard | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const loadCenters = useCallback(async () => {
+  const loadMetrics = useCallback(async () => {
+    if (!centerId) {
+      setError('No encontramos el centro solicitado.');
+      setIsLoading(false);
+      return;
+    }
+
     setIsLoading(true);
     setError(null);
 
     try {
-      setCenters(await getCenters());
+      const [centers, nextDashboard] = await Promise.all([
+        getCenters(),
+        getCenterDashboard(centerId)
+      ]);
+      setCenter(centers.find((item) => item.id === centerId) ?? null);
+      setDashboard(nextDashboard);
     } catch (loadError) {
+      setCenter(null);
+      setDashboard(null);
       setError(getCentersErrorMessage(loadError));
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [centerId]);
 
   useEffect(() => {
-    void loadCenters();
-  }, [loadCenters]);
+    void loadMetrics();
+  }, [loadMetrics]);
 
-  function goToAdminHome() {
-    router.replace('/(tabs-admin)' as never);
-  }
-
-  function openCenterMetrics(centerId: string) {
-    router.push(`/(tabs-admin)/metrics/${centerId}` as never);
+  function goToMetricsList() {
+    router.replace('/(tabs-admin)/metrics' as never);
   }
 
   return (
@@ -55,9 +72,9 @@ export default function AdminMetricsScreen() {
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
           <Pressable
-            accessibilityLabel="Volver al panel administrativo"
+            accessibilityLabel="Volver a métricas"
             accessibilityRole="button"
-            onPress={goToAdminHome}
+            onPress={goToMetricsList}
             style={styles.backButton}
           >
             <Ionicons color={colors.primaryDark} name="chevron-back" size={22} />
@@ -66,15 +83,15 @@ export default function AdminMetricsScreen() {
             <Ionicons color={colors.primaryDark} name="stats-chart-outline" size={24} />
           </View>
           <View style={styles.headerCopy}>
-            <Text style={styles.title}>Métricas por centro</Text>
-            <Text style={styles.subtitle}>Seleccioná un centro para ver su resumen operativo</Text>
+            <Text style={styles.title}>{center?.name ?? 'Métricas del centro'}</Text>
+            <Text style={styles.subtitle}>Resumen operativo básico</Text>
           </View>
         </View>
 
         {isLoading ? (
           <View style={styles.stateBox}>
             <ActivityIndicator color={colors.primary} />
-            <Text style={styles.stateText}>Cargando centros...</Text>
+            <Text style={styles.stateText}>Cargando métricas...</Text>
           </View>
         ) : null}
 
@@ -82,84 +99,84 @@ export default function AdminMetricsScreen() {
           <View style={styles.stateBox}>
             <Ionicons color={colors.error} name="alert-circle-outline" size={28} />
             <Text style={styles.errorText}>{error}</Text>
-            <Pressable style={styles.secondaryButton} onPress={loadCenters}>
+            <Pressable style={styles.secondaryButton} onPress={loadMetrics}>
               <Text style={styles.secondaryButtonText}>Reintentar</Text>
             </Pressable>
           </View>
         ) : null}
 
-        {!isLoading && !error && centers.length === 0 ? (
-          <View style={styles.stateBox}>
-            <Ionicons color={colors.primaryDark} name="business-outline" size={30} />
-            <Text style={styles.stateText}>Todavía no hay centros activos para medir</Text>
-          </View>
-        ) : null}
-
-        {!isLoading && !error && centers.length > 0 ? (
-          <View style={styles.list}>
-            {centers.map((center) => (
-              <CenterMetricsListItem
-                center={center}
-                key={center.id}
-                onPress={() => openCenterMetrics(center.id)}
-              />
-            ))}
-          </View>
+        {!isLoading && !error && dashboard ? (
+          <>
+            <CenterHeaderCard center={center} />
+            <View style={styles.metricsGrid}>
+              <MetricCard icon="people-outline" label="Especialistas totales" value={dashboard.specialistsTotal} />
+              <MetricCard icon="checkmark-circle-outline" label="Verificados" value={dashboard.specialistsVerified} />
+              <MetricCard icon="time-outline" label="Pendientes" value={dashboard.specialistsPending} />
+              <MetricCard icon="person-add-outline" label="Clientes vinculados" value={dashboard.clientsTotal} />
+            </View>
+          </>
         ) : null}
       </ScrollView>
     </SafeAreaView>
   );
 }
 
-function CenterMetricsListItem({
-  center,
-  onPress
-}: {
-  center: Center;
-  onPress: () => void;
-}) {
-  const location = [center.city, center.province].filter(Boolean).join(', ');
+function CenterHeaderCard({ center }: { center: Center | null }) {
+  const location = [center?.city, center?.province].filter(Boolean).join(', ');
 
   return (
-    <Pressable accessibilityRole="button" onPress={onPress}>
-      <Card style={styles.centerCard}>
-        {center.imageUrl ? (
-          <Image resizeMode="cover" source={{ uri: center.imageUrl }} style={styles.centerImage} />
-        ) : (
-          <View style={styles.centerImagePlaceholder}>
-            <View style={styles.centerImagePlaceholderIcon}>
-              <Ionicons color={colors.primaryDark} name="sparkles-outline" size={24} />
-            </View>
-            <Text style={styles.centerImagePlaceholderText}>EOS</Text>
+    <Card style={styles.centerHeroCard}>
+      {center?.imageUrl ? (
+        <Image resizeMode="cover" source={{ uri: center.imageUrl }} style={styles.centerImage} />
+      ) : (
+        <View style={styles.centerImagePlaceholder}>
+          <View style={styles.centerImagePlaceholderIcon}>
+            <Ionicons color={colors.primaryDark} name="sparkles-outline" size={24} />
           </View>
-        )}
+          <Text style={styles.centerImagePlaceholderText}>EOS</Text>
+        </View>
+      )}
 
-        <View style={styles.centerHeader}>
-          <View style={styles.centerIcon}>
-            <Ionicons color={colors.primaryDark} name="business-outline" size={22} />
-          </View>
-          <View style={styles.centerCopy}>
-            <Text style={styles.centerName}>{center.name}</Text>
-            <View style={styles.statusBadge}>
-              <Text style={styles.statusText}>Activo</Text>
-            </View>
+      <View style={styles.centerInfoRow}>
+        <View style={styles.centerIcon}>
+          <Ionicons color={colors.primaryDark} name="business-outline" size={22} />
+        </View>
+        <View style={styles.centerCopy}>
+          <Text style={styles.centerName}>{center?.name ?? 'Centro seleccionado'}</Text>
+          <View style={styles.statusBadge}>
+            <Text style={styles.statusText}>Activo</Text>
           </View>
         </View>
+      </View>
 
-        <View style={styles.centerMetaRow}>
-          <Ionicons color={colors.textSecondary} name="location-outline" size={17} />
-          <Text style={styles.centerMetaText}>{location || 'Ubicación no cargada'}</Text>
-        </View>
+      <View style={styles.centerMetaRow}>
+        <Ionicons color={colors.textSecondary} name="location-outline" size={17} />
+        <Text style={styles.centerMetaText}>{location || 'Ubicación no cargada'}</Text>
+      </View>
+      <Text style={styles.centerSubtitle}>Resumen operativo básico</Text>
+    </Card>
+  );
+}
 
-        <View style={styles.centerFooter}>
-          <View style={styles.specialistsChip}>
-            <Ionicons color={colors.primaryDark} name="people-outline" size={16} />
-            <Text style={styles.specialistsText}>Especialistas asignados: {center.specialistsCount ?? 0}</Text>
-          </View>
-          <Ionicons color={colors.primary} name="chevron-forward" size={20} />
+function MetricCard({
+  icon,
+  label,
+  value
+}: {
+  icon: keyof typeof Ionicons.glyphMap;
+  label: string;
+  value: number;
+}) {
+  return (
+    <Card style={styles.metricCard}>
+      <View style={styles.metricHeader}>
+        <View style={styles.metricIcon}>
+          <Ionicons color={colors.primaryDark} name={icon} size={22} />
         </View>
-      </Card>
-    </Pressable>
+        <Text style={styles.metricValue}>{value}</Text>
+      </View>
+      <Text style={styles.metricLabel}>{label}</Text>
+    </Card>
   );
 }
 
@@ -246,10 +263,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '900'
   },
-  list: {
-    gap: 12
-  },
-  centerCard: {
+  centerHeroCard: {
     borderRadius: 14,
     gap: 12
   },
@@ -258,7 +272,7 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     borderRadius: 12,
     borderWidth: 1,
-    height: 96,
+    height: 104,
     width: '100%'
   },
   centerImagePlaceholder: {
@@ -268,7 +282,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     gap: 6,
-    height: 96,
+    height: 104,
     justifyContent: 'center',
     width: '100%'
   },
@@ -285,7 +299,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '900'
   },
-  centerHeader: {
+  centerInfoRow: {
     alignItems: 'center',
     flexDirection: 'row',
     gap: 10
@@ -304,7 +318,7 @@ const styles = StyleSheet.create({
   },
   centerName: {
     color: colors.textPrimary,
-    fontSize: 17,
+    fontSize: 18,
     fontWeight: '900'
   },
   statusBadge: {
@@ -331,27 +345,39 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700'
   },
-  centerFooter: {
+  centerSubtitle: {
+    color: colors.textSecondary,
+    fontSize: 14,
+    fontWeight: '800'
+  },
+  metricsGrid: {
+    gap: 12
+  },
+  metricCard: {
+    borderRadius: 14,
+    gap: 12
+  },
+  metricHeader: {
     alignItems: 'center',
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
     justifyContent: 'space-between'
   },
-  specialistsChip: {
+  metricIcon: {
     alignItems: 'center',
-    backgroundColor: colors.surfaceSoft,
-    borderColor: colors.primaryLight,
-    borderRadius: 999,
-    borderWidth: 1,
-    flexDirection: 'row',
-    gap: 6,
-    paddingHorizontal: 10,
-    paddingVertical: 7
+    backgroundColor: colors.primaryLight,
+    borderRadius: 22,
+    height: 44,
+    justifyContent: 'center',
+    width: 44
   },
-  specialistsText: {
+  metricValue: {
     color: colors.textPrimary,
-    fontSize: 13,
+    fontSize: 34,
     fontWeight: '900'
   },
+  metricLabel: {
+    color: colors.textSecondary,
+    fontSize: 15,
+    fontWeight: '800'
+  }
 });
