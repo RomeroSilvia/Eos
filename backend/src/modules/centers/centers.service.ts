@@ -14,6 +14,13 @@ const CENTER_IMAGES_BUCKET = 'center-images';
 const ALLOWED_CENTER_IMAGE_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 const MAX_CENTER_IMAGE_SIZE_BYTES = 5 * 1024 * 1024;
 const MAX_CENTER_IMAGE_SIZE_MB = 5;
+const CENTER_NAME_MIN_LENGTH = 2;
+const CENTER_NAME_MAX_LENGTH = 80;
+const CENTER_ADDRESS_MAX_LENGTH = 160;
+const CENTER_LOCATION_MAX_LENGTH = 80;
+const CENTER_PHONE_MAX_LENGTH = 20;
+const CENTER_PHONE_MIN_DIGITS = 6;
+const CENTER_PHONE_ALLOWED_PATTERN = /^[0-9+\-()\s]+$/;
 
 type NormalizedCenterPayload = {
   name?: string;
@@ -43,13 +50,21 @@ export const centersService = {
     const payload = normalizeCreateInput(input);
     await ensureActiveNameIsAvailable(payload.name);
 
-    try {
-      const center = await centersRepository.create(payload);
-      await centersRepository.createAdminAssignment(adminUserId, center.id);
+    let center: CenterRow;
 
-      return toCenterSummary(center);
+    try {
+      center = await centersRepository.create(payload);
     } catch (error) {
       throw mapCreateCenterError(error);
+    }
+
+    try {
+      await centersRepository.createAdminAssignment(adminUserId, center.id);
+      return toCenterSummary(center);
+    } catch (error) {
+      logCentersError('create-center-admin-assignment', error);
+      await rollbackCreatedCenter(center.id);
+      throw new ApiError(500, 'No pudimos crear el centro. Intentá nuevamente.');
     }
   },
 
@@ -91,7 +106,9 @@ export const centersService = {
   getDashboard: async (adminUserId: string, centerId: string): Promise<CenterDashboardSummary> => {
     const center = await ensureAdminCanAccessActiveCenter(adminUserId, centerId);
     const specialists = await centersRepository.findSpecialistStatsByCenterId(center.id);
-    const specialistIds = specialists.map((specialist) => specialist.id);
+    const specialistIds = [
+      ...new Set(specialists.flatMap((specialist) => [specialist.id, specialist.user_id]).filter(Boolean))
+    ];
     const relations = await centersRepository.findActiveClientRelationsBySpecialistIds(specialistIds);
     const clientIds = new Set(relations.map((relation) => relation.client_id));
 
@@ -196,6 +213,14 @@ async function ensureActiveNameIsAvailable(name: string, ignoredCenterId?: strin
   }
 }
 
+async function rollbackCreatedCenter(centerId: string): Promise<void> {
+  try {
+    await centersRepository.softDelete(centerId);
+  } catch (error) {
+    logCentersError('rollback-created-center', error);
+  }
+}
+
 function normalizeCreateInput(
   input: CreateCenterInput
 ): Required<Pick<NormalizedCenterPayload, 'name'>> & Pick<NormalizedCenterPayload, 'address' | 'phone' | 'city' | 'province' | 'image_url'> {
@@ -203,10 +228,10 @@ function normalizeCreateInput(
 
   return {
     name,
-    address: normalizeNullableText(input.address),
-    phone: normalizeNullableText(input.phone),
-    city: normalizeNullableText(input.city),
-    province: normalizeNullableText(input.province),
+    address: normalizeAddress(input.address),
+    phone: normalizePhone(input.phone),
+    city: normalizeLocation(input.city, 'ciudad'),
+    province: normalizeLocation(input.province, 'provincia'),
     image_url: normalizeNullableText(input.image_url ?? input.imageUrl)
   };
 }
@@ -219,19 +244,19 @@ function normalizeUpdateInput(input: UpdateCenterInput): NormalizedCenterPayload
   }
 
   if (Object.prototype.hasOwnProperty.call(input, 'address')) {
-    payload.address = normalizeNullableText(input.address);
+    payload.address = normalizeAddress(input.address);
   }
 
   if (Object.prototype.hasOwnProperty.call(input, 'phone')) {
-    payload.phone = normalizeNullableText(input.phone);
+    payload.phone = normalizePhone(input.phone);
   }
 
   if (Object.prototype.hasOwnProperty.call(input, 'city')) {
-    payload.city = normalizeNullableText(input.city);
+    payload.city = normalizeLocation(input.city, 'ciudad');
   }
 
   if (Object.prototype.hasOwnProperty.call(input, 'province')) {
-    payload.province = normalizeNullableText(input.province);
+    payload.province = normalizeLocation(input.province, 'provincia');
   }
 
   if (Object.prototype.hasOwnProperty.call(input, 'image_url') || Object.prototype.hasOwnProperty.call(input, 'imageUrl')) {
@@ -243,13 +268,63 @@ function normalizeUpdateInput(input: UpdateCenterInput): NormalizedCenterPayload
 
 function normalizeRequiredName(value: unknown): string {
   if (typeof value !== 'string') {
-    throw new ApiError(400, 'El nombre del centro es obligatorio.');
+    throw new ApiError(400, 'Ingresá un nombre válido.');
   }
 
   const normalized = normalizeDisplayText(value);
 
   if (!normalized) {
-    throw new ApiError(400, 'El nombre del centro es obligatorio.');
+    throw new ApiError(400, 'Ingresá un nombre válido.');
+  }
+
+  if (normalized.length < CENTER_NAME_MIN_LENGTH) {
+    throw new ApiError(400, 'El nombre debe tener al menos 2 caracteres.');
+  }
+
+  if (normalized.length > CENTER_NAME_MAX_LENGTH) {
+    throw new ApiError(400, 'El nombre no puede superar los 80 caracteres.');
+  }
+
+  return normalized;
+}
+
+function normalizeAddress(value: unknown): string | null {
+  const normalized = normalizeNullableText(value);
+
+  if (normalized && normalized.length > CENTER_ADDRESS_MAX_LENGTH) {
+    throw new ApiError(400, 'La dirección es demasiado larga.');
+  }
+
+  return normalized;
+}
+
+function normalizeLocation(value: unknown, field: 'ciudad' | 'provincia'): string | null {
+  const normalized = normalizeNullableText(value);
+
+  if (!normalized) {
+    return null;
+  }
+
+  if (normalized.length > CENTER_LOCATION_MAX_LENGTH || /^\d+$/.test(normalized)) {
+    throw new ApiError(400, field === 'ciudad' ? 'Ingresá una ciudad válida.' : 'Ingresá una provincia válida.');
+  }
+
+  return normalized;
+}
+
+function normalizePhone(value: unknown): string | null {
+  const normalized = normalizeNullableText(value);
+
+  if (!normalized) {
+    return null;
+  }
+
+  if (
+    normalized.length > CENTER_PHONE_MAX_LENGTH ||
+    !CENTER_PHONE_ALLOWED_PATTERN.test(normalized) ||
+    countDigits(normalized) < CENTER_PHONE_MIN_DIGITS
+  ) {
+    throw new ApiError(400, 'El teléfono no tiene un formato válido.');
   }
 
   return normalized;
@@ -265,6 +340,10 @@ function normalizeNullableText(value: unknown): string | null {
   }
 
   return normalizeDisplayText(value) || null;
+}
+
+function countDigits(value: string): number {
+  return (value.match(/\d/g) ?? []).length;
 }
 
 function normalizeDisplayText(value: string): string {
@@ -290,15 +369,6 @@ function mapCreateCenterError(error: unknown): ApiError {
     message.includes('already exists')
   ) {
     return new ApiError(409, 'Ya existe un centro activo con ese nombre.');
-  }
-
-  if (
-    message.includes('row-level security') ||
-    message.includes('permission denied') ||
-    message.includes('not authorized') ||
-    message.includes('violates foreign key constraint')
-  ) {
-    return new ApiError(403, 'No tenés permiso para crear este centro.');
   }
 
   return new ApiError(500, 'No pudimos crear el centro. Intentá nuevamente.');

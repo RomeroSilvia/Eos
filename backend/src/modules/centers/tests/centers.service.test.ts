@@ -81,6 +81,7 @@ describe('centersService', () => {
       image_url: 'https://cdn.local/center.jpg'
     });
     expect(mockedRepo.createAdminAssignment).toHaveBeenCalledWith('admin-1', 'center-1');
+    expect(mockedRepo.findAdminAssignment).not.toHaveBeenCalled();
     expect(result).toEqual({
       id: 'center-1',
       name: 'Centro Norte',
@@ -96,12 +97,54 @@ describe('centersService', () => {
     });
   });
 
+  it('center_admin puede crear centro aunque no tenga centros previos', async () => {
+    mockedRepo.create.mockResolvedValue(makeCenter({ id: 'center-new' }));
+    mockedRepo.createAdminAssignment.mockResolvedValue(undefined);
+
+    const result = await centersService.createCenter('admin-empty', { name: 'Centro Nuevo' });
+
+    expect(mockedRepo.findAdminAssignment).not.toHaveBeenCalled();
+    expect(mockedRepo.createAdminAssignment).toHaveBeenCalledWith('admin-empty', 'center-new');
+    expect(result.id).toBe('center-new');
+  });
+
+  it('si falla crear relacion center_admins devuelve error amigable y baja el centro creado', async () => {
+    mockedRepo.create.mockResolvedValue(makeCenter({ id: 'center-new' }));
+    mockedRepo.createAdminAssignment.mockRejectedValue(new Error('violates foreign key constraint'));
+    mockedRepo.softDelete.mockResolvedValue(makeCenter({ id: 'center-new', is_active: false }));
+
+    const promise = centersService.createCenter('admin-1', { name: 'Centro Nuevo' });
+
+    await expect(promise).rejects.toMatchObject({ statusCode: 500 });
+    await expect(promise).rejects.toThrow('No pudimos crear el centro');
+
+    expect(mockedRepo.softDelete).toHaveBeenCalledWith('center-new');
+  });
+
   it('rechaza centro sin nombre', async () => {
+    const promise = centersService.createCenter('admin-1', { name: '   ' });
+
+    await expect(promise).rejects.toMatchObject({ statusCode: 400 });
+    await expect(promise).rejects.toThrow('Ingres');
+    expect(mockedRepo.create).not.toHaveBeenCalled();
+  });
+
+  it('rechaza nombre de 1 caracter', async () => {
     await expect(
-      centersService.createCenter('admin-1', { name: '   ' })
+      centersService.createCenter('admin-1', { name: 'A' })
     ).rejects.toMatchObject({
       statusCode: 400,
-      message: 'El nombre del centro es obligatorio.'
+      message: 'El nombre debe tener al menos 2 caracteres.'
+    });
+    expect(mockedRepo.create).not.toHaveBeenCalled();
+  });
+
+  it('rechaza nombre de mas de 80 caracteres', async () => {
+    await expect(
+      centersService.createCenter('admin-1', { name: 'A'.repeat(81) })
+    ).rejects.toMatchObject({
+      statusCode: 400,
+      message: 'El nombre no puede superar los 80 caracteres.'
     });
     expect(mockedRepo.create).not.toHaveBeenCalled();
   });
@@ -115,6 +158,88 @@ describe('centersService', () => {
       statusCode: 409,
       message: 'Ya existe un centro activo con ese nombre.'
     });
+    expect(mockedRepo.create).not.toHaveBeenCalled();
+  });
+
+  it('acepta campos opcionales vacios', async () => {
+    mockedRepo.create.mockResolvedValue(makeCenter({
+      address: null,
+      phone: null,
+      city: null,
+      province: null,
+      image_url: null
+    }));
+    mockedRepo.createAdminAssignment.mockResolvedValue(undefined);
+
+    const result = await centersService.createCenter('admin-1', {
+      name: 'Centro Libre',
+      address: '   ',
+      phone: '',
+      city: '',
+      province: null,
+      imageUrl: undefined
+    });
+
+    expect(mockedRepo.create).toHaveBeenCalledWith({
+      name: 'Centro Libre',
+      address: null,
+      phone: null,
+      city: null,
+      province: null,
+      image_url: null
+    });
+    expect(result).toEqual(expect.objectContaining({
+      address: null,
+      phone: null,
+      city: null,
+      province: null,
+      imageUrl: null
+    }));
+  });
+
+  it('rechaza telefono con letras', async () => {
+    const promise = centersService.createCenter('admin-1', { name: 'Centro Norte', phone: '11 ABC 1234' });
+
+    await expect(promise).rejects.toMatchObject({ statusCode: 400 });
+    await expect(promise).rejects.toThrow('formato');
+    expect(mockedRepo.create).not.toHaveBeenCalled();
+  });
+
+  it('acepta telefono con simbolos permitidos', async () => {
+    mockedRepo.create.mockResolvedValue(makeCenter({ phone: '+54 (11) 1234-5678' }));
+    mockedRepo.createAdminAssignment.mockResolvedValue(undefined);
+
+    await centersService.createCenter('admin-1', {
+      name: 'Centro Norte',
+      phone: ' +54 (11) 1234-5678 '
+    });
+
+    expect(mockedRepo.create).toHaveBeenCalledWith(expect.objectContaining({
+      phone: '+54 (11) 1234-5678'
+    }));
+  });
+
+  it('rechaza telefono con menos de 6 digitos reales', async () => {
+    const promise = centersService.createCenter('admin-1', { name: 'Centro Norte', phone: '+54 11' });
+
+    await expect(promise).rejects.toMatchObject({ statusCode: 400 });
+    await expect(promise).rejects.toThrow('formato');
+    expect(mockedRepo.create).not.toHaveBeenCalled();
+  });
+
+  it('rechaza ciudad numerica pura', async () => {
+    const promise = centersService.createCenter('admin-1', { name: 'Centro Norte', city: '12345' });
+
+    await expect(promise).rejects.toMatchObject({ statusCode: 400 });
+    await expect(promise).rejects.toThrow('ciudad');
+    expect(mockedRepo.create).not.toHaveBeenCalled();
+  });
+
+  it('rechaza provincia numerica pura', async () => {
+    const promise = centersService.createCenter('admin-1', { name: 'Centro Norte', province: '12345' });
+
+    await expect(promise).rejects.toMatchObject({ statusCode: 400 });
+    await expect(promise).rejects.toThrow('provincia');
     expect(mockedRepo.create).not.toHaveBeenCalled();
   });
 
@@ -184,21 +309,19 @@ describe('centersService', () => {
     mockedRepo.findById.mockResolvedValue(makeCenter());
     mockedRepo.findAdminAssignment.mockResolvedValue(null);
 
-    await expect(
-      centersService.updateCenter('admin-1', 'center-1', { name: 'Centro Sur' })
-    ).rejects.toMatchObject({
-      statusCode: 403,
-      message: 'No tenés permiso para gestionar este centro.'
-    });
+    const promise = centersService.updateCenter('admin-1', 'center-1', { name: 'Centro Sur' });
+
+    await expect(promise).rejects.toMatchObject({ statusCode: 403 });
+    await expect(promise).rejects.toThrow('permiso');
     expect(mockedRepo.update).not.toHaveBeenCalled();
   });
 
   it('dashboard devuelve contadores', async () => {
     mockedRepo.findById.mockResolvedValue(makeCenter());
     mockedRepo.findSpecialistStatsByCenterId.mockResolvedValue([
-      { id: 'specialist-1', license_status: 'verified' },
-      { id: 'specialist-2', license_status: 'pending' },
-      { id: 'specialist-3', license_status: 'rejected' }
+      { id: 'specialist-profile-1', user_id: 'specialist-user-1', license_status: 'verified' },
+      { id: 'specialist-profile-2', user_id: 'specialist-user-2', license_status: 'pending' },
+      { id: 'specialist-profile-3', user_id: 'specialist-user-3', license_status: 'rejected' }
     ]);
     mockedRepo.findActiveClientRelationsBySpecialistIds.mockResolvedValue([
       { client_id: 'client-1' },
@@ -210,9 +333,12 @@ describe('centersService', () => {
 
     expect(mockedRepo.findSpecialistStatsByCenterId).toHaveBeenCalledWith('center-1');
     expect(mockedRepo.findActiveClientRelationsBySpecialistIds).toHaveBeenCalledWith([
-      'specialist-1',
-      'specialist-2',
-      'specialist-3'
+      'specialist-profile-1',
+      'specialist-user-1',
+      'specialist-profile-2',
+      'specialist-user-2',
+      'specialist-profile-3',
+      'specialist-user-3'
     ]);
     expect(result).toEqual({
       specialistsTotal: 3,
@@ -229,7 +355,7 @@ describe('centersService', () => {
       centersService.getDashboard('admin-1', 'center-1')
     ).rejects.toMatchObject({
       statusCode: 404,
-      message: 'Centro no encontrado o inactivo.'
+      message: 'No encontramos este centro o fue dado de baja.'
     });
     expect(mockedRepo.findSpecialistStatsByCenterId).not.toHaveBeenCalled();
   });

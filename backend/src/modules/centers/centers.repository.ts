@@ -17,6 +17,7 @@ type CenterMutation = {
 
 type SpecialistCenterStatsRow = {
   id: string;
+  user_id: string;
   license_status: string;
 };
 
@@ -173,7 +174,7 @@ export const centersRepository = {
     const db = supabase as any;
     const { data, error } = await db
       .from(TABLE_NAMES.specialistProfiles)
-      .select('id, license_status')
+      .select('id, user_id, license_status')
       .eq('center_id', centerId);
 
     if (error) throw error;
@@ -253,7 +254,7 @@ export const centersRepository = {
     const { data, error } = await db
       .from(TABLE_NAMES.clientSpecialistRelations)
       .select('client_id')
-      .in('specialist_id', specialistIds)
+      .in('specialist_id', [...new Set(specialistIds)])
       .eq('status', 'active');
 
     if (error) throw error;
