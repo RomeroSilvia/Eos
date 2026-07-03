@@ -4,7 +4,7 @@ import { ApiError } from '../utils/ApiError';
 
 export const errorMiddleware: ErrorRequestHandler = (error, _req, res, _next) => {
   const isApiError = error instanceof ApiError;
-  const statusCode = isApiError ? error.statusCode : 500;
+  const statusCode = toValidHttpStatus(isApiError ? error.statusCode : 500);
   const message = isApiError ? error.message : 'Unexpected server error';
 
   if (!isApiError && env.nodeEnv === 'development') {
@@ -20,3 +20,11 @@ export const errorMiddleware: ErrorRequestHandler = (error, _req, res, _next) =>
     ...(isApiError && typeof error.details !== 'undefined' ? { details: error.details } : {})
   });
 };
+
+function toValidHttpStatus(statusCode: number): number {
+  if (Number.isInteger(statusCode) && statusCode >= 100 && statusCode <= 599) {
+    return statusCode;
+  }
+
+  return 500;
+}

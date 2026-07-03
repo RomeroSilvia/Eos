@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -15,6 +16,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Card } from '@/components/Card';
 import { colors } from '@/constants/colors';
+import { routes } from '@/constants/routes';
 import {
   approveSpecialist,
   getAdminErrorMessage,
@@ -26,6 +28,7 @@ import {
 } from '@/services/admin';
 
 export default function AdminHomeScreen() {
+  const router = useRouter();
   const [specialists, setSpecialists] = useState<PendingSpecialist[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [actionId, setActionId] = useState<string | null>(null);
@@ -145,6 +148,28 @@ export default function AdminHomeScreen() {
           <Text style={styles.summaryLabel}>Solicitudes pendientes</Text>
           <Text style={styles.summaryCount}>{specialists.length}</Text>
         </Card>
+
+        <View style={styles.quickLinksRow}>
+          <Pressable
+            accessibilityLabel="Ir a gestion de planes"
+            onPress={() => router.push(routes.adminPlans as never)}
+            style={styles.quickLinkCard}
+          >
+            <Ionicons color={colors.primaryDark} name="card-outline" size={20} />
+            <Text style={styles.quickLinkTitle}>Planes</Text>
+            <Text style={styles.quickLinkText}>Crear y asignar suscripciones</Text>
+          </Pressable>
+
+          <Pressable
+            accessibilityLabel="Ir a reportes por centro"
+            onPress={() => router.push(routes.adminReports as never)}
+            style={styles.quickLinkCard}
+          >
+            <Ionicons color={colors.primaryDark} name="stats-chart-outline" size={20} />
+            <Text style={styles.quickLinkTitle}>Reportes</Text>
+            <Text style={styles.quickLinkText}>Ver metricas globales por centro</Text>
+          </Pressable>
+        </View>
 
         {isLoading ? (
           <View style={styles.stateBox}>
@@ -452,6 +477,30 @@ const styles = StyleSheet.create({
   summaryCard: {
     borderRadius: 14,
     gap: 6
+  },
+  quickLinksRow: {
+    flexDirection: 'row',
+    gap: 10
+  },
+  quickLinkCard: {
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderRadius: 14,
+    borderWidth: 1,
+    flex: 1,
+    gap: 4,
+    minHeight: 104,
+    padding: 12
+  },
+  quickLinkTitle: {
+    color: colors.textPrimary,
+    fontSize: 15,
+    fontWeight: '900'
+  },
+  quickLinkText: {
+    color: colors.textSecondary,
+    fontSize: 12,
+    lineHeight: 16
   },
   summaryLabel: {
     color: colors.textSecondary,

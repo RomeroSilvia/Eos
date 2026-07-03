@@ -147,6 +147,14 @@ create policy "Usuarios actualizan sus propias notificaciones"
 -- database/e5_chat_messages_media_realtime.sql
 ```
 
+### 8. Entrega 3 Módulo 5 - Planes y Reportes
+
+```sql
+-- supabase/migrations/20260701000500_e3_m5_subscriptions_schema.sql
+-- supabase/migrations/20260701000501_e3_m5_metrics_views.sql
+-- database/e3_m5_subscription_plans_seed.sql
+```
+
 ## Módulos verticales — Entrega 2
 
 ### Módulo 1 — Apple Sign-In y Actualización de Perfil de Piel
@@ -205,6 +213,18 @@ Implementado:
 - Publicación de `chat_messages` en Supabase Realtime para actualizaciones en tiempo real.
 - Chat con envío de imágenes via `expo-image-picker`, separadores de fecha y soporte de videollamada.
 - Notificación push al destinatario al recibir un mensaje nuevo (`new-message`).
+
+## Entrega 3 - Módulo 5 (Planes/Suscripciones y Reportes)
+
+Implementado:
+
+- Backend `subscriptions` con CRUD de planes y asignación/cambio de suscripciones.
+- Backend `reports` con `GET /api/admin/reports?centerId=&from=&to=`.
+- Migraciones E3 para `subscription_plans`, `subscriptions` e índices/vista de métricas.
+- Pantallas admin: `/(tabs-admin)/plans` y `/(tabs-admin)/reports`.
+- Servicio frontend `services/subscriptions.ts`.
+- Integración best-effort con contrato de auditoría (`recordAuditLog`).
+- Regla de alcance E3 explícita: `subscriptions.status` es informativo y no bloquea features de otros módulos.
 
 ## Documentación adicional
 
