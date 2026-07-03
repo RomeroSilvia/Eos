@@ -65,6 +65,8 @@ export default function SpecialistProfileScreen() {
   const email = profile?.email ?? 'Email no disponible';
   const statusContent = getStatusContent(status);
   const hasProfessionalProfile = Boolean(status && status.license_status !== 'not_submitted');
+  const assignedCenter = status?.center ?? null;
+  const centerLocation = getCenterLocation(assignedCenter);
 
   return (
     <SafeAreaView edges={['top', 'left', 'right']} style={styles.screen}>
@@ -112,6 +114,17 @@ export default function SpecialistProfileScreen() {
               <View style={styles.cardCopy}>
                 <Text style={styles.sectionTitle}>{statusContent.title}</Text>
                 <Text style={styles.description}>{statusContent.description}</Text>
+              </View>
+            </Card>
+
+            <Card style={styles.centerCard}>
+              <View style={styles.centerIcon}>
+                <Ionicons color={colors.primaryDark} name="business-outline" size={22} />
+              </View>
+              <View style={styles.cardCopy}>
+                <Text style={styles.sectionTitle}>Centro estetico</Text>
+                <Text style={styles.centerName}>{getCenterLabel(assignedCenter)}</Text>
+                {centerLocation ? <Text style={styles.description}>{centerLocation}</Text> : null}
               </View>
             </Card>
 
@@ -231,6 +244,17 @@ function getLicenseStatusLabel(status?: string | null): string {
   if (status === 'pending') return 'Pendiente';
   if (status === 'rejected') return 'Rechazado';
   return 'No enviado';
+}
+
+function getCenterLabel(center?: { name: string } | null): string {
+  return center?.name ? `Centro: ${center.name}` : 'Centro: Sin centro asignado';
+}
+
+function getCenterLocation(center?: { city?: string | null; province?: string | null } | null): string | null {
+  if (!center) return null;
+
+  const location = [center.city, center.province].filter(Boolean).join(', ');
+  return location || null;
 }
 
 function getStatusContent(status: SpecialistStatus): {
@@ -355,8 +379,24 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 12
   },
+  centerCard: {
+    alignItems: 'center',
+    backgroundColor: colors.primarySuperLight,
+    borderColor: colors.primaryLight,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: 12
+  },
   statusIcon: {
     alignItems: 'center',
+    borderRadius: 22,
+    height: 44,
+    justifyContent: 'center',
+    width: 44
+  },
+  centerIcon: {
+    alignItems: 'center',
+    backgroundColor: colors.primaryLight,
     borderRadius: 22,
     height: 44,
     justifyContent: 'center',
@@ -375,6 +415,11 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     fontSize: 14,
     lineHeight: 20
+  },
+  centerName: {
+    color: colors.textPrimary,
+    fontSize: 16,
+    fontWeight: '900'
   },
   infoRow: {
     borderBottomColor: colors.border,

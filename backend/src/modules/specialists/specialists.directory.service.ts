@@ -33,7 +33,8 @@ export const specialistsDirectoryService = {
       id: row.profile.id,
       fullName: row.profile.full_name,
       specialty: row.specialistProfile.specialty,
-      licenseStatus: row.specialistProfile.license_status
+      licenseStatus: row.specialistProfile.license_status,
+      center: row.specialistProfile.center
     }));
   },
 
@@ -60,7 +61,8 @@ export const specialistsDirectoryService = {
         specialist: {
           id: specialist.profile.id,
           fullName: specialist.profile.full_name,
-          specialty: specialist.specialistProfile.specialty
+          specialty: specialist.specialistProfile.specialty,
+          center: specialist.specialistProfile.center
         }
       };
     }
@@ -78,7 +80,8 @@ export const specialistsDirectoryService = {
       specialist: {
         id: specialist.profile.id,
         fullName: specialist.profile.full_name,
-        specialty: specialist.specialistProfile.specialty
+        specialty: specialist.specialistProfile.specialty,
+        center: specialist.specialistProfile.center
       }
     };
   },
@@ -100,7 +103,8 @@ export const specialistsDirectoryService = {
         id: relation.specialist.id,
         fullName: relation.specialist.full_name,
         email: relation.specialist.email,
-        specialty: relation.specialistProfile?.specialty ?? null
+        specialty: relation.specialistProfile?.specialty ?? null,
+        center: relation.specialistProfile?.center ?? null
       }
     };
   },

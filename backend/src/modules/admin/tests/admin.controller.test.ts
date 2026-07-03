@@ -1,11 +1,17 @@
 import type { Request, Response } from 'express';
-import { getSpecialistDocuments, listPendingSpecialists, updateSpecialistStatus } from '../admin.controller';
+import {
+  getSpecialistDocuments,
+  listPendingSpecialists,
+  updateSpecialistCenter,
+  updateSpecialistStatus
+} from '../admin.controller';
 import { adminService } from '../admin.service';
 
 jest.mock('../admin.service', () => ({
   adminService: {
     getSpecialistDocuments: jest.fn(),
     listPendingSpecialists: jest.fn(),
+    updateSpecialistCenter: jest.fn(),
     updateSpecialistStatus: jest.fn()
   }
 }));
@@ -35,6 +41,7 @@ describe('adminController', () => {
         licenseNumber: 'MN-12345',
         licenseStatus: 'pending',
         rejectionReason: null,
+        centerId: null,
         createdAt: '2026-06-19T12:00:00.000Z'
       }
     ]);
@@ -67,13 +74,15 @@ describe('adminController', () => {
       licenseNumber: 'MN-12345',
       licenseStatus: 'verified',
       rejectionReason: null,
+      centerId: null,
       createdAt: '2026-06-19T12:00:00.000Z'
     });
 
     updateSpecialistStatus(
       {
         params: { specialistProfileId: 'specialist-profile-1' },
-        body: { licenseStatus: 'verified' }
+        body: { licenseStatus: 'verified' },
+        user: { id: 'admin-1', role: 'center_admin', accessToken: 'token-1' }
       } as unknown as Request,
       res,
       next
@@ -82,7 +91,8 @@ describe('adminController', () => {
 
     expect(mockedService.updateSpecialistStatus).toHaveBeenCalledWith(
       'specialist-profile-1',
-      { licenseStatus: 'verified' }
+      { licenseStatus: 'verified' },
+      'admin-1'
     );
     expect(res.json).toHaveBeenCalledWith({
       specialist: expect.objectContaining({
@@ -92,6 +102,47 @@ describe('adminController', () => {
     });
     expect(res.json.mock.calls[0][0].specialist).not.toHaveProperty('dni_photo_url');
     expect(res.json.mock.calls[0][0].specialist).not.toHaveProperty('title_photo_url');
+  });
+
+  it('responde especialista con centro actualizado', async () => {
+    const res = makeResponse();
+    const next = jest.fn();
+
+    mockedService.updateSpecialistCenter.mockResolvedValue({
+      specialistProfileId: 'specialist-profile-1',
+      userId: 'user-1',
+      fullName: 'Marta Lopez',
+      email: 'marta@example.com',
+      specialty: 'dermatologo',
+      licenseNumber: 'MN-12345',
+      licenseStatus: 'verified',
+      rejectionReason: null,
+      centerId: 'center-1',
+      createdAt: '2026-06-19T12:00:00.000Z'
+    });
+
+    updateSpecialistCenter(
+      {
+        params: { specialistId: 'specialist-profile-1' },
+        body: { centerId: 'center-1' },
+        user: { id: 'admin-1', role: 'center_admin', accessToken: 'token-1' }
+      } as unknown as Request,
+      res,
+      next
+    );
+    await new Promise((resolve) => setImmediate(resolve));
+
+    expect(mockedService.updateSpecialistCenter).toHaveBeenCalledWith(
+      'admin-1',
+      'specialist-profile-1',
+      { centerId: 'center-1' }
+    );
+    expect(res.json).toHaveBeenCalledWith({
+      specialist: expect.objectContaining({
+        specialistProfileId: 'specialist-profile-1',
+        centerId: 'center-1'
+      })
+    });
   });
 
   it('responde documentos firmados sin rutas internas', async () => {

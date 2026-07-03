@@ -9,6 +9,11 @@ export type PendingSpecialist = {
   licenseNumber: string;
   licenseStatus: 'pending' | 'verified' | 'rejected' | string;
   rejectionReason: string | null;
+  centerId: string | null;
+  center: {
+    id: string;
+    name: string;
+  } | null;
   createdAt: string | null;
 };
 
@@ -45,6 +50,15 @@ export async function getPendingSpecialists(): Promise<PendingSpecialist[]> {
   return response.specialists;
 }
 
+export async function getAdminSpecialists(): Promise<PendingSpecialist[]> {
+  const response = await apiRequest<PendingSpecialistsResponse>({
+    path: '/admin/specialists',
+    method: 'GET'
+  });
+
+  return response.specialists;
+}
+
 export async function getSpecialistDocuments(specialistProfileId: string): Promise<SpecialistDocuments> {
   const response = await apiRequest<SpecialistDocumentsResponse>({
     path: `/admin/specialists/${specialistProfileId}/documents`,
@@ -66,6 +80,19 @@ export async function rejectSpecialist(
     licenseStatus: 'rejected',
     rejectionReason
   });
+}
+
+export async function assignSpecialistCenter(
+  specialistProfileId: string,
+  centerId: string | null
+): Promise<PendingSpecialist> {
+  const response = await apiRequest<UpdateSpecialistStatusResponse>({
+    path: `/admin/specialists/${specialistProfileId}/center`,
+    method: 'PATCH',
+    body: JSON.stringify({ centerId })
+  });
+
+  return response.specialist;
 }
 
 export function getAdminErrorMessage(error: unknown): string {

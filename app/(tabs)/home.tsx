@@ -1,8 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
-import { useCallback } from 'react';
-import { Image, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useState } from 'react';
+import { ActivityIndicator, Image, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BellButton } from '@/components/BellButton';
 import { Button } from '@/components/Button';
@@ -10,19 +10,36 @@ import { Card } from '@/components/Card';
 import { HomeMetricCard } from '@/components/HomeMetricCard';
 
 import { RemindersSection } from '@/components/RemindersSection';
-import { HomeReminderItem } from '@/components/HomeReminderItem';
-import { SpecialistHomeCard } from '@/components/home/SpecialistHomeCard';
 import { colors } from '@/constants/colors';
 import { useHome } from '@/hooks/useHome';
+import { getMySpecialist, type MySpecialist, type SpecialistSpecialty } from '@/services/specialist';
 import { formatStepCount } from '@/utils/format';
 
 export default function HomeScreen() {
   const { summary, refreshSummary } = useHome();
+  const [mySpecialist, setMySpecialist] = useState<MySpecialist | null>(null);
+  const [isLoadingSpecialist, setIsLoadingSpecialist] = useState(true);
+  const [specialistError, setSpecialistError] = useState(false);
+
+  const loadMySpecialist = useCallback(async () => {
+    setIsLoadingSpecialist(true);
+    setSpecialistError(false);
+
+    try {
+      setMySpecialist(await getMySpecialist());
+    } catch {
+      setMySpecialist(null);
+      setSpecialistError(true);
+    } finally {
+      setIsLoadingSpecialist(false);
+    }
+  }, []);
 
   useFocusEffect(
     useCallback(() => {
       void refreshSummary(true);
-    }, [refreshSummary])
+      void loadMySpecialist();
+    }, [loadMySpecialist, refreshSummary])
   );
 
   if (!summary) {
@@ -111,12 +128,79 @@ export default function HomeScreen() {
             <HomeMetricCard metricId={metric.id} key={metric.id} label={metric.label} value={metric.value} />
           ))}
         </View>
+        <Card style={styles.specialistCard}>
+          <View style={styles.specialistTopRow}>
+            <View style={styles.specialistIconCircle}>
+              <Ionicons color={colors.primaryDark} name="medkit-outline" size={24} />
+            </View>
 
+            <View style={styles.specialistCopy}>
+              <Text style={styles.specialistEyebrow}>
+                {mySpecialist ? 'Mi especialista' : 'Especialista asignado'}
+              </Text>
+
+              {isLoadingSpecialist ? (
+                <View style={styles.specialistLoadingRow}>
+                  <ActivityIndicator color={colors.primary} />
+                  <Text style={styles.specialistDescription}>Buscando tu especialista...</Text>
+                </View>
+              ) : specialistError ? (
+                <>
+                  <Text style={styles.specialistTitle}>No pudimos cargar tu especialista</Text>
+                  <Text style={styles.specialistDescription}>Intentá nuevamente en unos minutos.</Text>
+                </>
+              ) : mySpecialist ? (
+                <>
+                  <Text style={styles.specialistTitle}>{mySpecialist.fullName}</Text>
+                  <Text style={styles.specialistDescription}>{getSpecialtyLabel(mySpecialist.specialty)}</Text>
+                  <Text style={styles.specialistCenter}>{getCenterLabel(mySpecialist.center)}</Text>
+                </>
+              ) : (
+                <>
+                  <Text style={styles.specialistTitle}>Todavía no tenés especialista asignado</Text>
+                  <Text style={styles.specialistDescription}>
+                    Buscá un especialista para recibir seguimiento personalizado.
+                  </Text>
+                </>
+              )}
+            </View>
+          </View>
+
+          {!isLoadingSpecialist && !specialistError && mySpecialist ? (
+            <View style={styles.specialistActions}>
+              <Button
+               onPress={() => router.push('/chat')}
+                style={styles.specialistButton}
+              >
+                Enviar Consulta
+              </Button>
+             
+            </View>
+          ) : null}
+
+          {!isLoadingSpecialist && !specialistError && !mySpecialist ? (
+            <Button onPress={() => router.push('/specialists')} style={styles.specialistButton} variant="secondary">
+              Buscar especialista
+            </Button>
+          ) : null}
+        </Card>
         <RemindersSection />
+
+       
 
       </ScrollView>
     </SafeAreaView>
   );
+}
+
+function getSpecialtyLabel(specialty: SpecialistSpecialty | null): string {
+  if (specialty === 'dermatologo') return 'Dermatologo/a';
+  if (specialty === 'cosmetologo') return 'Cosmetologo/a';
+  return 'Especialidad no informada';
+}
+
+function getCenterLabel(center?: { name: string } | null): string {
+  return center?.name ? `Centro: ${center.name}` : 'Centro: Sin centro asignado';
 }
 
 const styles = StyleSheet.create({
@@ -203,6 +287,64 @@ const styles = StyleSheet.create({
   metricsRow: {
     flexDirection: 'row',
     gap: 12
+  },
+  specialistCard: {
+    gap: 14,
+    padding: 16
+  },
+  specialistTopRow: {
+    alignItems: 'flex-start',
+    flexDirection: 'row',
+    gap: 12
+  },
+  specialistIconCircle: {
+    alignItems: 'center',
+    backgroundColor: colors.primaryLight,
+    borderColor: colors.primary,
+    borderRadius: 24,
+    borderWidth: 1,
+    height: 48,
+    justifyContent: 'center',
+    width: 48
+  },
+  specialistCopy: {
+    flex: 1,
+    gap: 5,
+    minWidth: 0
+  },
+  specialistEyebrow: {
+    color: colors.textMuted,
+    fontSize: 12,
+    fontWeight: '900',
+    textTransform: 'uppercase'
+  },
+  specialistTitle: {
+    color: colors.textPrimary,
+    fontSize: 18,
+    fontWeight: '900',
+    lineHeight: 23
+  },
+  specialistDescription: {
+    color: colors.textSecondary,
+    fontSize: 14,
+    lineHeight: 20
+  },
+  specialistCenter: {
+    color: colors.primaryDark,
+    fontSize: 13,
+    fontWeight: '800'
+  },
+  specialistLoadingRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 10
+  },
+  specialistActions: {
+    gap: 10
+  },
+  specialistButton: {
+    alignSelf: 'stretch',
+    minHeight: 48
   },
   sectionHeader: {
     marginTop: 4

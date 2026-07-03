@@ -1,6 +1,80 @@
 # E3 Contracts
 
-## M5 - Planes y Suscripciones (publicado)
+## M3 - Centros Esteticos y Tablero Admin
+
+M3 publica el contrato de centros usado por pantallas admin y por modulos posteriores de reportes.
+
+### Database
+
+Owned by M3:
+
+```text
+centers
+center_admins
+specialist_profiles.center_id
+```
+
+Contrato:
+
+```text
+centers(
+  id uuid primary key,
+  name text not null,
+  address text null,
+  phone text null,
+  is_active boolean not null,
+  created_at timestamptz not null,
+  updated_at timestamptz not null
+)
+
+center_admins(
+  id uuid primary key,
+  user_id uuid references profiles(id),
+  center_id uuid references centers(id),
+  role text not null default 'center_admin',
+  created_at timestamptz not null
+)
+
+specialist_profiles.center_id uuid null references centers(id)
+```
+
+### Backend Endpoints
+
+```text
+GET    /api/centers
+POST   /api/centers
+PATCH  /api/centers/:centerId
+DELETE /api/centers/:centerId
+GET    /api/centers/:centerId/dashboard
+PATCH  /api/admin/specialists/:specialistId/center
+```
+
+### Permissions
+
+Todos los endpoints requieren usuario autenticado con rol `center_admin`.
+
+El scope de centro se define por `center_admins`; un admin solo puede operar centros asociados a su `user_id`.
+
+### Dashboard
+
+M3 expone solo contadores basicos:
+
+```ts
+{
+  specialistsTotal: number;
+  specialistsVerified: number;
+  specialistsPending: number;
+  clientsTotal: number;
+}
+```
+
+No incluye modulo M5 de reportes avanzados, filtros de fecha o exportes.
+
+### Audit
+
+Audit en M3 queda como TODO/best-effort hasta contrato final de M4.
+
+## M5 - Planes y Suscripciones
 
 Fecha: 2026-07-02
 

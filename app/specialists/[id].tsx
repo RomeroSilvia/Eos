@@ -6,12 +6,13 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Card } from '@/components/Card';
 import { AppHeader } from '@/components/navigation/AppHeader';
 import { colors } from '@/constants/colors';
-import { getMySpecialist, getSpecialists, type SpecialistSpecialty } from '@/services/specialist';
+import { getMySpecialist, getSpecialists, type SpecialistCenter, type SpecialistSpecialty } from '@/services/specialist';
 
 type SpecialistDetailState = {
   id: string;
   fullName: string;
   specialty: SpecialistSpecialty | null;
+  center: SpecialistCenter | null;
 };
 
 export default function SpecialistDetailScreen() {
@@ -19,6 +20,7 @@ export default function SpecialistDetailScreen() {
     id?: string | string[];
     fullName?: string | string[];
     specialty?: SpecialistSpecialty | string | string[];
+    centerName?: string | string[];
   }>();
 
   const [isLoadingDetails, setIsLoadingDetails] = useState(false);
@@ -28,9 +30,10 @@ export default function SpecialistDetailScreen() {
     () => ({
       id: specialistId,
       fullName: asSingleValue(params.fullName) ?? 'Especialista',
-      specialty: toSpecialty(asSingleValue(params.specialty))
+      specialty: toSpecialty(asSingleValue(params.specialty)),
+      center: toCenter(asSingleValue(params.centerName))
     }),
-    [params.fullName, params.specialty, specialistId]
+    [params.centerName, params.fullName, params.specialty, specialistId]
   );
   const [detail, setDetail] = useState<SpecialistDetailState>(initialDetail);
 
@@ -61,12 +64,13 @@ export default function SpecialistDetailScreen() {
           setDetail((prev) => ({
             ...prev,
             fullName: mySpecialist.fullName || prev.fullName,
-            specialty: mySpecialist.specialty ?? prev.specialty
+            specialty: mySpecialist.specialty ?? prev.specialty,
+            center: mySpecialist.center ?? prev.center
           }));
         }
 
         const hasEnoughDataFromRelation =
-          mySpecialist?.id === specialistId && Boolean(mySpecialist.specialty);
+          mySpecialist?.id === specialistId && Boolean(mySpecialist.specialty) && Boolean(mySpecialist.center);
 
         if (hasEnoughDataFromRelation) {
           return;
@@ -82,7 +86,8 @@ export default function SpecialistDetailScreen() {
         setDetail((prev) => ({
           ...prev,
           fullName: fullDetail.fullName || prev.fullName,
-          specialty: fullDetail.specialty ?? prev.specialty
+          specialty: fullDetail.specialty ?? prev.specialty,
+          center: fullDetail.center ?? prev.center
         }));
       } finally {
         if (!cancelled) {
@@ -108,6 +113,7 @@ export default function SpecialistDetailScreen() {
           <Text style={styles.specialty}>
             {detail.specialty ? getSpecialtyLabel(detail.specialty) : 'Especialidad no informada'}
           </Text>
+          <Text style={styles.centerText}>{getCenterLabel(detail.center)}</Text>
           {isLoadingDetails ? <Text style={styles.loadingHint}>Completando datos del perfil...</Text> : null}
           <Text style={styles.description}>
             Este perfil muestra los datos del especialista seleccionado.
@@ -134,12 +140,21 @@ function toSpecialty(value?: string): SpecialistSpecialty | null {
   return null;
 }
 
+function toCenter(name?: string): SpecialistCenter | null {
+  const normalized = name?.trim();
+  return normalized ? { id: 'route-param', name: normalized } : null;
+}
+
 function getSpecialtyLabel(specialty: SpecialistSpecialty): string {
   if (specialty === 'dermatologo') {
     return 'Dermatologo/a';
   }
 
   return 'Cosmetologo/a';
+}
+
+function getCenterLabel(center?: { name: string } | null): string {
+  return center?.name ? `Centro: ${center.name}` : 'Centro: Sin centro asignado';
 }
 
 const styles = StyleSheet.create({
@@ -174,6 +189,12 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     fontSize: 15,
     fontWeight: '700'
+  },
+  centerText: {
+    color: colors.textSecondary,
+    fontSize: 14,
+    fontWeight: '700',
+    textAlign: 'center'
   },
   loadingHint: {
     color: colors.textSecondary,

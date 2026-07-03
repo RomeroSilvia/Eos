@@ -12,7 +12,9 @@ export const TABLE_NAMES = {
   pushTokens: 'push_tokens',
   notificationHistory: 'notification_history',
   subscriptionPlans: 'subscription_plans',
-  subscriptions: 'subscriptions'
+  subscriptions: 'subscriptions',
+  centers: 'centers',
+  centerAdmins: 'center_admins'
 } as const;
 
 export type TableName = (typeof TABLE_NAMES)[keyof typeof TABLE_NAMES];
