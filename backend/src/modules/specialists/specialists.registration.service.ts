@@ -117,11 +117,14 @@ export const specialistsRegistrationService = {
         specialty: null,
         license_number: null,
         full_name: fullName,
+        center_id: null,
+        centerId: null,
         center: null
       };
     }
 
-    const center = await specialistsSharedRepository.findActiveCenterById(getSpecialistCenterId(profile));
+    const centerId = getSpecialistCenterId(profile);
+    const center = await specialistsSharedRepository.findActiveCenterById(centerId);
 
     return {
       license_status: profile.license_status as SpecialistStatus['license_status'],
@@ -129,13 +132,16 @@ export const specialistsRegistrationService = {
       specialty: profile.specialty as SpecialistSpecialty,
       license_number: profile.license_number,
       full_name: fullName,
+      center_id: centerId,
+      centerId,
       center
     };
   }
 };
 
 function getSpecialistCenterId(profile: unknown): string | null {
-  const centerId = (profile as { center_id?: unknown }).center_id;
+  const centerId = (profile as { center_id?: unknown; centerId?: unknown }).center_id
+    ?? (profile as { center_id?: unknown; centerId?: unknown }).centerId;
   return typeof centerId === 'string' && centerId.trim() ? centerId : null;
 }
 

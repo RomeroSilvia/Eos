@@ -60,6 +60,11 @@ type SpecialistProfileIdentity = Pick<SpecialistProfileRow, 'id' | 'user_id'>;
 type CenterSummary = {
   id: string;
   name: string;
+  address?: string | null;
+  city?: string | null;
+  province?: string | null;
+  phone?: string | null;
+  imageUrl?: string | null;
 };
 
 type SpecialistProfileWithCenterId = Pick<SpecialistProfileRow, 'user_id' | 'specialty' | 'license_status'> & {
@@ -270,7 +275,7 @@ export const specialistsDirectoryRepository = {
 
     const { data, error } = await db
       .from(TABLE_NAMES.centers)
-      .select('id, name, is_active')
+      .select('id, name, address, city, province, phone, image_url, is_active')
       .in('id', centerIds)
       .eq('is_active', true);
 
@@ -281,7 +286,12 @@ export const specialistsDirectoryRepository = {
         center.id,
         {
           id: center.id,
-          name: center.name
+          name: center.name,
+          address: center.address ?? null,
+          city: center.city ?? null,
+          province: center.province ?? null,
+          phone: center.phone ?? null,
+          imageUrl: center.imageUrl ?? (center as { image_url?: string | null }).image_url ?? null
         }
       ])
     );

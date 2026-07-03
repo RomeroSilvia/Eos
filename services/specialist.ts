@@ -19,6 +19,11 @@ export type SpecialistDocumentMimeType = typeof SPECIALIST_DOCUMENT_ALLOWED_MIME
 export type SpecialistCenter = {
   id: string;
   name: string;
+  address?: string | null;
+  city?: string | null;
+  province?: string | null;
+  phone?: string | null;
+  imageUrl?: string | null;
 };
 
 export type SpecialistStatus = {
@@ -391,7 +396,16 @@ function normalizeSpecialistCenter(value: unknown): SpecialistCenter | null {
     return null;
   }
 
-  const center = value as { id?: unknown; name?: unknown };
+  const center = value as {
+    id?: unknown;
+    name?: unknown;
+    address?: unknown;
+    city?: unknown;
+    province?: unknown;
+    phone?: unknown;
+    image_url?: unknown;
+    imageUrl?: unknown;
+  };
   const id = getOptionalString(center.id);
   const name = getOptionalString(center.name);
 
@@ -399,7 +413,15 @@ function normalizeSpecialistCenter(value: unknown): SpecialistCenter | null {
     return null;
   }
 
-  return { id, name };
+  return {
+    id,
+    name,
+    address: getOptionalString(center.address),
+    city: getOptionalString(center.city),
+    province: getOptionalString(center.province),
+    phone: getOptionalString(center.phone),
+    imageUrl: getOptionalString(center.imageUrl ?? center.image_url)
+  };
 }
 
 async function appendImageToFormData(

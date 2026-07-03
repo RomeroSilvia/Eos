@@ -11,9 +11,16 @@ export type SpecialistStatus = {
   specialty: SpecialistSpecialty | null;
   license_number: string | null;
   full_name: string | null;
+  center_id: string | null;
+  centerId: string | null;
   center: {
     id: string;
     name: string;
+    address: string | null;
+    city: string | null;
+    province: string | null;
+    phone: string | null;
+    imageUrl: string | null;
   } | null;
 };
 
