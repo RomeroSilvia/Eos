@@ -73,7 +73,8 @@ export default function SpecialistsScreen() {
           id: selected.id,
           fullName: selected.fullName,
           email: null,
-          specialty: selected.specialty
+          specialty: selected.specialty,
+          center: selected.center
         });
       }
 
@@ -145,6 +146,7 @@ export default function SpecialistsScreen() {
                       {mySpecialist.specialty ? getSpecialtyLabel(mySpecialist.specialty) : 'Especialidad no informada'}
                     </Text>
                   </View>
+                  <Text style={styles.centerText}>{getCenterLabel(mySpecialist.center)}</Text>
                 </View>
               </View>
               <Text style={styles.description}>Este es tu especialista vinculado actualmente.</Text>
@@ -183,6 +185,7 @@ export default function SpecialistsScreen() {
                       <Text style={styles.description}>
                         {item.specialty ? getSpecialtyLabel(item.specialty) : 'Especialidad no informada'}
                       </Text>
+                      <Text style={styles.centerText}>{getCenterLabel(item.center)}</Text>
                     </View>
                   </View>
 
@@ -194,7 +197,8 @@ export default function SpecialistsScreen() {
                           params: {
                             id: item.id,
                             fullName: item.fullName,
-                            specialty: item.specialty
+                            specialty: item.specialty,
+                            centerName: item.center?.name ?? ''
                           }
                         })
                       }
@@ -233,6 +237,10 @@ function getSpecialtyLabel(specialty: SpecialistSpecialty): string {
   }
 
   return 'Cosmetologo/a';
+}
+
+function getCenterLabel(center?: { name: string } | null): string {
+  return center?.name ? `Centro: ${center.name}` : 'Centro: Sin centro asignado';
 }
 
 const styles = StyleSheet.create({
@@ -356,6 +364,11 @@ const styles = StyleSheet.create({
   specialtyPillText: {
     color: colors.textSecondary,
     fontSize: 12,
+    fontWeight: '700'
+  },
+  centerText: {
+    color: colors.textSecondary,
+    fontSize: 13,
     fontWeight: '700'
   }
 });

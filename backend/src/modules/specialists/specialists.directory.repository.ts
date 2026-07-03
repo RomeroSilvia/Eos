@@ -28,19 +28,25 @@ type ClientSpecialistRelationRow = {
 
 type SpecialistWithProfile = {
   profile: Pick<ProfileRow, 'id' | 'full_name' | 'role'>;
-  specialistProfile: Pick<SpecialistProfileRow, 'specialty' | 'license_status'>;
+  specialistProfile: Pick<SpecialistProfileRow, 'specialty' | 'license_status'> & {
+    center: CenterSummary | null;
+  };
 };
 
 type VerifiedSpecialistProfile = SpecialistWithProfile;
 
 type SpecialistWithPrivateProfile = {
   profile: Pick<ProfileRow, 'id' | 'full_name' | 'email' | 'role'>;
-  specialistProfile: Pick<SpecialistProfileRow, 'specialty' | 'license_status'>;
+  specialistProfile: Pick<SpecialistProfileRow, 'specialty' | 'license_status'> & {
+    center: CenterSummary | null;
+  };
 };
 
 type ActiveRelationWithSpecialist = Pick<ClientSpecialistRelationRow, 'id' | 'client_id' | 'specialist_id' | 'status'> & {
   specialist: Pick<ProfileRow, 'id' | 'full_name' | 'email'> | null;
-  specialistProfile: Pick<SpecialistProfileRow, 'specialty' | 'license_status'> | null;
+  specialistProfile: (Pick<SpecialistProfileRow, 'specialty' | 'license_status'> & {
+    center: CenterSummary | null;
+  }) | null;
 };
 
 type ActiveRelationWithClient = Pick<ClientSpecialistRelationRow, 'id' | 'client_id' | 'specialist_id' | 'status'>;
@@ -50,6 +56,20 @@ type ClientProfileRow = Pick<ProfileRow, 'id' | 'full_name' | 'email' | 'skin_ty
 type PatientRelationRow = Pick<ClientSpecialistRelationRow, 'id' | 'client_id' | 'specialist_id' | 'status' | 'created_at'>;
 
 type SpecialistProfileIdentity = Pick<SpecialistProfileRow, 'id' | 'user_id'>;
+
+type CenterSummary = {
+  id: string;
+  name: string;
+  address?: string | null;
+  city?: string | null;
+  province?: string | null;
+  phone?: string | null;
+  imageUrl?: string | null;
+};
+
+type SpecialistProfileWithCenterId = Pick<SpecialistProfileRow, 'user_id' | 'specialty' | 'license_status'> & {
+  center_id?: string | null;
+};
 
 type PatientSkinProfileRow = {
   user_id: string;
@@ -73,9 +93,11 @@ type UnreadChatMessageRow = {
 
 export const specialistsDirectoryRepository = {
   findVerifiedSpecialists: async (filters: { specialty?: string; name?: string }): Promise<VerifiedSpecialistProfile[]> => {
-    const { data: specialistData, error: specialistError } = await supabase
+    const db = supabase as any;
+
+    const { data: specialistData, error: specialistError } = await db
       .from(TABLE_NAMES.specialistProfiles)
-      .select('user_id, specialty, license_status')
+      .select('user_id, specialty, license_status, center_id')
       .eq('license_status', 'verified');
 
     if (specialistError) throw specialistError;
@@ -84,7 +106,7 @@ export const specialistsDirectoryRepository = {
       return [];
     }
 
-    let rows = specialistData;
+    let rows = (specialistData ?? []) as SpecialistProfileWithCenterId[];
 
     if (filters.specialty) {
       rows = rows.filter((row) => row.specialty === filters.specialty);
@@ -95,8 +117,9 @@ export const specialistsDirectoryRepository = {
     }
 
     const userIds = rows.map((row) => row.user_id);
+    const centerIds = [...new Set(rows.map((row) => getSpecialistCenterId(row)).filter((id): id is string => Boolean(id)))];
 
-    const db = supabase as any;
+    const centersByIdPromise = specialistsDirectoryRepository.findActiveCentersByIds(centerIds);
 
     let profileQuery = db
       .from(TABLE_NAMES.profiles)
@@ -107,7 +130,10 @@ export const specialistsDirectoryRepository = {
       profileQuery = profileQuery.ilike('full_name', `%${filters.name}%`);
     }
 
-    const { data: profileData, error: profileError } = await profileQuery;
+    const [{ data: profileData, error: profileError }, centersById] = await Promise.all([
+      profileQuery,
+      centersByIdPromise
+    ]);
 
     if (profileError) throw profileError;
 
@@ -127,7 +153,8 @@ export const specialistsDirectoryRepository = {
           },
           specialistProfile: {
             specialty: row.specialty,
-            license_status: row.license_status
+            license_status: row.license_status,
+            center: centersById.get(getSpecialistCenterId(row) ?? '') ?? null
           }
         };
       });
@@ -142,6 +169,7 @@ export const specialistsDirectoryRepository = {
         `
         specialty,
         license_status,
+        center_id,
         profiles!inner(id, full_name, email, role)
       `
       )
@@ -152,6 +180,8 @@ export const specialistsDirectoryRepository = {
     if (error) throw error;
     if (!data) return null;
 
+    const center = await specialistsSharedRepository.findActiveCenterById(getSpecialistCenterId(data));
+
     return {
       profile: {
         id: data.profiles.id,
@@ -161,7 +191,8 @@ export const specialistsDirectoryRepository = {
       },
       specialistProfile: {
         specialty: data.specialty,
-        license_status: data.license_status
+        license_status: data.license_status,
+        center
       }
     };
   },
@@ -199,13 +230,16 @@ export const specialistsDirectoryRepository = {
 
   findSpecialistProfileByUserId: async (
     userId: string
-  ): Promise<Pick<SpecialistProfileRow, 'specialty' | 'license_status'> | null> => {
+  ): Promise<(Pick<SpecialistProfileRow, 'specialty' | 'license_status'> & { center: CenterSummary | null }) | null> => {
     const data = await specialistsSharedRepository.findSpecialistProfileByUserId(userId);
 
     if (data) {
+      const center = await specialistsSharedRepository.findActiveCenterById(getSpecialistCenterId(data));
+
       return {
         specialty: data.specialty,
-        license_status: data.license_status
+        license_status: data.license_status,
+        center
       };
     }
 
@@ -221,14 +255,46 @@ export const specialistsDirectoryRepository = {
       if (specialty === 'dermatologo' || specialty === 'cosmetologo') {
         return {
           specialty,
-          license_status: 'pending'
-        } as Pick<SpecialistProfileRow, 'specialty' | 'license_status'>;
+          license_status: 'pending',
+          center: null
+        } as Pick<SpecialistProfileRow, 'specialty' | 'license_status'> & { center: CenterSummary | null };
       }
     } catch {
       return null;
     }
 
     return null;
+  },
+
+  findActiveCentersByIds: async (centerIds: string[]): Promise<Map<string, CenterSummary>> => {
+    if (centerIds.length === 0) {
+      return new Map();
+    }
+
+    const db = supabase as any;
+
+    const { data, error } = await db
+      .from(TABLE_NAMES.centers)
+      .select('id, name, address, city, province, phone, image_url, is_active')
+      .in('id', centerIds)
+      .eq('is_active', true);
+
+    if (error) throw error;
+
+    return new Map(
+      (data ?? []).map((center: CenterSummary) => [
+        center.id,
+        {
+          id: center.id,
+          name: center.name,
+          address: center.address ?? null,
+          city: center.city ?? null,
+          province: center.province ?? null,
+          phone: center.phone ?? null,
+          imageUrl: center.imageUrl ?? (center as { image_url?: string | null }).image_url ?? null
+        }
+      ])
+    );
   },
 
   findSpecialistProfileIdentityByUserId: async (userId: string): Promise<SpecialistProfileIdentity | null> => {
@@ -571,3 +637,8 @@ export const specialistsDirectoryRepository = {
     return data;
   }
 };
+
+function getSpecialistCenterId(profile: unknown): string | null {
+  const centerId = (profile as { center_id?: unknown }).center_id;
+  return typeof centerId === 'string' && centerId.trim() ? centerId : null;
+}

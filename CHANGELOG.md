@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- E3-M3: Centros esteticos, asociacion de especialistas a centros y dashboard admin basico por centro.
+
 ## 0.1.0 - Scaffold inicial
 
 - Configuracion base con Expo SDK 54, TypeScript estricto y expo-router.

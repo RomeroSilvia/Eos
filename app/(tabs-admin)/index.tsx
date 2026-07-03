@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -16,6 +17,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Card } from '@/components/Card';
 import { colors } from '@/constants/colors';
 import {
+  assignSpecialistCenter,
   approveSpecialist,
   getAdminErrorMessage,
   getSpecialistDocuments,
@@ -24,13 +26,18 @@ import {
   type SpecialistDocuments,
   type PendingSpecialist
 } from '@/services/admin';
+import { getCenters, getCentersErrorMessage, type Center } from '@/services/centers';
 
 export default function AdminHomeScreen() {
+  const router = useRouter();
   const [specialists, setSpecialists] = useState<PendingSpecialist[]>([]);
+  const [centers, setCenters] = useState<Center[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [actionId, setActionId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [centersError, setCentersError] = useState<string | null>(null);
   const [rejectingSpecialist, setRejectingSpecialist] = useState<PendingSpecialist | null>(null);
+  const [assigningSpecialist, setAssigningSpecialist] = useState<PendingSpecialist | null>(null);
   const [rejectionReason, setRejectionReason] = useState('');
   const [rejectionError, setRejectionError] = useState<string | null>(null);
   const [documentSpecialist, setDocumentSpecialist] = useState<PendingSpecialist | null>(null);
@@ -41,11 +48,18 @@ export default function AdminHomeScreen() {
   const loadSpecialists = useCallback(async () => {
     setIsLoading(true);
     setError(null);
+    setCentersError(null);
 
     try {
-      setSpecialists(await getPendingSpecialists());
+      const [nextSpecialists, nextCenters] = await Promise.all([
+        getPendingSpecialists(),
+        getCenters()
+      ]);
+      setSpecialists(nextSpecialists);
+      setCenters(nextCenters);
     } catch (loadError) {
       setError(getAdminErrorMessage(loadError));
+      setCentersError(getCentersErrorMessage(loadError));
     } finally {
       setIsLoading(false);
     }
@@ -54,6 +68,8 @@ export default function AdminHomeScreen() {
   useEffect(() => {
     void loadSpecialists();
   }, [loadSpecialists]);
+
+  const activeCenters = centers.filter((center) => center.isActive);
 
   async function handleApprove(specialist: PendingSpecialist) {
     setActionId(specialist.specialistProfileId);
@@ -73,6 +89,11 @@ export default function AdminHomeScreen() {
     setRejectingSpecialist(specialist);
     setRejectionReason('');
     setRejectionError(null);
+  }
+
+  function openAssignCenterModal(specialist: PendingSpecialist) {
+    setAssigningSpecialist(specialist);
+    setCentersError(null);
   }
 
   async function openDocumentsModal(specialist: PendingSpecialist) {
@@ -100,6 +121,25 @@ export default function AdminHomeScreen() {
     setDocuments(null);
     setDocumentsError(null);
     setDocumentsLoading(false);
+  }
+
+  async function handleAssignCenter(centerId: string | null) {
+    if (!assigningSpecialist) return;
+
+    setActionId(assigningSpecialist.specialistProfileId);
+
+    try {
+      const updated = await assignSpecialistCenter(assigningSpecialist.specialistProfileId, centerId);
+      setSpecialists((current) => current.map((specialist) => (
+        specialist.specialistProfileId === updated.specialistProfileId ? updated : specialist
+      )));
+      setAssigningSpecialist(null);
+      Alert.alert('Centro actualizado', 'La asignacion fue guardada correctamente.');
+    } catch (assignError) {
+      setCentersError(getAdminErrorMessage(assignError));
+    } finally {
+      setActionId(null);
+    }
   }
 
   async function handleReject() {
@@ -131,20 +171,63 @@ export default function AdminHomeScreen() {
   return (
     <SafeAreaView style={styles.screen}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <View style={styles.header}>
-          <View style={styles.headerIcon}>
-            <Ionicons color={colors.primaryDark} name="shield-checkmark-outline" size={26} />
-          </View>
-          <View style={styles.headerCopy}>
-            <Text style={styles.title}>Validación de especialistas</Text>
-            <Text style={styles.subtitle}>Revisá las solicitudes pendientes</Text>
-          </View>
+        <View style={styles.panelHeader}>
+          <Text style={styles.panelTitle}>Panel administrativo</Text>
+          <Text style={styles.panelSubtitle}>Gestiona especialistas, centros y metricas de EOS</Text>
         </View>
 
+    
+
         <Card variant="soft" style={styles.summaryCard}>
+          <View style={styles.adminCardHeader}>
+            <View style={styles.navIcon}>
+              <Ionicons color={colors.primaryDark} name="shield-checkmark-outline" size={22} />
+            </View>
+            <View style={styles.navCopy}>
+              <Text style={styles.navTitle}>Especialistas</Text>
+              <Text style={styles.navDescription}>Validar solicitudes y asociar centros</Text>
+            </View>
+          </View>
           <Text style={styles.summaryLabel}>Solicitudes pendientes</Text>
           <Text style={styles.summaryCount}>{specialists.length}</Text>
         </Card>
+
+        <Pressable
+          accessibilityLabel="Abrir gestion de centros"
+          accessibilityRole="button"
+          onPress={() => router.push('/(tabs-admin)/centers' as never)}
+          style={styles.navCard}
+        >
+          <View style={styles.navIcon}>
+            <Ionicons color={colors.primaryDark} name="business-outline" size={22} />
+          </View>
+          <View style={styles.navCopy}>
+            <Text style={styles.navTitle}>Centros</Text>
+            <Text style={styles.navDescription}>Crear, editar y dar de baja centros esteticos</Text>
+          </View>
+          <Ionicons color={colors.textSecondary} name="chevron-forward" size={22} />
+        </Pressable>
+
+        <Pressable
+          accessibilityLabel="Abrir metricas por centro"
+          accessibilityRole="button"
+          onPress={() => router.push('/(tabs-admin)/metrics' as never)}
+          style={styles.navCard}
+        >
+          <View style={styles.navIcon}>
+            <Ionicons color={colors.primaryDark} name="stats-chart-outline" size={22} />
+          </View>
+          <View style={styles.navCopy}>
+            <Text style={styles.navTitle}>Metricas</Text>
+            <Text style={styles.navDescription}>Ver resumen basico filtrado por centro</Text>
+          </View>
+          <Ionicons color={colors.textSecondary} name="chevron-forward" size={22} />
+        </Pressable>
+
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Validacion de especialistas</Text>
+          <Text style={styles.sectionSubtitle}>Revisa documentos, aprueba solicitudes y asigna centros</Text>
+        </View>
 
         {isLoading ? (
           <View style={styles.stateBox}>
@@ -176,7 +259,10 @@ export default function AdminHomeScreen() {
               <SpecialistRequestCard
                 key={specialist.specialistProfileId}
                 disabled={actionId === specialist.specialistProfileId}
+                centerActionLabel={specialist.centerId ? 'Cambiar centro' : 'Asignar centro'}
+                centerName={getCenterName(activeCenters, specialist.centerId)}
                 onApprove={() => handleApprove(specialist)}
+                onAssignCenter={() => openAssignCenterModal(specialist)}
                 onViewDocuments={() => openDocumentsModal(specialist)}
                 onReject={() => openRejectModal(specialist)}
                 specialist={specialist}
@@ -220,6 +306,71 @@ export default function AdminHomeScreen() {
                 <Text style={styles.actionButtonText}>{isRejecting ? 'Rechazando...' : 'Rechazar'}</Text>
               </Pressable>
             </View>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal
+        animationType="fade"
+        onRequestClose={() => setAssigningSpecialist(null)}
+        transparent
+        visible={assigningSpecialist !== null}
+      >
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalCard}>
+            <View style={styles.documentsHeader}>
+              <View style={styles.documentsHeaderCopy}>
+                <Text style={styles.modalTitle}>Asignar centro</Text>
+                <Text style={styles.modalDescription}>
+                  Elegi el centro asociado a este especialista.
+                </Text>
+              </View>
+              <Pressable
+                accessibilityLabel="Cerrar asignacion de centro"
+                onPress={() => setAssigningSpecialist(null)}
+                style={styles.iconButton}
+              >
+                <Ionicons color={colors.textSecondary} name="close" size={22} />
+              </Pressable>
+            </View>
+
+            {assigningSpecialist ? (
+              <Text style={styles.documentsSpecialistName}>
+                {assigningSpecialist.fullName ?? assigningSpecialist.email ?? 'Especialista'}
+              </Text>
+            ) : null}
+
+            {centersError ? <Text style={styles.errorText}>{centersError}</Text> : null}
+
+            <View style={styles.centerOptions}>
+              <CenterOption
+                active={assigningSpecialist?.centerId === null}
+                disabled={actionId === assigningSpecialist?.specialistProfileId}
+                label="Sin centro"
+                onPress={() => handleAssignCenter(null)}
+              />
+              {activeCenters.map((center) => (
+                <CenterOption
+                  active={assigningSpecialist?.centerId === center.id}
+                  disabled={actionId === assigningSpecialist?.specialistProfileId}
+                  key={center.id}
+                  label={center.name}
+                  onPress={() => handleAssignCenter(center.id)}
+                />
+              ))}
+            </View>
+
+            {activeCenters.length === 0 ? (
+              <Text style={styles.stateText}>Primero crea un centro.</Text>
+            ) : null}
+
+            <Pressable
+              disabled={actionId === assigningSpecialist?.specialistProfileId}
+              onPress={() => setAssigningSpecialist(null)}
+              style={styles.secondaryButton}
+            >
+              <Text style={styles.secondaryButtonText}>Cancelar</Text>
+            </Pressable>
           </View>
         </View>
       </Modal>
@@ -297,14 +448,20 @@ export default function AdminHomeScreen() {
 }
 
 function SpecialistRequestCard({
+  centerActionLabel,
+  centerName,
   disabled,
   onApprove,
+  onAssignCenter,
   onViewDocuments,
   onReject,
   specialist
 }: {
+  centerActionLabel: string;
+  centerName: string;
   disabled: boolean;
   onApprove: () => void;
+  onAssignCenter: () => void;
   onViewDocuments: () => void;
   onReject: () => void;
   specialist: PendingSpecialist;
@@ -325,6 +482,17 @@ function SpecialistRequestCard({
         <MetaItem label="Especialidad" value={getSpecialtyLabel(specialist.specialty)} />
         <MetaItem label="Matrícula" value={specialist.licenseNumber} />
         <MetaItem label="Fecha" value={formatDate(specialist.createdAt)} />
+      </View>
+
+      <View style={styles.centerAssignment}>
+        <View style={styles.centerAssignmentCopy}>
+          <Text style={styles.centerAssignmentLabel}>Centro actual</Text>
+          <Text style={styles.centerAssignmentValue}>{centerName}</Text>
+        </View>
+        <Pressable disabled={disabled} onPress={onAssignCenter} style={[styles.centerAssignmentButton, disabled && styles.disabled]}>
+          <Ionicons color={colors.primary} name="business-outline" size={18} />
+          <Text style={styles.centerAssignmentButtonText}>{centerActionLabel}</Text>
+        </Pressable>
       </View>
 
       <Pressable disabled={disabled} onPress={onViewDocuments} style={[styles.documentButton, disabled && styles.disabled]}>
@@ -379,6 +547,36 @@ function MetaItem({ label, value }: { label: string; value: string }) {
   );
 }
 
+function CenterOption({
+  active,
+  disabled,
+  label,
+  onPress
+}: {
+  active: boolean;
+  disabled: boolean;
+  label: string;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityState={{ selected: active, disabled }}
+      disabled={disabled}
+      onPress={onPress}
+      style={[styles.centerOption, active && styles.centerOptionActive, disabled && styles.disabled]}
+    >
+      <Text style={[styles.centerOptionText, active && styles.centerOptionTextActive]}>{label}</Text>
+      {active ? <Ionicons color={colors.primaryDark} name="checkmark-circle" size={20} /> : null}
+    </Pressable>
+  );
+}
+
+function getCenterName(centers: Center[], centerId: string | null): string {
+  if (!centerId) return 'Sin centro asignado';
+  return centers.find((center) => center.id === centerId)?.name ?? 'Centro no disponible';
+}
+
 function getSpecialtyLabel(value: string): string {
   if (value === 'dermatologo') return 'Dermatólogo/a';
   if (value === 'cosmetologo') return 'Cosmetólogo/a';
@@ -422,6 +620,19 @@ const styles = StyleSheet.create({
     padding: 20,
     paddingBottom: 40
   },
+  panelHeader: {
+    gap: 6
+  },
+  panelTitle: {
+    color: colors.textPrimary,
+    fontSize: 28,
+    fontWeight: '900'
+  },
+  panelSubtitle: {
+    color: colors.textSecondary,
+    fontSize: 15,
+    lineHeight: 21
+  },
   header: {
     alignItems: 'center',
     flexDirection: 'row',
@@ -453,6 +664,12 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     gap: 6
   },
+  adminCardHeader: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 8
+  },
   summaryLabel: {
     color: colors.textSecondary,
     fontSize: 15,
@@ -462,6 +679,58 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     fontSize: 38,
     fontWeight: '900'
+  },
+  navCard: {
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderRadius: 14,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: 12,
+    minHeight: 76,
+    padding: 14,
+    shadowColor: colors.textPrimary,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.06,
+    shadowRadius: 18,
+    elevation: 2
+  },
+  navIcon: {
+    alignItems: 'center',
+    backgroundColor: colors.primaryLight,
+    borderRadius: 22,
+    height: 44,
+    justifyContent: 'center',
+    width: 44
+  },
+  navCopy: {
+    flex: 1
+  },
+  navTitle: {
+    color: colors.textPrimary,
+    fontSize: 17,
+    fontWeight: '900'
+  },
+  navDescription: {
+    color: colors.textSecondary,
+    fontSize: 13,
+    lineHeight: 19,
+    marginTop: 2
+  },
+  sectionHeader: {
+    gap: 3,
+    marginTop: 2
+  },
+  sectionTitle: {
+    color: colors.textPrimary,
+    fontSize: 18,
+    fontWeight: '900'
+  },
+  sectionSubtitle: {
+    color: colors.textSecondary,
+    fontSize: 14,
+    lineHeight: 20
   },
   stateBox: {
     alignItems: 'center',
@@ -556,6 +825,43 @@ const styles = StyleSheet.create({
     minHeight: 44
   },
   documentButtonText: {
+    color: colors.primary,
+    fontSize: 15,
+    fontWeight: '900'
+  },
+  centerAssignment: {
+    alignItems: 'stretch',
+    backgroundColor: colors.primarySuperLight,
+    borderColor: colors.border,
+    borderRadius: 10,
+    borderWidth: 1,
+    gap: 12,
+    padding: 12
+  },
+  centerAssignmentCopy: {
+    gap: 3
+  },
+  centerAssignmentLabel: {
+    color: colors.textSecondary,
+    fontSize: 12,
+    fontWeight: '800'
+  },
+  centerAssignmentValue: {
+    color: colors.textPrimary,
+    fontSize: 16,
+    fontWeight: '900'
+  },
+  centerAssignmentButton: {
+    alignItems: 'center',
+    borderColor: colors.primary,
+    borderRadius: 8,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: 8,
+    justifyContent: 'center',
+    minHeight: 44
+  },
+  centerAssignmentButtonText: {
     color: colors.primary,
     fontSize: 15,
     fontWeight: '900'
@@ -663,6 +969,35 @@ const styles = StyleSheet.create({
   documentsContent: {
     gap: 14,
     paddingBottom: 4
+  },
+  centerOptions: {
+    gap: 10
+  },
+  centerOption: {
+    alignItems: 'center',
+    backgroundColor: colors.primarySuperLight,
+    borderColor: colors.border,
+    borderRadius: 8,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: 10,
+    justifyContent: 'space-between',
+    minHeight: 46,
+    paddingHorizontal: 12
+  },
+  centerOptionActive: {
+    backgroundColor: colors.primaryLight,
+    borderColor: colors.primary
+  },
+  centerOptionText: {
+    color: colors.textPrimary,
+    flex: 1,
+    fontSize: 15,
+    fontWeight: '800'
+  },
+  centerOptionTextActive: {
+    color: colors.primaryDark,
+    fontWeight: '900'
   },
   documentSection: {
     gap: 8
