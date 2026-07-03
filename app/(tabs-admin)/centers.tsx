@@ -48,6 +48,8 @@ type CenterFormState = {
   imageUri: string | null;
 };
 
+type CenterFormErrors = Partial<Record<'name' | 'address' | 'city' | 'province' | 'phone', string>>;
+
 const emptyForm: CenterFormState = {
   name: '',
   address: '',
@@ -65,6 +67,7 @@ export default function AdminCentersScreen() {
   const [modalMode, setModalMode] = useState<'create' | 'edit' | null>(null);
   const [editingCenter, setEditingCenter] = useState<Center | null>(null);
   const [form, setForm] = useState<CenterFormState>(emptyForm);
+  const [formErrors, setFormErrors] = useState<CenterFormErrors>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -83,6 +86,12 @@ export default function AdminCentersScreen() {
   const [openCenterMenuId, setOpenCenterMenuId] = useState<string | null>(null);
 
   const activeCount = useMemo(() => centers.filter((center) => center.isActive).length, [centers]);
+  const selectedMenuCenter = useMemo(
+    () => centers.find((center) => center.id === openCenterMenuId) ?? null,
+    [centers, openCenterMenuId]
+  );
+  const formValidationErrors = useMemo(() => validateCenterForm(form), [form]);
+  const isFormInvalid = Object.keys(formValidationErrors).length > 0;
 
   const loadCenters = useCallback(async () => {
     setIsLoading(true);
@@ -105,6 +114,7 @@ export default function AdminCentersScreen() {
     setModalMode('create');
     setEditingCenter(null);
     setForm(emptyForm);
+    setFormErrors({});
     setFormError(null);
   }
 
@@ -119,6 +129,7 @@ export default function AdminCentersScreen() {
       phone: center.phone ?? '',
       imageUri: null
     });
+    setFormErrors({});
     setFormError(null);
   }
 
@@ -127,6 +138,16 @@ export default function AdminCentersScreen() {
     setModalMode(null);
     setEditingCenter(null);
     setForm(emptyForm);
+    setFormErrors({});
+    setFormError(null);
+  }
+
+  function updateFormField(field: Exclude<keyof CenterFormState, 'imageUri'>, value: string) {
+    setForm((current) => {
+      const next = { ...current, [field]: value };
+      setFormErrors(validateCenterForm(next));
+      return next;
+    });
     setFormError(null);
   }
 
@@ -137,8 +158,8 @@ export default function AdminCentersScreen() {
     }));
   }
 
-  function toggleCenterMenu(centerId: string) {
-    setOpenCenterMenuId((current) => (current === centerId ? null : centerId));
+  function openCenterActions(centerId: string) {
+    setOpenCenterMenuId(centerId);
   }
 
   function closeCenterMenu() {
@@ -146,6 +167,14 @@ export default function AdminCentersScreen() {
   }
 
   async function handleSubmit() {
+    const validationErrors = validateCenterForm(form);
+    setFormErrors(validationErrors);
+
+    if (Object.keys(validationErrors).length > 0) {
+      setFormError(null);
+      return;
+    }
+
     const payload = {
       name: form.name.trim(),
       address: normalizeOptionalField(form.address),
@@ -431,33 +460,82 @@ export default function AdminCentersScreen() {
                 center={center}
                 disabled={deletingId === center.id}
                 isExpanded={Boolean(expandedCenterIds[center.id])}
-                isMenuOpen={openCenterMenuId === center.id}
                 key={center.id}
-                onDelete={() => {
-                  closeCenterMenu();
-                  confirmDelete(center);
-                }}
-                onEdit={() => {
-                  closeCenterMenu();
-                  openEditModal(center);
-                }}
                 onOpenMaps={() => {
                   void openCenterInMaps(center);
-                }}
-                onViewSpecialists={() => {
-                  closeCenterMenu();
-                  void openViewSpecialistsModal(center);
                 }}
                 onManageSpecialists={() => {
                   void openSpecialistsModal(center);
                 }}
                 onToggleDetails={() => toggleCenterDetails(center.id)}
-                onToggleMenu={() => toggleCenterMenu(center.id)}
+                onToggleMenu={() => openCenterActions(center.id)}
               />
             ))}
           </View>
         ) : null}
       </ScrollView>
+
+      <Modal animationType="slide" onRequestClose={closeCenterMenu} transparent visible={selectedMenuCenter !== null}>
+        <Pressable accessibilityRole="button" onPress={closeCenterMenu} style={styles.actionSheetBackdrop}>
+          <Pressable onPress={(event) => event.stopPropagation()} style={styles.actionSheetContainer}>
+            <Card style={styles.actionSheetCard}>
+              <View style={styles.actionSheetHandle} />
+              <Text style={styles.actionSheetTitle}>Acciones del centro</Text>
+              <Text style={styles.actionSheetSubtitle}>{selectedMenuCenter?.name ?? 'Centro seleccionado'}</Text>
+
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => {
+                  const center = selectedMenuCenter;
+                  closeCenterMenu();
+                  if (center) {
+                    void openViewSpecialistsModal(center);
+                  }
+                }}
+                style={styles.sheetAction}
+              >
+                <Ionicons color={colors.textSecondary} name="people-outline" size={18} />
+                <Text style={styles.sheetActionText}>Ver especialistas</Text>
+              </Pressable>
+
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => {
+                  const center = selectedMenuCenter;
+                  closeCenterMenu();
+                  if (center) {
+                    openEditModal(center);
+                  }
+                }}
+                style={styles.sheetAction}
+              >
+                <Ionicons color={colors.textSecondary} name="create-outline" size={18} />
+                <Text style={styles.sheetActionText}>Editar</Text>
+              </Pressable>
+
+              <Pressable
+                accessibilityRole="button"
+                disabled={selectedMenuCenter ? deletingId === selectedMenuCenter.id : true}
+                onPress={() => {
+                  const center = selectedMenuCenter;
+                  closeCenterMenu();
+                  if (center) {
+                    confirmDelete(center);
+                  }
+                }}
+                style={[styles.sheetAction, selectedMenuCenter && deletingId === selectedMenuCenter.id && styles.disabled]}
+              >
+                <Ionicons color={colors.secondaryDark} name="trash-outline" size={18} />
+                <Text style={styles.sheetDestructiveText}>Dar de baja</Text>
+              </Pressable>
+
+              <Pressable accessibilityRole="button" onPress={closeCenterMenu} style={styles.sheetCancelButton}>
+                <Text style={styles.sheetCancelText}>Cancelar</Text>
+              </Pressable>
+            </Card>
+          </Pressable>
+        </Pressable>
+      </Modal>
 
       <Modal animationType="fade" onRequestClose={closeModal} transparent visible={modalMode !== null}>
         <View style={styles.modalBackdrop}>
@@ -477,48 +555,49 @@ export default function AdminCentersScreen() {
             <View style={styles.formGroup}>
               <Text style={styles.inputLabel}>Nombre</Text>
               <TextInput
-                onChangeText={(value) => {
-                  setForm((current) => ({ ...current, name: value }));
-                  setFormError(null);
-                }}
+                onChangeText={(value) => updateFormField('name', value)}
                 placeholder="Centro EOS Norte"
                 placeholderTextColor={colors.textMuted}
                 style={styles.input}
                 value={form.name}
               />
+              {formErrors.name ? <Text style={styles.fieldErrorText}>{formErrors.name}</Text> : null}
             </View>
 
             <View style={styles.formGroup}>
               <Text style={styles.inputLabel}>Dirección</Text>
               <TextInput
-                onChangeText={(value) => setForm((current) => ({ ...current, address: value }))}
+                onChangeText={(value) => updateFormField('address', value)}
                 placeholder="Calle 123"
                 placeholderTextColor={colors.textMuted}
                 style={styles.input}
                 value={form.address}
               />
+              {formErrors.address ? <Text style={styles.fieldErrorText}>{formErrors.address}</Text> : null}
             </View>
 
             <View style={styles.formRow}>
               <View style={styles.formRowItem}>
                 <Text style={styles.inputLabel}>Ciudad</Text>
                 <TextInput
-                  onChangeText={(value) => setForm((current) => ({ ...current, city: value }))}
+                  onChangeText={(value) => updateFormField('city', value)}
                   placeholder="CABA"
                   placeholderTextColor={colors.textMuted}
                   style={styles.input}
                   value={form.city}
                 />
+                {formErrors.city ? <Text style={styles.fieldErrorText}>{formErrors.city}</Text> : null}
               </View>
               <View style={styles.formRowItem}>
                 <Text style={styles.inputLabel}>Provincia</Text>
                 <TextInput
-                  onChangeText={(value) => setForm((current) => ({ ...current, province: value }))}
+                  onChangeText={(value) => updateFormField('province', value)}
                   placeholder="Buenos Aires"
                   placeholderTextColor={colors.textMuted}
                   style={styles.input}
                   value={form.province}
                 />
+                {formErrors.province ? <Text style={styles.fieldErrorText}>{formErrors.province}</Text> : null}
               </View>
             </View>
 
@@ -526,12 +605,13 @@ export default function AdminCentersScreen() {
               <Text style={styles.inputLabel}>Teléfono</Text>
               <TextInput
                 keyboardType="phone-pad"
-                onChangeText={(value) => setForm((current) => ({ ...current, phone: value }))}
+                onChangeText={(value) => updateFormField('phone', value)}
                 placeholder="+54 11 1234-5678"
                 placeholderTextColor={colors.textMuted}
                 style={styles.input}
                 value={form.phone}
               />
+              {formErrors.phone ? <Text style={styles.fieldErrorText}>{formErrors.phone}</Text> : null}
             </View>
 
             <View style={styles.formGroup}>
@@ -557,7 +637,11 @@ export default function AdminCentersScreen() {
               <Pressable disabled={isSaving} onPress={closeModal} style={styles.secondaryButton}>
                 <Text style={styles.secondaryButtonText}>Cancelar</Text>
               </Pressable>
-              <Pressable disabled={isSaving} onPress={handleSubmit} style={[styles.saveButton, isSaving && styles.disabled]}>
+              <Pressable
+                disabled={isSaving || isFormInvalid}
+                onPress={handleSubmit}
+                style={[styles.saveButton, (isSaving || isFormInvalid) && styles.disabled]}
+              >
                 <Text style={styles.actionButtonText}>{isSaving ? 'Guardando...' : 'Guardar'}</Text>
               </Pressable>
             </View>
@@ -696,26 +780,18 @@ function CenterCard({
   center,
   disabled,
   isExpanded,
-  isMenuOpen,
-  onDelete,
-  onEdit,
   onManageSpecialists,
   onOpenMaps,
   onToggleDetails,
-  onToggleMenu,
-  onViewSpecialists
+  onToggleMenu
 }: {
   center: Center;
   disabled: boolean;
   isExpanded: boolean;
-  isMenuOpen: boolean;
-  onDelete: () => void;
-  onEdit: () => void;
   onManageSpecialists: () => void;
   onOpenMaps: () => void;
   onToggleDetails: () => void;
   onToggleMenu: () => void;
-  onViewSpecialists: () => void;
 }) {
   return (
     <Card style={styles.centerCard}>
@@ -748,23 +824,6 @@ function CenterCard({
           >
             <Ionicons color={colors.textSecondary} name="ellipsis-horizontal" size={22} />
           </Pressable>
-
-          {isMenuOpen ? (
-            <View style={styles.overflowMenu}>
-              <Pressable onPress={onViewSpecialists} style={styles.overflowMenuItem}>
-                <Ionicons color={colors.textPrimary} name="people-outline" size={17} />
-                <Text style={styles.overflowMenuText}>Ver especialistas</Text>
-              </Pressable>
-              <Pressable onPress={onEdit} style={styles.overflowMenuItem}>
-                <Ionicons color={colors.textPrimary} name="create-outline" size={17} />
-                <Text style={styles.overflowMenuText}>Editar</Text>
-              </Pressable>
-              <Pressable onPress={onDelete} style={styles.overflowMenuItem}>
-                <Ionicons color={colors.secondaryDark} name="trash-outline" size={17} />
-                <Text style={styles.overflowMenuDangerText}>Dar de baja</Text>
-              </Pressable>
-            </View>
-          ) : null}
         </View>
       </View>
 
@@ -913,6 +972,50 @@ function MetaItem({ label, value }: { label: string; value: string }) {
 function normalizeOptionalField(value: string): string | null {
   const trimmedValue = value.trim();
   return trimmedValue || null;
+}
+
+function validateCenterForm(values: CenterFormState): CenterFormErrors {
+  const errors: CenterFormErrors = {};
+  const name = values.name.trim();
+  const address = values.address.trim();
+  const city = values.city.trim();
+  const province = values.province.trim();
+  const phone = values.phone.trim();
+
+  if (!name) {
+    errors.name = 'Ingresá un nombre válido.';
+  } else if (name.length < 2) {
+    errors.name = 'El nombre debe tener al menos 2 caracteres.';
+  } else if (name.length > 80) {
+    errors.name = 'El nombre no puede superar los 80 caracteres.';
+  }
+
+  if (address.length > 160) {
+    errors.address = 'La dirección es demasiado larga.';
+  }
+
+  if (city.length > 80 || isNumericOnly(city)) {
+    errors.city = 'Ingresá una ciudad válida.';
+  }
+
+  if (province.length > 80 || isNumericOnly(province)) {
+    errors.province = 'Ingresá una provincia válida.';
+  }
+
+  if (phone && !isValidCenterPhone(phone)) {
+    errors.phone = 'El teléfono no tiene un formato válido.';
+  }
+
+  return errors;
+}
+
+function isNumericOnly(value: string): boolean {
+  return Boolean(value) && /^\d+$/.test(value);
+}
+
+function isValidCenterPhone(value: string): boolean {
+  const digits = value.match(/\d/g) ?? [];
+  return value.length <= 20 && /^[0-9+\-()\s]+$/.test(value) && digits.length >= 6;
 }
 
 function getSpecialtyLabel(value: string): string {
@@ -1143,9 +1246,7 @@ const styles = StyleSheet.create({
     paddingVertical: 3
   },
   overflowWrap: {
-    marginTop: 1,
-    position: 'relative',
-    zIndex: 5
+    marginTop: 1
   },
   overflowButton: {
     alignItems: 'center',
@@ -1157,35 +1258,71 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     width: 36
   },
-  overflowMenu: {
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderRadius: 12,
-    borderWidth: 1,
-    gap: 2,
-    minWidth: 178,
-    padding: 6,
-    position: 'absolute',
-    right: 0,
-    top: 42,
-    zIndex: 10
+  actionSheetBackdrop: {
+    backgroundColor: 'rgba(16, 42, 67, 0.32)',
+    flex: 1,
+    justifyContent: 'flex-end',
+    padding: 16
   },
-  overflowMenuItem: {
-    alignItems: 'center',
-    borderRadius: 8,
-    flexDirection: 'row',
+  actionSheetContainer: {
+    width: '100%'
+  },
+  actionSheetCard: {
     gap: 8,
-    minHeight: 40,
-    paddingHorizontal: 10
+    padding: 16
   },
-  overflowMenuText: {
+  actionSheetHandle: {
+    alignSelf: 'center',
+    backgroundColor: colors.border,
+    borderRadius: 999,
+    height: 4,
+    marginBottom: 4,
+    width: 42
+  },
+  actionSheetTitle: {
     color: colors.textPrimary,
-    fontSize: 14,
+    fontSize: 17,
+    fontWeight: '900',
+    textAlign: 'center'
+  },
+  actionSheetSubtitle: {
+    color: colors.textSecondary,
+    fontSize: 13,
+    fontWeight: '700',
+    marginBottom: 4,
+    textAlign: 'center'
+  },
+  sheetAction: {
+    alignItems: 'center',
+    borderRadius: 10,
+    flexDirection: 'row',
+    gap: 10,
+    minHeight: 44,
+    paddingHorizontal: 12,
+    paddingVertical: 10
+  },
+  sheetActionText: {
+    color: colors.textPrimary,
+    flex: 1,
+    fontSize: 15,
     fontWeight: '800'
   },
-  overflowMenuDangerText: {
+  sheetDestructiveText: {
     color: colors.secondaryDark,
-    fontSize: 14,
+    flex: 1,
+    fontSize: 15,
+    fontWeight: '900'
+  },
+  sheetCancelButton: {
+    alignItems: 'center',
+    borderTopColor: colors.border,
+    borderTopWidth: 1,
+    marginTop: 4,
+    paddingTop: 12
+  },
+  sheetCancelText: {
+    color: colors.textSecondary,
+    fontSize: 15,
     fontWeight: '900'
   },
   specialistsSummaryBadge: {
@@ -1397,6 +1534,12 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     minHeight: 46,
     paddingHorizontal: 12
+  },
+  fieldErrorText: {
+    color: colors.error,
+    fontSize: 12,
+    fontWeight: '700',
+    lineHeight: 17
   },
   imagePicker: {
     borderColor: colors.border,
