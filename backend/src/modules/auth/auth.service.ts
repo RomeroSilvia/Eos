@@ -307,7 +307,16 @@ function mapLoginError(error: { message: string; status?: number }): ApiError {
 }
 
 function mapAuthProviderError(error: { message: string; status?: number }, fallbackStatus: number): ApiError {
-  return new ApiError(error.status ?? fallbackStatus, getSafeProviderErrorMessage(error.status ?? fallbackStatus));
+  const status = resolveHttpStatus(error.status, fallbackStatus);
+  return new ApiError(status, getSafeProviderErrorMessage(status));
+}
+
+function resolveHttpStatus(status: number | undefined, fallbackStatus: number): number {
+  if (typeof status === 'number' && Number.isInteger(status) && status >= 100 && status <= 599) {
+    return status;
+  }
+
+  return fallbackStatus;
 }
 
 function getSafeProviderErrorMessage(status: number): string {

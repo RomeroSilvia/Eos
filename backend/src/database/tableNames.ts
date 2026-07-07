@@ -11,6 +11,8 @@ export const TABLE_NAMES = {
   routineStepLogs: 'routine_step_logs',
   pushTokens: 'push_tokens',
   notificationHistory: 'notification_history',
+  subscriptionPlans: 'subscription_plans',
+  subscriptions: 'subscriptions',
   centers: 'centers',
   centerAdmins: 'center_admins'
 } as const;

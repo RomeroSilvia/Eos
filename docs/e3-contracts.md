@@ -1,8 +1,8 @@
 # E3 Contracts
 
-## M3 - Centros Esteticos & Tablero Admin
+## M3 - Centros Esteticos y Tablero Admin
 
-M3 publishes the center contract used by admin screens and later reporting modules.
+M3 publica el contrato de centros usado por pantallas admin y por modulos posteriores de reportes.
 
 ### Database
 
@@ -14,7 +14,7 @@ center_admins
 specialist_profiles.center_id
 ```
 
-Contract:
+Contrato:
 
 ```text
 centers(
@@ -51,13 +51,13 @@ PATCH  /api/admin/specialists/:specialistId/center
 
 ### Permissions
 
-All endpoints require an authenticated user with role `center_admin`.
+Todos los endpoints requieren usuario autenticado con rol `center_admin`.
 
-Center scope is defined by `center_admins`; a center admin can operate only on centers linked to their user id.
+El scope de centro se define por `center_admins`; un admin solo puede operar centros asociados a su `user_id`.
 
 ### Dashboard
 
-M3 exposes only basic counters:
+M3 expone solo contadores basicos:
 
 ```ts
 {
@@ -68,8 +68,38 @@ M3 exposes only basic counters:
 }
 ```
 
-This is not the M5 reporting module. No date filters, exports, plans or advanced metrics are part of this contract.
+No incluye modulo M5 de reportes avanzados, filtros de fecha o exportes.
 
 ### Audit
 
-Audit calls are TODO/best-effort until M4 provides the final `recordAuditLog` contract.
+Audit en M3 queda como TODO/best-effort hasta contrato final de M4.
+
+## M5 - Planes y Suscripciones
+
+Fecha: 2026-07-02
+
+### Contrato funcional
+
+- `subscription_plans` y `subscriptions` existen para gestion administrativa.
+- `subscriptions.status` es informativo en E3.
+- E3 no aplica enforcement de acceso por estado de plan.
+
+### Contrato backend
+
+Endpoints estables para consumo admin:
+
+- `GET /api/admin/subscriptions/plans`
+- `POST /api/admin/subscriptions/plans`
+- `PATCH /api/admin/subscriptions/plans/:planId`
+- `GET /api/admin/subscriptions`
+- `POST /api/admin/subscriptions`
+- `GET /api/admin/reports?centerId=&from=&to=`
+
+### Contrato de integracion con M3
+
+- Si `centers` y `specialist_profiles.center_id` existen, `GET /api/admin/reports` filtra por `centerId`.
+- Si aun no existe ese esquema, el endpoint responde con datos globales y `scopeWarning`.
+
+### Contrato de integracion con M4
+
+- Operaciones de planes y suscripciones emiten `recordAuditLog` en modo best-effort.

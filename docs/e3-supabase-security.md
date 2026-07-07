@@ -2,7 +2,7 @@
 
 ## M3 - Centers
 
-M3 introduces center-scoped data access.
+M3 introduce acceso por scope de centros.
 
 ### Tables
 
@@ -14,34 +14,34 @@ specialist_profiles.center_id
 
 ### RLS Intent
 
-`centers` and `center_admins` have RLS enabled.
+`centers` y `center_admins` tienen RLS habilitado.
 
 Read access:
 
-- `center_admin` can read centers associated through `center_admins`.
-- `center_admin` can read only their own `center_admins` rows.
+- `center_admin` puede leer centros asociados por `center_admins`.
+- `center_admin` puede leer solo sus filas propias en `center_admins`.
 
 Write access:
 
-- Backend endpoints enforce `authenticate` and `requireRole('center_admin')`.
-- Backend services validate center access through `center_admins` before mutations.
-- SQL write policies for direct client writes are intentionally not opened.
+- Backend fuerza `authenticate` y `requireRole('center_admin')`.
+- Services backend validan acceso por `center_admins` antes de mutaciones.
+- Politicas SQL de escritura directa desde cliente no se abren.
 
 ### Specialist Assignment
 
-`PATCH /api/admin/specialists/:specialistId/center` updates `specialist_profiles.center_id`.
+`PATCH /api/admin/specialists/:specialistId/center` actualiza `specialist_profiles.center_id`.
 
-Rules:
+Reglas:
 
-- `centerId` can be a center id or `null`.
-- Non-null `centerId` must exist, be active, and be accessible by the admin.
-- `null` desassociates the specialist from a center.
+- `centerId` puede ser id de centro o `null`.
+- Si no es null, el centro debe existir, estar activo y ser accesible para el admin.
+- `null` desasocia especialista del centro.
 
 ### Dashboard
 
-`GET /api/centers/:centerId/dashboard` is scoped by `center_admins`.
+`GET /api/centers/:centerId/dashboard` queda scoped por `center_admins`.
 
-It returns basic counters only:
+Retorna solo contadores basicos:
 
 ```text
 specialistsTotal
@@ -50,8 +50,35 @@ specialistsPending
 clientsTotal
 ```
 
-Advanced reports and exports are M5.
+Reportes avanzados y exportes corresponden a M5.
 
 ### Audit
 
-M3 leaves audit as TODO/best-effort until M4 exists.
+M3 deja audit como TODO/best-effort hasta M4.
+
+## Estado por tabla (M5)
+
+| Tabla | Modulo | RLS | Detalle |
+|---|---|---|---|
+| `subscription_plans` | M5 | Activo | Lectura autenticada. Escritura por `center_admin` via backend. |
+| `subscriptions` | M5 | Activo | Lectura propia (`owner_type='user'`) o por `center_admin`. Escritura por `center_admin` via backend. |
+
+## SQL implementado (M5)
+
+- Migracion: `supabase/migrations/20260701000500_e3_m5_subscriptions_schema.sql`
+  - `alter table public.subscription_plans enable row level security;`
+  - `alter table public.subscriptions enable row level security;`
+  - Politicas de lectura/escritura explicitas para ambos recursos.
+
+- Migracion de metricas: `supabase/migrations/20260701000501_e3_m5_metrics_views.sql`
+  - Crea vista `public.vw_e3_global_summary`.
+  - Agrega indices para consultas de reportes.
+
+## Regla de uso backend (M5)
+
+Los endpoints admin de M5 usan `authenticate` + `requireRole('center_admin')`.
+No se expone escritura de planes/suscripciones desde cliente anonimo.
+
+## Nota de alcance E3 (M5)
+
+`subscriptions.status` es informativo durante E3 y no bloquea acceso a funciones de otros modulos.

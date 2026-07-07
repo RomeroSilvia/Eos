@@ -10,6 +10,7 @@ import { RemindersSection } from '@/components/RemindersSection';
 import { colors } from '@/constants/colors';
 import { useProfile } from '@/hooks/useProfile';
 import { logout } from '@/services/auth';
+import { getMySubscription } from '@/services/subscriptions';
 import { formatSkinType } from '@/utils/skinType';
 import { getMySpecialist, unlinkSpecialist } from '@/services/specialist';
 import type { MySpecialist } from '@/services/specialist';
@@ -19,6 +20,7 @@ export default function ProfileScreen() {
   const router = useRouter();
   const { profile } = useProfile();
   const [mySpecialist, setMySpecialist] = useState<MySpecialist | null>(null);
+  const [subscriptionName, setSubscriptionName] = useState<string | null>(null);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [unlinking, setUnlinking] = useState(false);
   const [isCenterModalVisible, setIsCenterModalVisible] = useState(false);
@@ -36,6 +38,13 @@ export default function ProfileScreen() {
   useFocusEffect(
     useCallback(() => {
       void loadMySpecialist();
+      void getMySubscription()
+        .then((subscription) => {
+          setSubscriptionName(subscription?.plan?.name ?? null);
+        })
+        .catch(() => {
+          setSubscriptionName(null);
+        });
     }, [loadMySpecialist])
   );
 
@@ -121,6 +130,14 @@ export default function ProfileScreen() {
           <View>
             <Text style={styles.name}>{profile?.name ?? 'Marta'}</Text>
             <Text style={styles.meta}>{formatSkinType(profile?.skinType)} · {formatRole(profile?.role)}</Text>
+            {profile?.role === 'user' && subscriptionName?.trim() ? (
+              <View style={styles.subscriptionPill}>
+                <Text style={styles.subscriptionPillText}>
+                  <Text style={styles.subscriptionPillLabel}>Suscripcion: </Text>
+                  <Text style={styles.subscriptionPillPlan}>{subscriptionName}</Text>
+                </Text>
+              </View>
+            ) : null}
           </View>
         </Card>
         <Card style={styles.settings}>
@@ -385,6 +402,26 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     fontSize: 14,
     marginTop: 3
+  },
+  subscriptionPill: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#FDE7F3',
+    borderColor: '#F7B7D9',
+    borderRadius: 999,
+    borderWidth: 1,
+    marginTop: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 4
+  },
+  subscriptionPillText: {
+    fontSize: 13,
+    fontWeight: '700'
+  },
+  subscriptionPillLabel: {
+    color: '#8A4A68'
+  },
+  subscriptionPillPlan: {
+    color: '#C2185B'
   },
   settings: {
     gap: 12

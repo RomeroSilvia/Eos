@@ -11,6 +11,7 @@ import { useProfile } from '@/hooks/useProfile';
 import { changePassword } from '@/services/auth';
 import { areNotificationsEnabled, setNotificationsEnabled } from '@/services/notifications';
 import { updateProfile } from '@/services/profile';
+import { cancelMySubscription, getMySubscription, type Subscription } from '@/services/subscriptions';
 import { getFriendlyErrorMessage } from '@/services/api/client';
 
 export default function SettingsScreen() {
@@ -23,6 +24,9 @@ export default function SettingsScreen() {
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [isSavingPassword, setIsSavingPassword] = useState(false);
   const [isSavingNotifications, setIsSavingNotifications] = useState(false);
+  const [subscription, setSubscription] = useState<Subscription | null>(null);
+  const [isLoadingSubscription, setIsLoadingSubscription] = useState(false);
+  const [isCancelingSubscription, setIsCancelingSubscription] = useState(false);
 
   const isSpecialist = profile?.role === 'specialist';
   const isUser = profile?.role === 'user';
@@ -46,6 +50,38 @@ export default function SettingsScreen() {
       active = false;
     };
   }, []);
+
+  useEffect(() => {
+    if (!isUser) {
+      setSubscription(null);
+      setIsLoadingSubscription(false);
+      return;
+    }
+
+    let active = true;
+    setIsLoadingSubscription(true);
+
+    void getMySubscription()
+      .then((nextSubscription) => {
+        if (active) {
+          setSubscription(nextSubscription);
+        }
+      })
+      .catch(() => {
+        if (active) {
+          setSubscription(null);
+        }
+      })
+      .finally(() => {
+        if (active) {
+          setIsLoadingSubscription(false);
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [isUser]);
 
   async function handleSaveProfile() {
     if (!fullName.trim()) {
@@ -106,6 +142,32 @@ export default function SettingsScreen() {
     } finally {
       setIsSavingNotifications(false);
     }
+  }
+
+  function handleCancelSubscription() {
+    Alert.alert(
+      'Cancelar suscripcion',
+      '¿Querés cancelar tu suscripcion actual?',
+      [
+        { text: 'Volver', style: 'cancel' },
+        {
+          text: 'Cancelar suscripcion',
+          style: 'destructive',
+          onPress: async () => {
+            setIsCancelingSubscription(true);
+            try {
+              await cancelMySubscription();
+              setSubscription(null);
+              Alert.alert('Suscripcion', 'Tu suscripcion fue cancelada.');
+            } catch (error) {
+              Alert.alert('Suscripcion', getFriendlyErrorMessage(error, 'No pudimos cancelar tu suscripcion.'));
+            } finally {
+              setIsCancelingSubscription(false);
+            }
+          }
+        }
+      ]
+    );
   }
 
   return (
@@ -208,6 +270,66 @@ export default function SettingsScreen() {
         {isUser ? (
           <Card style={styles.card}>
             <View style={styles.sectionHeader}>
+              <View style={styles.subscriptionIconWrap}>
+                <Ionicons color={colors.secondaryDark} name="card-outline" size={20} />
+              </View>
+              <View style={styles.sectionCopy}>
+                <Text style={styles.sectionTitle}>Suscripcion</Text>
+                <Text style={styles.sectionText}>Tu plan actual.</Text>
+              </View>
+            </View>
+
+            {isLoadingSubscription ? (
+              <Text style={styles.sectionText}>Cargando...</Text>
+            ) : subscription ? (
+              <View style={styles.subscriptionInfoBox}>
+                <View style={styles.subscriptionTopRow}>
+                  <Text style={styles.subscriptionPlanName}>{subscription.plan?.name ?? 'Plan'}</Text>
+                  <View style={[styles.statusPill, getSubscriptionStatusStyle(subscription.status)]}>
+                    <Text style={[styles.statusPillText, getSubscriptionStatusTextStyle(subscription.status)]}>
+                      {getSubscriptionStatusLabel(subscription.status)}
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={styles.subscriptionMetaGrid}>
+                  <View style={styles.subscriptionMetaItem}>
+                    <Text style={styles.subscriptionMetaLabel}>Nivel</Text>
+                    <Text style={styles.subscriptionMetaValue}>{formatPlanLevel(subscription.plan?.level)}</Text>
+                  </View>
+                  <View style={styles.subscriptionMetaItem}>
+                    <Text style={styles.subscriptionMetaLabel}>Precio</Text>
+                    <Text style={styles.subscriptionMetaValue}>{formatPrice(subscription.plan?.price)}</Text>
+                  </View>
+                </View>
+
+                <View style={styles.subscriptionDivider} />
+
+                <View style={styles.subscriptionMetaItem}>
+                  <Text style={styles.subscriptionMetaLabel}>Vigencia</Text>
+                  <Text style={styles.subscriptionMetaValue}>
+                    {formatShortDate(subscription.startedAt)} - {subscription.endsAt ? formatShortDate(subscription.endsAt) : 'Sin fin'}
+                  </Text>
+                </View>
+
+                <Button
+                  disabled={isCancelingSubscription}
+                  onPress={handleCancelSubscription}
+                  style={styles.cancelSubscriptionButton}
+                  variant="ghost"
+                >
+                  {isCancelingSubscription ? 'Cancelando...' : 'Dar de baja suscripcion'}
+                </Button>
+              </View>
+            ) : (
+              <Text style={styles.sectionText}>No tenes una suscripcion activa.</Text>
+            )}
+          </Card>
+        ) : null}
+
+        {isUser ? (
+          <Card style={styles.card}>
+            <View style={styles.sectionHeader}>
               <View style={styles.iconWrap}>
                 <Ionicons color={colors.primaryDark} name="sparkles-outline" size={20} />
               </View>
@@ -297,6 +419,79 @@ const styles = StyleSheet.create({
     gap: 4,
     padding: 12
   },
+  subscriptionInfoBox: {
+    backgroundColor: colors.secondarySoft,
+    borderColor: colors.secondary,
+    borderRadius: 14,
+    borderWidth: 1,
+    gap: 10,
+    padding: 12
+  },
+  subscriptionIconWrap: {
+    alignItems: 'center',
+    backgroundColor: colors.secondarySoft,
+    borderRadius: 18,
+    height: 40,
+    justifyContent: 'center',
+    width: 40
+  },
+  subscriptionTopRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 8
+  },
+  statusPill: {
+    borderRadius: 999,
+    borderWidth: 1,
+    paddingHorizontal: 10,
+    paddingVertical: 4
+  },
+  statusPillText: {
+    fontSize: 12,
+    fontWeight: '800'
+  },
+  subscriptionMetaGrid: {
+    flexDirection: 'row',
+    gap: 10
+  },
+  subscriptionMetaItem: {
+    backgroundColor: colors.surface,
+    borderColor: colors.secondaryLight,
+    borderRadius: 10,
+    borderWidth: 1,
+    flex: 1,
+    gap: 2,
+    paddingHorizontal: 10,
+    paddingVertical: 8
+  },
+  subscriptionMetaLabel: {
+    color: colors.secondaryDark,
+    fontSize: 11,
+    fontWeight: '700',
+    textTransform: 'uppercase'
+  },
+  subscriptionMetaValue: {
+    color: colors.textPrimary,
+    fontSize: 14,
+    fontWeight: '800'
+  },
+  cancelSubscriptionButton: {
+    alignSelf: 'flex-start',
+    marginTop: 4,
+    minHeight: 36,
+    paddingHorizontal: 8
+  },
+  subscriptionDivider: {
+    backgroundColor: colors.secondaryDark,
+    height: 1,
+    opacity: 0.2
+  },
+  subscriptionPlanName: {
+    color: colors.secondaryDark,
+    fontSize: 16,
+    fontWeight: '900'
+  },
   readOnlyName: {
     color: colors.textPrimary,
     fontSize: 16,
@@ -314,3 +509,77 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between'
   }
 });
+
+function formatShortDate(value: string): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return '-';
+  }
+
+  return date.toLocaleDateString('es-AR');
+}
+
+function getSubscriptionStatusLabel(status: Subscription['status']): string {
+  switch (status) {
+    case 'active':
+      return 'Activa';
+    case 'pending':
+      return 'Pendiente';
+    case 'canceled':
+      return 'Cancelada';
+    case 'expired':
+      return 'Expirada';
+    case 'past_due':
+      return 'Con deuda';
+    default:
+      return status;
+  }
+}
+
+function getSubscriptionStatusStyle(status: Subscription['status']): { backgroundColor: string; borderColor: string } {
+  switch (status) {
+    case 'active':
+      return { backgroundColor: colors.primaryLight, borderColor: colors.primary };
+    case 'pending':
+      return { backgroundColor: '#FFF5E6', borderColor: '#D89C3D' };
+    case 'canceled':
+    case 'expired':
+      return { backgroundColor: '#FDECEC', borderColor: colors.error };
+    case 'past_due':
+      return { backgroundColor: colors.secondaryLight, borderColor: colors.secondaryDark };
+    default:
+      return { backgroundColor: colors.surface, borderColor: colors.border };
+  }
+}
+
+function getSubscriptionStatusTextStyle(status: Subscription['status']): { color: string } {
+  switch (status) {
+    case 'active':
+      return { color: colors.primaryDark };
+    case 'pending':
+      return { color: '#8A5A00' };
+    case 'canceled':
+    case 'expired':
+      return { color: colors.error };
+    case 'past_due':
+      return { color: colors.secondaryDark };
+    default:
+      return { color: colors.textPrimary };
+  }
+}
+
+function formatPlanLevel(level?: string): string {
+  if (!level) {
+    return '-';
+  }
+
+  return level.charAt(0).toUpperCase() + level.slice(1);
+}
+
+function formatPrice(price?: number): string {
+  if (typeof price !== 'number' || !Number.isFinite(price)) {
+    return '-';
+  }
+
+  return `$${price.toLocaleString('es-AR')}`;
+}
