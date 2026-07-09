@@ -149,6 +149,7 @@ export default function Step2() {
                 {/* Nombre */}
                 <Text style={styles.label}>Nombre de la rutina</Text>
                 <TextInput
+                    accessibilityLabel="Nombre de la rutina"
                     value={state.name}
                     onChangeText={setName}
                     placeholder="Ej. Rutina piel sensible"
@@ -164,6 +165,9 @@ export default function Step2() {
                 <View style={styles.list}>
                     {goals.map((goal) => (
                         <Pressable
+                            accessibilityLabel={`Objetivo principal ${goal.label}`}
+                            accessibilityRole="radio"
+                            accessibilityState={{ selected: state.selectedGoalId === goal.id }}
                             key={goal.id}
                             onPress={() => setSelectedGoalId(goal.id)}
                             style={[
@@ -192,6 +196,9 @@ export default function Step2() {
                 </View>
 
                 <Pressable
+                    accessibilityLabel={state.isSubmitting ? 'Creando rutina' : 'Continuar al tipo de rutina'}
+                    accessibilityRole="button"
+                    accessibilityState={{ disabled: !isValid || state.isSubmitting }}
                     disabled={!isValid || state.isSubmitting}
                     onPress={handleContinue}
                     style={[

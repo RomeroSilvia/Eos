@@ -45,7 +45,12 @@ function RoutineSectionCardBase({
         </View>
 
         {(onAddStep || onEditStep || onDeleteStep) && (
-          <MaterialCommunityIcons name="dots-vertical" size={20} color={colors.textSecondary} />
+          <MaterialCommunityIcons
+            accessible={false}
+            name="dots-vertical"
+            size={20}
+            color={colors.textSecondary}
+          />
         )}
       </View>
 
@@ -65,7 +70,12 @@ function RoutineSectionCardBase({
       )}
 
       {onAddStep && (
-        <Pressable style={styles.add} onPress={onAddStep}>
+        <Pressable
+          accessibilityLabel={`Añadir paso en ${title}`}
+          accessibilityRole="button"
+          style={styles.add}
+          onPress={onAddStep}
+        >
           <Text style={styles.addText}>+ Añadir paso</Text>
         </Pressable>
       )}

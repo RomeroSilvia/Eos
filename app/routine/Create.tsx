@@ -32,6 +32,8 @@ export default function CreateRoutineScreen() {
         </Text>
 
         <Pressable
+          accessibilityLabel="Comenzar creacion de rutina"
+          accessibilityRole="button"
           style={styles.button}
           onPress={() => {
             markRoutineWizardTransition('Create', 'Step2', {

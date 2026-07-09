@@ -113,7 +113,13 @@ export default function Step6Confirm() {
 
               return (
                 <View key={section.key}>
-                  <Pressable style={styles.sectionRow} onPress={() => toggle(section.key)}>
+                  <Pressable
+                    accessibilityLabel={`${expanded[section.key] ? 'Contraer' : 'Expandir'} seccion ${section.title}`}
+                    accessibilityRole="button"
+                    accessibilityState={{ expanded: expanded[section.key] }}
+                    style={styles.sectionRow}
+                    onPress={() => toggle(section.key)}
+                  >
                     <View style={styles.row}>
                       <View style={styles.icon}>
                         <MaterialCommunityIcons name={section.icon} size={20} color={colors.surface} />
@@ -144,6 +150,8 @@ export default function Step6Confirm() {
         </ScrollView>
 
         <Pressable
+          accessibilityLabel="Editar pasos de la rutina"
+          accessibilityRole="button"
           style={styles.editBtn}
           onPress={() =>
             router.push({
@@ -156,6 +164,8 @@ export default function Step6Confirm() {
         </Pressable>
 
         <Pressable
+          accessibilityLabel="Confirmar rutina"
+          accessibilityRole="button"
           style={styles.button}
           onPress={() =>
             router.push({

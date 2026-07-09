@@ -40,6 +40,9 @@ export default function Step3() {
         </Text>
 
         <Pressable
+          accessibilityLabel="Seleccionar rutina matutina"
+          accessibilityRole="radio"
+          accessibilityState={{ selected: type === 'morning' }}
           onPress={() => setTimeOfDay('morning')}
           style={[styles.card, type === 'morning' && styles.cardActive]}
         >
@@ -64,6 +67,9 @@ export default function Step3() {
         </Pressable>
 
         <Pressable
+          accessibilityLabel="Seleccionar rutina nocturna"
+          accessibilityRole="radio"
+          accessibilityState={{ selected: type === 'night' }}
           onPress={() => setTimeOfDay('night')}
           style={[styles.card, type === 'night' && styles.cardActive]}
         >
@@ -88,6 +94,9 @@ export default function Step3() {
         </Pressable>
 
         <Pressable
+          accessibilityLabel={effectiveRoutineId ? 'Continuar a pasos de rutina' : 'Preparando rutina'}
+          accessibilityRole="button"
+          accessibilityState={{ disabled: !effectiveRoutineId }}
           disabled={!effectiveRoutineId}
           style={[styles.button, !effectiveRoutineId && styles.buttonDisabled]}
           onPress={() => {

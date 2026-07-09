@@ -191,6 +191,7 @@ export default function RoutineEdit() {
       <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
         <Text style={styles.label}>Nombre</Text>
         <TextInput
+          accessibilityLabel="Nombre de la rutina"
           value={name}
           onChangeText={setName}
           placeholder="Nombre de la rutina"
@@ -199,6 +200,7 @@ export default function RoutineEdit() {
 
         <Text style={styles.label}>Objetivo</Text>
         <TextInput
+          accessibilityLabel="Objetivo de la rutina"
           value={description}
           onChangeText={setDescription}
           placeholder="Objetivo o descripcion"
@@ -213,6 +215,9 @@ export default function RoutineEdit() {
 
             return (
               <Pressable
+                accessibilityLabel={`Seleccionar rutina ${type.label}`}
+                accessibilityRole="radio"
+                accessibilityState={{ selected }}
                 key={type.value}
                 onPress={() => setTimeOfDay(type.value)}
                 style={[styles.typeItem, selected && styles.typeItemActive]}
@@ -258,6 +263,9 @@ export default function RoutineEdit() {
         </View>
 
         <Pressable
+          accessibilityLabel={isSaving ? 'Guardando cambios de rutina' : 'Guardar cambios de rutina'}
+          accessibilityRole="button"
+          accessibilityState={{ disabled: !canSave }}
           disabled={!canSave}
           onPress={handleSave}
           style={[styles.button, !canSave && styles.buttonDisabled]}

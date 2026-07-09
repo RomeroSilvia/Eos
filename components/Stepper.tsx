@@ -6,9 +6,14 @@ type StepperProps = {
   total?: number;
 };
 
-export function Stepper({ current, total = 4 }: StepperProps) {
+export function Stepper({ current, total = 6 }: StepperProps) {
   return (
-    <View style={styles.container}>
+    <View
+      accessibilityLabel={`Paso ${current} de ${total}`}
+      accessibilityRole="progressbar"
+      accessibilityValue={{ min: 1, max: total, now: current }}
+      style={styles.container}
+    >
       {[...Array(total)].map((_, index) => {
         const step = index + 1;
         const isDone = step < current;
@@ -17,6 +22,7 @@ export function Stepper({ current, total = 4 }: StepperProps) {
         return (
           <View key={step} style={styles.stepWrapper}>
             <View
+              accessible={false}
               style={[
                 styles.circle,
                 isDone && styles.done,
@@ -24,6 +30,7 @@ export function Stepper({ current, total = 4 }: StepperProps) {
               ]}
             >
               <Text
+                accessible={false}
                 style={[
                   styles.text,
                   isDone && styles.textDone,
@@ -34,7 +41,7 @@ export function Stepper({ current, total = 4 }: StepperProps) {
               </Text>
             </View>
 
-            {step < total && <View style={styles.line} />}
+            {step < total && <View accessible={false} style={styles.line} />}
           </View>
         );
       })}

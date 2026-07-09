@@ -130,6 +130,7 @@ export default function AddStep() {
 
         <Text style={styles.label}>Nombre del paso</Text>
         <TextInput
+          accessibilityLabel="Nombre del paso"
           value={name}
           onChangeText={setName}
           placeholder="Ej. Limpieza simple"
@@ -138,6 +139,7 @@ export default function AddStep() {
 
         <Text style={styles.label}>Descripción (opcional)</Text>
         <TextInput
+          accessibilityLabel="Descripcion del paso"
           value={description}
           onChangeText={setDescription}
           placeholder="Describe el paso o lo que veas relevante"
@@ -165,6 +167,8 @@ export default function AddStep() {
         />
 
         <Pressable
+          accessibilityLabel="Crear producto y volver al paso"
+          accessibilityRole="button"
           onPress={() => router.push('/products/create?returnTo=add-step')}
           style={({ pressed }) => [styles.outlineButton, { opacity: pressed ? 0.7 : 1 }]}
         >
@@ -172,6 +176,9 @@ export default function AddStep() {
         </Pressable>
 
         <Pressable
+          accessibilityLabel={isSaving ? 'Guardando paso' : 'Guardar paso'}
+          accessibilityRole="button"
+          accessibilityState={{ disabled: isSaving || !name.trim() }}
           disabled={isSaving || !name.trim()}
           onPress={handleSave}
           style={[styles.button, (isSaving || !name.trim()) && styles.buttonDisabled]}

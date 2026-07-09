@@ -11,37 +11,64 @@ type Props = {
 };
 
 export function RoutineStepItem({ index, title, product, onPress, onDelete }: Props) {
-  const Content = onPress ? Pressable : View;
+  const content = (
+    <>
+      <MaterialCommunityIcons
+        accessible={false}
+        name="drag"
+        size={18}
+        color={colors.textSecondary}
+      />
+
+      <View style={styles.circle}>
+        <Text style={styles.number}>{index}</Text>
+      </View>
+
+      <View style={styles.text}>
+        <Text style={styles.title}>{title}</Text>
+        {product && <Text style={styles.product}>{product}</Text>}
+      </View>
+    </>
+  );
 
   return (
     <View style={styles.row}>
-      <Content
-        onPress={onPress}
-        style={({ pressed }) =>
-          onPress
-            ? [styles.contentContainer, { opacity: pressed ? 0.6 : 1 }]
-            : styles.contentContainer
-        }
-      >
-        <MaterialCommunityIcons name="drag" size={18} color={colors.textSecondary} />
-
-        <View style={styles.circle}>
-          <Text style={styles.number}>{index}</Text>
+      {onPress ? (
+        <Pressable
+          accessibilityLabel={`Editar paso ${index}: ${title}`}
+          accessibilityRole="button"
+          onPress={onPress}
+          style={({ pressed }) => [styles.contentContainer, { opacity: pressed ? 0.6 : 1 }]}
+        >
+          {content}
+        </Pressable>
+      ) : (
+        <View
+          accessible
+          accessibilityLabel={`Paso ${index}: ${title}`}
+          style={styles.contentContainer}
+        >
+          {content}
         </View>
-
-        <View style={styles.text}>
-          <Text style={styles.title}>{title}</Text>
-          {product && <Text style={styles.product}>{product}</Text>}
-        </View>
-      </Content>
+      )}
 
       <View style={styles.rightSide}>
         {onDelete ? (
-          <Pressable onPress={onDelete} hitSlop={8} accessibilityRole="button" accessibilityLabel="Eliminar paso">
+          <Pressable
+            onPress={onDelete}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel={`Eliminar paso ${title}`}
+          >
             <MaterialCommunityIcons name="trash-can-outline" size={20} color={colors.error} />
           </Pressable>
         ) : (
-          <MaterialCommunityIcons name="dots-vertical" size={18} color={colors.textSecondary} />
+          <MaterialCommunityIcons
+            accessible={false}
+            name="dots-vertical"
+            size={18}
+            color={colors.textSecondary}
+          />
         )}
       </View>
     </View>

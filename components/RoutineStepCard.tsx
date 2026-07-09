@@ -39,6 +39,9 @@ function RoutineStepCardBase({
     <Card style={styles.card}>
       <Pressable
         onPress={() => onToggle(step.id)}
+        accessibilityLabel={`${completed ? 'Marcar pendiente' : 'Marcar completado'} el paso ${index + 1}: ${step.name}`}
+        accessibilityRole="checkbox"
+        accessibilityState={{ checked: completed }}
         style={[styles.check, completed ? styles.checkDone : styles.checkPending]}
       >
         <MaterialCommunityIcons
@@ -84,7 +87,7 @@ function RoutineStepCardBase({
         <View style={styles.actions}>
           <Pressable
             onPress={() => onEdit(step)}
-            accessibilityLabel="Editar paso"
+            accessibilityLabel={`Editar paso ${index + 1}: ${step.name}`}
             accessibilityRole="button"
             hitSlop={8}
           >
@@ -93,7 +96,7 @@ function RoutineStepCardBase({
 
           <Pressable
             onPress={() => onDelete(step)}
-            accessibilityLabel="Eliminar paso"
+            accessibilityLabel={`Eliminar paso ${index + 1}: ${step.name}`}
             accessibilityRole="button"
             hitSlop={8}
           >

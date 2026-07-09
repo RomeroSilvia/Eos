@@ -206,6 +206,8 @@ export default function Step4() {
         </ScrollView>
 
         <Pressable
+          accessibilityLabel="Continuar a productos de rutina"
+          accessibilityRole="button"
           style={styles.button}
           onPress={() => {
             markRoutineWizardTransition('Step4', 'Step5', {

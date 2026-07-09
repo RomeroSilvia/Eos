@@ -22,6 +22,9 @@ function ProductSelectorBase({ products, selectedIds, onSelect }: Props) {
   return (
     <View>
       <Pressable
+        accessibilityLabel={open ? 'Cerrar selector de productos' : 'Abrir selector de productos'}
+        accessibilityRole="button"
+        accessibilityState={{ expanded: open }}
         onPress={() => setOpen((prev) => !prev)}
         style={({ pressed }) => [styles.trigger, { opacity: pressed ? 0.8 : 1 }]}
       >
@@ -40,6 +43,8 @@ function ProductSelectorBase({ products, selectedIds, onSelect }: Props) {
           ) : (
             available.map((product) => (
               <Pressable
+                accessibilityLabel={`Seleccionar producto ${product.name}`}
+                accessibilityRole="button"
                 key={product.id}
                 onPress={() => {
                   onSelect(product);
