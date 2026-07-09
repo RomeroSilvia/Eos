@@ -112,6 +112,20 @@ export default function RoutineEdit() {
         </View>
 
         <Pressable
+          onPress={() => {
+            if (routineId) {
+              router.push({
+                pathname: '/routine/Step4',
+                params: { routineId }
+              });
+            }
+          }}
+          style={styles.secondaryButton}
+        >
+          <Text style={styles.secondaryButtonText}>Agregar pasos</Text>
+        </Pressable>
+
+        <Pressable
           disabled={!canSave}
           onPress={handleSave}
           style={[styles.button, !canSave && styles.buttonDisabled]}
@@ -190,8 +204,24 @@ const styles = StyleSheet.create({
     color: colors.textPrimary
   },
 
+  secondaryButton: {
+    marginTop: 14,
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 16,
+    alignItems: 'center'
+  },
+
+  secondaryButtonText: {
+    color: colors.textPrimary,
+    fontSize: 16,
+    fontWeight: '700'
+  },
+
   button: {
-    marginTop: 'auto',
+    marginTop: 14,
     backgroundColor: colors.secondary,
     borderRadius: 12,
     padding: 16,
