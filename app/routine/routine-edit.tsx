@@ -1,13 +1,14 @@
 import { useCallback, useState } from 'react';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { colors } from '@/constants/colors';
 import { AppHeader } from '@/components/navigation/AppHeader';
-import { getRoutineById, updateRoutine } from '@/services/routines';
-import type { RoutineTimeOfDay } from '@/types/routine';
+import { RoutineSectionCard } from '@/components/RoutineSectionCard';
+import { deleteStep as deleteStepApi, getRoutineById, getStepsByRoutine, updateRoutine } from '@/services/routines';
+import type { RoutineStep, RoutineTimeOfDay } from '@/types/routine';
 
 const routineTypes: {
   value: RoutineTimeOfDay;
@@ -19,6 +20,48 @@ const routineTypes: {
   { value: 'custom', label: 'Personalizada', icon: 'calendar-star' }
 ];
 
+type SectionKey = 'limpieza' | 'tratamientos' | 'hidratacion' | 'proteccion' | 'complementario';
+
+type SectionConfig = {
+  key: SectionKey;
+  title: string;
+  description: string;
+  icon: keyof typeof MaterialCommunityIcons.glyphMap;
+};
+
+const sections: SectionConfig[] = [
+  {
+    key: 'limpieza',
+    title: 'Limpieza',
+    description: 'Elimina impurezas y prepara la piel',
+    icon: 'spray-bottle'
+  },
+  {
+    key: 'tratamientos',
+    title: 'Tratamientos',
+    description: 'Activos especificos segun tus objetivos.',
+    icon: 'eyedropper'
+  },
+  {
+    key: 'hidratacion',
+    title: 'Hidratacion',
+    description: 'Ayuda a mantener la barrera cutanea.',
+    icon: 'water-outline'
+  },
+  {
+    key: 'proteccion',
+    title: 'Proteccion solar',
+    description: 'Cuidado diario para proteger la piel.',
+    icon: 'weather-sunny'
+  },
+  {
+    key: 'complementario',
+    title: 'Cuidado complementario',
+    description: 'Pasos opcionales o de uso semanal para completar tu rutina.',
+    icon: 'face-mask'
+  }
+];
+
 export default function RoutineEdit() {
   const router = useRouter();
   const { routineId } = useLocalSearchParams<{ routineId: string }>();
@@ -26,17 +69,24 @@ export default function RoutineEdit() {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [timeOfDay, setTimeOfDay] = useState<RoutineTimeOfDay>('morning');
+  const [steps, setSteps] = useState<RoutineStep[]>([]);
+  const [isAssignedRoutine, setIsAssignedRoutine] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
   const loadRoutine = useCallback(async () => {
     if (!routineId) return;
 
     try {
-      const routine = await getRoutineById(routineId);
+      const [routine, routineSteps] = await Promise.all([
+        getRoutineById(routineId),
+        getStepsByRoutine(routineId)
+      ]);
 
       setName(routine.name);
       setDescription(routine.description ?? '');
       setTimeOfDay(routine.time_of_day ?? 'morning');
+      setIsAssignedRoutine(Boolean(routine.assigned_by));
+      setSteps(routineSteps);
     } catch (error) {
       console.error(error);
     }
@@ -69,10 +119,76 @@ export default function RoutineEdit() {
     }
   };
 
+  const groupedSteps = sections.reduce<Record<SectionKey, RoutineStep[]>>((acc, section) => {
+    acc[section.key] = steps
+      .filter((step) => getSectionKey(step.category) === section.key)
+      .sort((a, b) => (a.step_order ?? 0) - (b.step_order ?? 0));
+    return acc;
+  }, {} as Record<SectionKey, RoutineStep[]>);
+
+  const goToAddStep = useCallback((section: SectionKey) => {
+    if (!routineId || isAssignedRoutine) return;
+
+    router.push({
+      pathname: '/routine/Add-step',
+      params: { routineId, section }
+    });
+  }, [isAssignedRoutine, routineId, router]);
+
+  const editStep = useCallback((stepId: string, section: string) => {
+    if (!routineId || isAssignedRoutine) return;
+
+    router.push({
+      pathname: '/routine/Add-step',
+      params: { routineId, stepId, section }
+    });
+  }, [isAssignedRoutine, routineId, router]);
+
+  const deleteStep = useCallback(async (stepId: string) => {
+    if (!routineId || isAssignedRoutine) return;
+
+    const previousSteps = steps;
+    setSteps((current) => current.filter((step) => step.id !== stepId));
+
+    try {
+      await deleteStepApi(stepId);
+      setSteps(await getStepsByRoutine(routineId));
+    } catch (error) {
+      console.error(error);
+      setSteps(previousSteps);
+    }
+  }, [isAssignedRoutine, routineId, steps]);
+
+  const confirmDeleteStep = useCallback((stepId: string) => {
+    const step = steps.find((item) => item.id === stepId);
+    const stepName = step?.name ?? 'este paso';
+
+    if (Platform.OS === 'web') {
+      const confirmed = window.confirm(`Eliminar "${stepName}"? Esta accion no se puede deshacer.`);
+      if (confirmed) {
+        void deleteStep(stepId);
+      }
+      return;
+    }
+
+    Alert.alert(
+      'Eliminar paso',
+      `Se eliminara "${stepName}". Esta accion no se puede deshacer.`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Eliminar',
+          style: 'destructive',
+          onPress: () => void deleteStep(stepId)
+        }
+      ]
+    );
+  }, [deleteStep, steps]);
+
   return (
     <SafeAreaView style={styles.screen}>
       <AppHeader breadcrumb="Rutinas" title="Editar rutina" />
-      <View style={styles.container}>
+      <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
         <Text style={styles.label}>Nombre</Text>
         <TextInput
           value={name}
@@ -114,19 +230,32 @@ export default function RoutineEdit() {
           })}
         </View>
 
-        <Pressable
-          onPress={() => {
-            if (routineId) {
-              router.push({
-                pathname: '/routine/Step4',
-                params: { routineId }
-              });
-            }
-          }}
-          style={styles.secondaryButton}
-        >
-          <Text style={styles.secondaryButtonText}>Agregar pasos</Text>
-        </Pressable>
+        <View style={styles.stepsHeader}>
+          <Text style={styles.sectionTitle}>Pasos de la rutina</Text>
+          {isAssignedRoutine ? (
+            <Text style={styles.assignedHint}>La estructura asignada por especialista no se puede modificar.</Text>
+          ) : null}
+        </View>
+
+        <View style={styles.stepSections}>
+          {sections.map((section) => (
+            <RoutineSectionCard
+              key={section.key}
+              title={section.title}
+              description={section.description}
+              icon={section.icon}
+              steps={groupedSteps[section.key].map((step) => ({
+                id: step.id,
+                nombre: step.name,
+                producto: step.description ?? '',
+                category: section.key
+              }))}
+              onAddStep={isAssignedRoutine ? undefined : () => goToAddStep(section.key)}
+              onEditStep={isAssignedRoutine ? undefined : editStep}
+              onDeleteStep={isAssignedRoutine ? undefined : confirmDeleteStep}
+            />
+          ))}
+        </View>
 
         <Pressable
           disabled={!canSave}
@@ -135,9 +264,18 @@ export default function RoutineEdit() {
         >
           <Text style={styles.buttonText}>{isSaving ? 'Guardando...' : 'Guardar cambios'}</Text>
         </Pressable>
-      </View>
+      </ScrollView>
     </SafeAreaView>
   );
+}
+
+function getSectionKey(category?: string | null): SectionKey {
+  if (category === 'limpieza') return 'limpieza';
+  if (category === 'tratamientos') return 'tratamientos';
+  if (category === 'hidratacion') return 'hidratacion';
+  if (category === 'proteccion') return 'proteccion';
+
+  return 'complementario';
 }
 
 const styles = StyleSheet.create({
@@ -146,9 +284,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background
   },
   container: {
-    flex: 1,
     padding: 20,
-    gap: 14
+    gap: 14,
+    paddingBottom: 48
   },
 
   title: {
@@ -207,20 +345,25 @@ const styles = StyleSheet.create({
     color: colors.textPrimary
   },
 
-  secondaryButton: {
-    marginTop: 14,
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderWidth: 1,
-    borderRadius: 12,
-    padding: 16,
-    alignItems: 'center'
+  stepsHeader: {
+    gap: 4,
+    marginTop: 10
   },
 
-  secondaryButtonText: {
+  sectionTitle: {
     color: colors.textPrimary,
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '700'
+  },
+
+  assignedHint: {
+    color: colors.textSecondary,
+    fontSize: 13,
+    lineHeight: 18
+  },
+
+  stepSections: {
+    gap: 12
   },
 
   button: {

@@ -16,7 +16,7 @@ type Props = {
   description: string;
   icon: string;
   steps: Step[];
-  onAddStep: () => void;
+  onAddStep?: () => void;
   onEditStep?: (stepId: string, category: string) => void;
   onDeleteStep?: (stepId: string) => void;
 };
@@ -44,7 +44,9 @@ function RoutineSectionCardBase({
           </View>
         </View>
 
-        <MaterialCommunityIcons name="dots-vertical" size={20} color={colors.textSecondary} />
+        {(onAddStep || onEditStep || onDeleteStep) && (
+          <MaterialCommunityIcons name="dots-vertical" size={20} color={colors.textSecondary} />
+        )}
       </View>
 
       {steps.length > 0 && (
@@ -62,9 +64,11 @@ function RoutineSectionCardBase({
         </View>
       )}
 
-      <Pressable style={styles.add} onPress={onAddStep}>
-        <Text style={styles.addText}>+ Añadir paso</Text>
-      </Pressable>
+      {onAddStep && (
+        <Pressable style={styles.add} onPress={onAddStep}>
+          <Text style={styles.addText}>+ Añadir paso</Text>
+        </Pressable>
+      )}
     </View>
   );
 }

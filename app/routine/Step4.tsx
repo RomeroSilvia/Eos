@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
+import { Alert, Platform, View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors } from '@/constants/colors';
 import { Stepper } from '@/components/Stepper';
@@ -108,6 +108,32 @@ export default function Step4() {
     }
   }, [loadRoutineState, refreshSteps, removeStepFromState, routineId]);
 
+  const confirmDeleteStep = useCallback((stepId: string) => {
+    const step = uniqueSteps.find((item) => item.id === stepId);
+    const stepName = step?.name ?? 'este paso';
+
+    if (Platform.OS === 'web') {
+      const confirmed = window.confirm(`Eliminar "${stepName}"? Esta accion no se puede deshacer.`);
+      if (confirmed) {
+        void deleteStep(stepId);
+      }
+      return;
+    }
+
+    Alert.alert(
+      'Eliminar paso',
+      `Se eliminara "${stepName}". Esta accion no se puede deshacer.`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Eliminar',
+          style: 'destructive',
+          onPress: () => void deleteStep(stepId)
+        }
+      ]
+    );
+  }, [deleteStep, uniqueSteps]);
+
   return (
     <SafeAreaView style={styles.screen}>
       <AppHeader breadcrumb={assignClientId ? 'Pacientes / Rutinas' : 'Rutinas'} title="Nueva rutina" />
@@ -135,7 +161,7 @@ export default function Step4() {
             steps={sections.limpieza}
             onAddStep={() => goToAddStep('limpieza')}
             onEditStep={editStep}
-            onDeleteStep={deleteStep}
+            onDeleteStep={confirmDeleteStep}
           />
 
           <RoutineSectionCard
@@ -145,7 +171,7 @@ export default function Step4() {
             steps={sections.tratamientos}
             onAddStep={() => goToAddStep('tratamientos')}
             onEditStep={editStep}
-            onDeleteStep={deleteStep}
+            onDeleteStep={confirmDeleteStep}
           />
 
           <RoutineSectionCard
@@ -155,7 +181,7 @@ export default function Step4() {
             steps={sections.hidratacion}
             onAddStep={() => goToAddStep('hidratacion')}
             onEditStep={editStep}
-            onDeleteStep={deleteStep}
+            onDeleteStep={confirmDeleteStep}
           />
 
           <RoutineSectionCard
@@ -165,7 +191,7 @@ export default function Step4() {
             steps={sections.proteccion}
             onAddStep={() => goToAddStep('proteccion')}
             onEditStep={editStep}
-            onDeleteStep={deleteStep}
+            onDeleteStep={confirmDeleteStep}
           />
 
           <RoutineSectionCard
@@ -175,7 +201,7 @@ export default function Step4() {
             steps={sections.complementario}
             onAddStep={() => goToAddStep('complementario')}
             onEditStep={editStep}
-            onDeleteStep={deleteStep}
+            onDeleteStep={confirmDeleteStep}
           />
         </ScrollView>
 
