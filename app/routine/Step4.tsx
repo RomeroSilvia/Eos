@@ -143,7 +143,7 @@ export default function Step4() {
           style={styles.button}
           onPress={() =>
             router.push({
-              pathname: '/routine/Step6-confirm',
+              pathname: '/routine/Step5-products',
               params: assignClientId ? { routineId, assignClientId } : { routineId }
             })
           }

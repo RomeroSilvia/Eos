@@ -14,7 +14,7 @@ export default function Step5Products() {
             <AppHeader breadcrumb="Rutinas" title="Nueva rutina" />
             <View style={styles.container}>
                 <View style={{ alignItems: 'center' }}>
-                    <Stepper current={4} />
+                    <Stepper current={5} />
                 </View>
 
                 <Text style={styles.section}>Productos</Text>

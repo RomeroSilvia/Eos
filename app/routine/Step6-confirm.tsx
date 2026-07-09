@@ -72,7 +72,7 @@ export default function Step6Confirm() {
       <AppHeader breadcrumb={assignClientId ? 'Pacientes / Rutinas' : 'Rutinas'} title="Confirmar rutina" />
       <View style={styles.container}>
         <View style={{ alignItems: 'center' }}>
-          <Stepper current={4} />
+          <Stepper current={6} />
         </View>
 
         <Text style={styles.section}>Confirmacion</Text>
