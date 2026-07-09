@@ -1,5 +1,6 @@
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { memo } from 'react';
 import { colors } from '@/constants/colors';
 import { RoutineStepItem } from './RoutineStepItem';
 
@@ -20,7 +21,7 @@ type Props = {
   onDeleteStep?: (stepId: string) => void;
 };
 
-export function RoutineSectionCard({
+function RoutineSectionCardBase({
   title,
   description,
   icon,
@@ -67,6 +68,8 @@ export function RoutineSectionCard({
     </View>
   );
 }
+
+export const RoutineSectionCard = memo(RoutineSectionCardBase);
 
 const styles = StyleSheet.create({
   card: {

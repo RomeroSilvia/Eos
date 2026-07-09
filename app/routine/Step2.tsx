@@ -3,12 +3,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors } from '@/constants/colors';
 import { Stepper } from '@/components/Stepper';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useMemo } from 'react';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { createRoutine } from '@/services/routines';
-import { assignRoutineToPatient } from '@/services/specialist';
 import { AppHeader } from '@/components/navigation/AppHeader';
 import { getFriendlyErrorMessage } from '@/services/api/client';
+import { useRoutineWizard } from '@/hooks/useRoutineWizard';
 import {
     clearRoutineWizardTransition,
     logRoutineWizardWork,
@@ -40,21 +39,35 @@ export default function Step2() {
     const patientIdParam = getSingleParam(patientId);
     const clientIdParam = getSingleParam(clientId);
     const effectiveClientId = assignClientIdParam ?? patientIdParam ?? clientIdParam;
-    const [name, setName] = useState('');
-    const [selected, setSelected] = useState<number | null>(null);
-    const [isSubmitting, setIsSubmitting] = useState(false);
+    const {
+        state,
+        setAssignClientId,
+        setDescription,
+        setName,
+        setSelectedGoalId,
+        createAndStoreRoutine,
+        assignRoutineToPatient
+    } = useRoutineWizard();
     useRoutineWizardProfiler('Step2', { flowMode: effectiveClientId ? 'assigned-routine' : 'own-routine' });
 
-    const isValid = name.trim() !== '' && selected !== null;
+    const selectedGoal = useMemo(
+        () => goals.find((goal) => goal.id === state.selectedGoalId) ?? null,
+        [state.selectedGoalId]
+    );
+    const isValid = state.name.trim() !== '' && state.selectedGoalId !== null;
+
+    useEffect(() => {
+        setAssignClientId(effectiveClientId);
+    }, [effectiveClientId, setAssignClientId]);
 
     const handleContinue = async () => {
-        if (!isValid || isSubmitting) {
+        if (!isValid || state.isSubmitting) {
             return;
         }
 
         const payload = {
-            name,
-            description: goals.find(g => g.id === selected)?.label,
+            name: state.name.trim(),
+            description: selectedGoal?.label,
             time_of_day: null
         };
 
@@ -85,14 +98,14 @@ export default function Step2() {
         }
 
         try {
-            setIsSubmitting(true);
+            setDescription(selectedGoal?.label ?? '');
             const transitionStartedAt = markRoutineWizardTransition('Step2', 'Step3', {
                 flowMode: effectiveClientId ? 'assigned-routine' : 'own-routine'
             });
 
             const routine = effectiveClientId
                 ? await assignRoutineToPatient(effectiveClientId, payload)
-                : await createRoutine(payload);
+                : await createAndStoreRoutine(payload);
             logRoutineWizardWork('Step2 create routine before navigation', transitionStartedAt, {
                 flowMode: effectiveClientId ? 'assigned-routine' : 'own-routine'
             });
@@ -124,8 +137,6 @@ export default function Step2() {
                 'Rutina',
                 getFriendlyErrorMessage(error, 'No pudimos crear la rutina. Intenta nuevamente.')
             );
-        } finally {
-            setIsSubmitting(false);
         }
     };
 
@@ -142,7 +153,7 @@ export default function Step2() {
                 {/* Nombre */}
                 <Text style={styles.label}>Nombre de la rutina</Text>
                 <TextInput
-                    value={name}
+                    value={state.name}
                     onChangeText={setName}
                     placeholder="Ej. Rutina piel sensible"
                     style={styles.input}
@@ -158,10 +169,10 @@ export default function Step2() {
                     {goals.map((goal) => (
                         <Pressable
                             key={goal.id}
-                            onPress={() => setSelected(goal.id)}
+                            onPress={() => setSelectedGoalId(goal.id)}
                             style={[
                                 styles.item,
-                                selected === goal.id && styles.itemActive
+                                state.selectedGoalId === goal.id && styles.itemActive
                             ]}
                         >
                             <View style={styles.itemLeft}>
@@ -178,21 +189,21 @@ export default function Step2() {
 
                             <View style={[
                                 styles.radio,
-                                selected === goal.id && styles.radioActive
+                                state.selectedGoalId === goal.id && styles.radioActive
                             ]} />
                         </Pressable>
                     ))}
                 </View>
 
                 <Pressable
-                    disabled={!isValid || isSubmitting}
+                    disabled={!isValid || state.isSubmitting}
                     onPress={handleContinue}
                     style={[
                         styles.button,
-                        (!isValid || isSubmitting) && styles.disabled
+                        (!isValid || state.isSubmitting) && styles.disabled
                     ]}
                 >
-                    <Text style={styles.buttonText}>{isSubmitting ? 'Creando...' : 'Continuar'}</Text>
+                    <Text style={styles.buttonText}>{state.isSubmitting ? 'Creando...' : 'Continuar'}</Text>
                 </Pressable>
 
             </View>

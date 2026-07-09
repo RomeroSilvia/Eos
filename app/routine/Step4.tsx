@@ -76,25 +76,25 @@ export default function Step4() {
     return grouped;
   }, [uniqueSteps]);
 
-  const goToAddStep = (section: string) => {
+  const goToAddStep = useCallback((section: string) => {
     if (!routineId) return;
 
     router.push({
       pathname: '/routine/Add-step',
       params: assignClientId ? { section, routineId, assignClientId } : { section, routineId }
     });
-  };
+  }, [assignClientId, routineId, router]);
 
-  const editStep = (stepId: string, section: string) => {
+  const editStep = useCallback((stepId: string, section: string) => {
     if (!routineId) return;
 
     router.push({
       pathname: '/routine/Add-step',
       params: assignClientId ? { section, routineId, stepId, assignClientId } : { section, routineId, stepId }
     });
-  };
+  }, [assignClientId, routineId, router]);
 
-  const deleteStep = async (stepId: string) => {
+  const deleteStep = useCallback(async (stepId: string) => {
     if (!routineId) return;
 
     removeStepFromState(stepId);
@@ -106,7 +106,7 @@ export default function Step4() {
       console.error(error);
       await loadRoutineState(routineId);
     }
-  };
+  }, [loadRoutineState, refreshSteps, removeStepFromState, routineId]);
 
   return (
     <SafeAreaView style={styles.screen}>

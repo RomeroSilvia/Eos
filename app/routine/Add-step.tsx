@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors } from '@/constants/colors';
 import { useFocusEffect } from '@react-navigation/native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { createStep, getStepProducts, getStepsByRoutine, setStepProducts, updateStep } from '@/services/routines';
 import { useProducts } from '@/hooks/useProducts';
 import { ProductCard } from '@/components/ProductCard';
@@ -30,6 +30,10 @@ export default function AddStep() {
 
   const { products, refreshProducts } = useProducts();
   const { addOrUpdateStep, refreshSteps } = useRoutineWizard();
+  const selectedProductIds = useMemo(
+    () => selectedProducts.map((product) => product.id),
+    [selectedProducts]
+  );
 
   useFocusEffect(
     useCallback(() => {
@@ -106,13 +110,13 @@ export default function AddStep() {
     }
   };
 
-  const handleSelectProduct = (product: Product) => {
+  const handleSelectProduct = useCallback((product: Product) => {
     setSelectedProducts((prev) => [...prev, product]);
-  };
+  }, []);
 
-  const handleRemoveProduct = (id: string) => {
+  const handleRemoveProduct = useCallback((id: string) => {
     setSelectedProducts((prev) => prev.filter((p) => p.id !== id));
-  };
+  }, []);
 
   return (
     <SafeAreaView style={styles.screen}>
@@ -156,7 +160,7 @@ export default function AddStep() {
 
         <ProductSelector
           products={products}
-          selectedIds={selectedProducts.map((p) => p.id)}
+          selectedIds={selectedProductIds}
           onSelect={handleSelectProduct}
         />
 
@@ -243,6 +247,9 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: 'center',
     marginTop: 8
+  },
+  buttonDisabled: {
+    opacity: 0.5
   },
   buttonText: {
     color: colors.surface,

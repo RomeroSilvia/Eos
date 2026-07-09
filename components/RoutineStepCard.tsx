@@ -1,4 +1,5 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { memo } from 'react';
 import { StyleSheet, Text, View, Pressable } from 'react-native';
 import { colors } from '@/constants/colors';
 import type { RoutineStep } from '@/types/routine';
@@ -25,7 +26,7 @@ const getIcon = (step: RoutineStep) => {
   return 'bottle-tonic-outline';
 };
 
-export function RoutineStepCard({
+function RoutineStepCardBase({
   step,
   index,
   completed,
@@ -103,6 +104,8 @@ export function RoutineStepCard({
     </Card>
   );
 }
+
+export const RoutineStepCard = memo(RoutineStepCardBase);
 
 const styles = StyleSheet.create({
   card: {

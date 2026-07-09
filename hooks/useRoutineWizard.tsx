@@ -137,6 +137,29 @@ type UseRoutineWizardContext = {
 
 const RoutineWizardContext = createContext<UseRoutineWizardContext | undefined>(undefined);
 
+function toRoutineCreatePayload(payload: {
+  name: string;
+  description?: string | null;
+  time_of_day?: string | null;
+}) {
+  return {
+    ...payload,
+    description: payload.description ?? undefined
+  };
+}
+
+function toRoutineUpdatePayload(data: {
+  name?: string;
+  description?: string | null;
+  time_of_day?: RoutineTimeOfDay | null;
+  is_active?: boolean;
+}) {
+  return {
+    ...data,
+    time_of_day: data.time_of_day ?? undefined
+  };
+}
+
 export function RoutineWizardProvider({ children }: PropsWithChildren<{}>) {
   const [state, dispatch] = useReducer(reducer, initialState);
 
@@ -202,7 +225,7 @@ export function RoutineWizardProvider({ children }: PropsWithChildren<{}>) {
       setError(null);
 
       try {
-        const routine = await createRoutine(payload);
+        const routine = await createRoutine(toRoutineCreatePayload(payload));
 
         dispatch({ type: 'SET_ROUTINE_FROM_RESPONSE', payload: routine });
         return routine;
@@ -230,7 +253,7 @@ export function RoutineWizardProvider({ children }: PropsWithChildren<{}>) {
       setError(null);
 
       try {
-        const routine = await assignRoutineToPatient(patientId, payload);
+        const routine = await assignRoutineToPatient(patientId, toRoutineCreatePayload(payload));
 
         dispatch({ type: 'SET_ROUTINE_FROM_RESPONSE', payload: routine });
         return routine;
@@ -259,7 +282,7 @@ export function RoutineWizardProvider({ children }: PropsWithChildren<{}>) {
       setError(null);
 
       try {
-        const routine = await updateRoutine(id, data);
+        const routine = await updateRoutine(id, toRoutineUpdatePayload(data));
 
         dispatch({ type: 'SET_ROUTINE_FROM_RESPONSE', payload: routine });
 

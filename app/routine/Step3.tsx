@@ -3,21 +3,23 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors } from '@/constants/colors';
 import { Stepper } from '@/components/Stepper';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { useState } from 'react';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { updateRoutine } from '@/services/routines';
 import { AppHeader } from '@/components/navigation/AppHeader';
+import { useRoutineWizard } from '@/hooks/useRoutineWizard';
 import {
+  clearRoutineWizardTransition,
   logRoutineWizardWork,
   markRoutineWizardTransition,
   useRoutineWizardProfiler
 } from '@/hooks/useRoutineWizardProfiler';
+import type { RoutineTimeOfDay } from '@/types/routine';
 
 export default function Step3() {
   const router = useRouter();
   const { routineId, assignClientId } = useLocalSearchParams<{ routineId: string; assignClientId?: string }>();
 
-  const [type, setType] = useState<'mañana' | 'noche'>('mañana');
+  const { state, setTimeOfDay, updateRoutineData } = useRoutineWizard();
+  const type = state.time_of_day ?? 'morning';
   useRoutineWizardProfiler('Step3', { assignClientId: Boolean(assignClientId) });
 
   return (
@@ -35,8 +37,8 @@ export default function Step3() {
         </Text>
 
         <Pressable
-          onPress={() => setType('mañana')}
-          style={[styles.card, type === 'mañana' && styles.cardActive]}
+          onPress={() => setTimeOfDay('morning')}
+          style={[styles.card, type === 'morning' && styles.cardActive]}
         >
           <View style={styles.cardLeft}>
             <View style={[styles.icon, styles.iconActive]}>
@@ -51,7 +53,7 @@ export default function Step3() {
             </View>
           </View>
 
-          {type === 'mañana' && (
+          {type === 'morning' && (
             <View style={styles.checkAbsolute}>
               <MaterialCommunityIcons name="check" size={16} color={colors.surface} />
             </View>
@@ -59,8 +61,8 @@ export default function Step3() {
         </Pressable>
 
         <Pressable
-          onPress={() => setType('noche')}
-          style={[styles.card, type === 'noche' && styles.cardActive]}
+          onPress={() => setTimeOfDay('night')}
+          style={[styles.card, type === 'night' && styles.cardActive]}
         >
           <View style={styles.cardLeft}>
             <View style={[styles.icon, styles.iconActive]}>
@@ -75,7 +77,7 @@ export default function Step3() {
             </View>
           </View>
 
-          {type === 'noche' && (
+          {type === 'night' && (
             <View style={styles.checkAbsolute}>
               <MaterialCommunityIcons name="check" size={16} color={colors.surface} />
             </View>
@@ -83,24 +85,28 @@ export default function Step3() {
         </Pressable>
 
         <Pressable
-          style={styles.button}
+          disabled={state.isSubmitting}
+          style={[styles.button, state.isSubmitting && styles.buttonDisabled]}
           onPress={async () => {
             if (!routineId || typeof routineId !== 'string') return;
 
+            const selectedTimeOfDay: RoutineTimeOfDay = type === 'night' ? 'night' : 'morning';
             const transitionStartedAt = markRoutineWizardTransition('Step3', 'Step4', {
               routineId,
               assignClientId: Boolean(assignClientId)
             });
 
             try {
-              await updateRoutine(routineId as string, {
-                time_of_day: type === 'mañana' ? 'morning' : 'night'
+              await updateRoutineData(routineId as string, {
+                time_of_day: selectedTimeOfDay
               });
               logRoutineWizardWork('Step3 update routine before navigation', transitionStartedAt, {
                 routineId
               });
             } catch (e) {
+              clearRoutineWizardTransition();
               console.error(e);
+              return;
             }
 
             router.push({
@@ -111,7 +117,7 @@ export default function Step3() {
             });
           }}
         >
-          <Text style={styles.buttonText}>Continuar</Text>
+          <Text style={styles.buttonText}>{state.isSubmitting ? 'Guardando...' : 'Continuar'}</Text>
         </Pressable>
       </View>
     </SafeAreaView>
@@ -163,6 +169,9 @@ const styles = StyleSheet.create({
     padding: 14,
     borderRadius: 10,
     alignItems: 'center'
+  },
+  buttonDisabled: {
+    opacity: 0.5
   },
   buttonText: { color: colors.surface, fontWeight: '700' }
 });
