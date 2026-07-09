@@ -10,6 +10,7 @@ import { useProducts } from '@/hooks/useProducts';
 import { ProductCard } from '@/components/ProductCard';
 import { ProductSelector } from '@/components/ProductSelector';
 import { AppHeader } from '@/components/navigation/AppHeader';
+import { useRoutineWizard } from '@/hooks/useRoutineWizard';
 import type { Product } from '@/types/product';
 
 export default function AddStep() {
@@ -24,9 +25,11 @@ export default function AddStep() {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [selectedProducts, setSelectedProducts] = useState<Product[]>([]);
+  const [isSaving, setIsSaving] = useState(false);
   const isEditing = typeof stepId === 'string' && stepId.length > 0;
 
   const { products, refreshProducts } = useProducts();
+  const { addOrUpdateStep, refreshSteps } = useRoutineWizard();
 
   useFocusEffect(
     useCallback(() => {
@@ -59,18 +62,22 @@ export default function AddStep() {
   }, [isEditing, routineId, stepId]);
 
   const handleSave = async () => {
-    try {
-      if (!routineId || !name.trim()) return;
+    if (!routineId || !name.trim() || isSaving) return;
 
+    try {
+      setIsSaving(true);
       const productIds = selectedProducts.map((p) => p.id);
 
       if (isEditing) {
-        await updateStep(stepId, {
+        const updatedStep = await updateStep(stepId, {
           name: name.trim(),
           description: description || null,
           category: section
         });
+
         await setStepProducts(stepId, productIds);
+        addOrUpdateStep(updatedStep);
+        await refreshSteps(routineId);
         router.back();
         return;
       }
@@ -89,9 +96,13 @@ export default function AddStep() {
       });
 
       await setStepProducts(newStep.id, productIds);
+      addOrUpdateStep(newStep);
+      await refreshSteps(routineId);
       router.back();
     } catch (e) {
       console.error(e);
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -157,10 +168,11 @@ export default function AddStep() {
         </Pressable>
 
         <Pressable
+          disabled={isSaving || !name.trim()}
           onPress={handleSave}
-          style={styles.button}
+          style={[styles.button, (isSaving || !name.trim()) && styles.buttonDisabled]}
         >
-          <Text style={styles.buttonText}>Guardar</Text>
+          <Text style={styles.buttonText}>{isSaving ? 'Guardando...' : 'Guardar'}</Text>
         </Pressable>
       </ScrollView>
     </SafeAreaView>

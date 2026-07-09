@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { colors } from '@/constants/colors';
 import { AppHeader } from '@/components/navigation/AppHeader';
@@ -27,23 +28,25 @@ export default function RoutineEdit() {
   const [timeOfDay, setTimeOfDay] = useState<RoutineTimeOfDay>('morning');
   const [isSaving, setIsSaving] = useState(false);
 
-  useEffect(() => {
+  const loadRoutine = useCallback(async () => {
     if (!routineId) return;
 
-    const loadRoutine = async () => {
-      try {
-        const routine = await getRoutineById(routineId);
+    try {
+      const routine = await getRoutineById(routineId);
 
-        setName(routine.name);
-        setDescription(routine.description ?? '');
-        setTimeOfDay(routine.time_of_day ?? 'morning');
-      } catch (error) {
-        console.error(error);
-      }
-    };
-
-    void loadRoutine();
+      setName(routine.name);
+      setDescription(routine.description ?? '');
+      setTimeOfDay(routine.time_of_day ?? 'morning');
+    } catch (error) {
+      console.error(error);
+    }
   }, [routineId]);
+
+  useFocusEffect(
+    useCallback(() => {
+      void loadRoutine();
+    }, [loadRoutine])
+  );
 
   const canSave = name.trim().length > 0 && !isSaving;
 

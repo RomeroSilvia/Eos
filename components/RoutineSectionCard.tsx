@@ -7,6 +7,7 @@ type Step = {
   id: string;
   nombre: string;
   producto?: string;
+  category: string;
 };
 
 type Props = {
@@ -15,6 +16,8 @@ type Props = {
   icon: string;
   steps: Step[];
   onAddStep: () => void;
+  onEditStep?: (stepId: string, category: string) => void;
+  onDeleteStep?: (stepId: string) => void;
 };
 
 export function RoutineSectionCard({
@@ -22,7 +25,9 @@ export function RoutineSectionCard({
   description,
   icon,
   steps,
-  onAddStep
+  onAddStep,
+  onEditStep,
+  onDeleteStep
 }: Props) {
   return (
     <View style={styles.card}>
@@ -49,6 +54,8 @@ export function RoutineSectionCard({
               index={index + 1}
               title={step.nombre}
               product={step.producto}
+              onPress={onEditStep ? () => onEditStep(step.id, step.category) : undefined}
+              onDelete={onDeleteStep ? () => onDeleteStep(step.id) : undefined}
             />
           ))}
         </View>
