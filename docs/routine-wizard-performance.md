@@ -45,7 +45,7 @@ Los logs aparecen en Metro/DevTools con estos prefijos:
 
 - T1.2 reduce renders innecesarios compartiendo estado del wizard sin prop drilling y memoizando componentes pesados.
 - T1.3 hace optimistas `Step2 -> Step3` y `Step3 -> Step4`: `Step2` inicia la creación de rutina en segundo plano y `Step3` pinta sin esperar la red; `Step3` navega a `Step4` antes de persistir `time_of_day`.
-- T1.4 puede reutilizar `markRoutineWizardTransition` y `useRoutineWizardProfiler` como base para un benchmark automatizado.
+- T1.4 agrega `npm run perf:routine-wizard` como guardia automatizada para que las transiciones optimistas fallen si el p95 supera 100ms.
 
 ## T1.3 - Navegación optimista
 
@@ -58,3 +58,27 @@ El flujo actualizado evita que la red bloquee el primer frame de la pantalla sig
 5. `Step3 -> Step4` navega primero y ejecuta `updateRoutineDataInBackground(...)` después, dejando `time_of_day` actualizado en el reducer desde el tap.
 
 Si la creación falla, el provider deja el error en `state.error` y se muestra una alerta. Si falla la actualización del tipo de rutina, el usuario ya está en `Step4`, pero recibe una alerta para reintentar.
+
+## T1.4 - Medicion automatizada
+
+Comando:
+
+```bash
+npm run perf:routine-wizard
+```
+
+El script `scripts/routine-wizard-performance.js` simula latencia de backend de `100ms` y mide si la navegacion de `Step2 -> Step3` y `Step3 -> Step4` queda agendada de forma sincronica antes de esperar la promesa de persistencia.
+
+Criterio de aceptacion automatizado:
+
+- `p95 <= 100ms` para cada transicion.
+- La navegacion debe ejecutarse de forma sincronica dentro del handler.
+- Si un cambio vuelve a esperar el backend antes de navegar, el script falla.
+
+Opciones utiles:
+
+```bash
+node scripts/routine-wizard-performance.js --threshold=100 --iterations=500 --latency=150
+```
+
+Esta medicion es una guardia automatizada de regresion. La validacion final de RNF-01 sigue usando los logs reales de `useRoutineWizardProfiler` en dispositivo/emulador, porque solo ahi se observa el costo real de render y primer frame.
