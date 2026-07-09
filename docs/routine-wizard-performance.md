@@ -101,3 +101,24 @@ npm run typecheck
 ```
 
 El repo no tiene React Native Testing Library configurado en frontend. Por eso la cobertura de interaccion del wizard queda dividida entre tests de contrato del servicio frontend, tests backend de reglas de negocio y el guard de performance. La verificacion visual/interactiva final sigue siendo manual con los logs de `useRoutineWizardProfiler`.
+
+## T1.9 - Accesibilidad
+
+El wizard de rutinas expone semantica accesible en sus controles principales:
+
+- `Stepper` anuncia `Paso N de 6` como `progressbar`.
+- Inputs del wizard y edicion de rutina tienen `accessibilityLabel`.
+- Opciones tipo objetivo/tipo de rutina usan `accessibilityRole="radio"` y `accessibilityState.selected`.
+- Botones de avance, guardado, confirmacion, edicion y eliminacion tienen labels descriptivos y estado `disabled` cuando corresponde.
+- Acordeones de confirmacion usan `accessibilityState.expanded`.
+- Iconos decorativos quedan fuera del arbol accesible.
+
+Step5 mantiene botones placeholder de productos marcados como `disabled` hasta que exista una accion real de asociacion de productos en esa pantalla.
+
+## T1.10 - Documentacion y skill
+
+Documentacion de cierre de M1:
+
+- `docs/division-modulos.md` resume el estado actualizado del modulo Rutinas.
+- `docs/e3-contracts.md` documenta el contrato M1 con auditoria best-effort.
+- `agents/skills/e3-routine-wizard-perf/SKILL.md` deja instrucciones operativas para retomar el modulo.
