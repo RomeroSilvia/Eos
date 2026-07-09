@@ -82,3 +82,22 @@ node scripts/routine-wizard-performance.js --threshold=100 --iterations=500 --la
 ```
 
 Esta medicion es una guardia automatizada de regresion. La validacion final de RNF-01 sigue usando los logs reales de `useRoutineWizardProfiler` en dispositivo/emulador, porque solo ahi se observa el costo real de render y primer frame.
+
+## T1.8 - Cobertura de tests
+
+Tests automatizados agregados para M1:
+
+- `backend/src/modules/routines/tests/routines.service.test.ts`: reglas de ownership, endpoints anidados, auditoria y permisos de rutinas asignadas.
+- `backend/src/modules/routines/tests/routines.controller.test.ts`: validacion de parametros y delegacion controller -> service.
+- `backend/src/modules/routines/tests/routines.frontend-service.test.ts`: contratos de `services/routines.ts`, incluyendo endpoints anidados de pasos.
+- `backend/src/modules/routines/tests/routines.performance-script.test.ts`: guardia automatizada de performance y regresion de navegacion sincronica.
+
+Comandos:
+
+```bash
+cd backend
+npm test -- routines
+npm run typecheck
+```
+
+El repo no tiene React Native Testing Library configurado en frontend. Por eso la cobertura de interaccion del wizard queda dividida entre tests de contrato del servicio frontend, tests backend de reglas de negocio y el guard de performance. La verificacion visual/interactiva final sigue siendo manual con los logs de `useRoutineWizardProfiler`.

@@ -4,8 +4,6 @@ const DEFAULT_THRESHOLD_MS = 100;
 const DEFAULT_ITERATIONS = 200;
 const DEFAULT_LATENCY_MS = 100;
 
-const options = parseArgs(process.argv.slice(2));
-
 function parseArgs(args) {
   return args.reduce(
     (acc, arg) => {
@@ -48,11 +46,11 @@ function round(value) {
   return Math.round(value * 10) / 10;
 }
 
-async function measureScenario(name, handler) {
+async function measureScenario(name, handler, scenarioOptions = parseArgs([])) {
   const samples = [];
   const pendingWork = [];
 
-  for (let i = 0; i < options.iterations; i += 1) {
+  for (let i = 0; i < scenarioOptions.iterations; i += 1) {
     let navigatedAt = null;
     const startedAt = performance.now();
 
@@ -62,7 +60,7 @@ async function measureScenario(name, handler) {
           navigatedAt = performance.now();
         }
       },
-      persist: () => backgroundWork(options.latencyMs)
+      persist: () => backgroundWork(scenarioOptions.latencyMs)
     });
 
     if (navigatedAt === null) {
@@ -82,9 +80,9 @@ async function measureScenario(name, handler) {
     maxMs: round(Math.max(...samples))
   };
 
-  if (result.p95Ms > options.thresholdMs) {
+  if (result.p95Ms > scenarioOptions.thresholdMs) {
     throw new Error(
-      `${name} p95=${result.p95Ms}ms exceeds ${options.thresholdMs}ms.`
+      `${name} p95=${result.p95Ms}ms exceeds ${scenarioOptions.thresholdMs}ms.`
     );
   }
 
@@ -92,16 +90,17 @@ async function measureScenario(name, handler) {
 }
 
 async function main() {
+  const options = parseArgs(process.argv.slice(2));
   const results = await Promise.all([
     measureScenario('Step2 -> Step3 optimistic create', ({ navigate, persist }) => {
       const pending = persist();
       navigate();
       return pending;
-    }),
+    }, options),
     measureScenario('Step3 -> Step4 optimistic update', ({ navigate, persist }) => {
       navigate();
       return persist();
-    })
+    }, options)
   ]);
 
   console.log('Routine wizard performance guard');
@@ -109,7 +108,15 @@ async function main() {
   console.log(`Threshold: p95 <= ${options.thresholdMs}ms`);
 }
 
-main().catch((error) => {
-  console.error(error.message);
-  process.exit(1);
-});
+if (require.main === module) {
+  main().catch((error) => {
+    console.error(error.message);
+    process.exit(1);
+  });
+}
+
+module.exports = {
+  measureScenario,
+  parseArgs,
+  percentile
+};

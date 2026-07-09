@@ -100,7 +100,7 @@ export default function Step4() {
     removeStepFromState(stepId);
 
     try {
-      await deleteStepApi(stepId);
+      await deleteStepApi(stepId, routineId);
       await refreshSteps(routineId);
     } catch (error) {
       console.error(error);

@@ -88,18 +88,19 @@ export async function updateStep(
     category?: string | null;
     step_order?: number;
     is_required?: boolean;
-  }
+  },
+  routineId?: string
 ): Promise<RoutineStep> {
   return apiRequest<RoutineStep>({
-    path: `/routines/steps/${id}`,
+    path: routineId ? `/routines/${routineId}/steps/${id}` : `/routines/steps/${id}`,
     method: 'PATCH',
     body: JSON.stringify(data)
   });
 }
 
-export async function deleteStep(id: string): Promise<void> {
+export async function deleteStep(id: string, routineId?: string): Promise<void> {
   await apiRequest<void>({
-    path: `/routines/steps/${id}`,
+    path: routineId ? `/routines/${routineId}/steps/${id}` : `/routines/steps/${id}`,
     method: 'DELETE'
   });
 }

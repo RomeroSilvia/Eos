@@ -77,7 +77,7 @@ export default function AddStep() {
           name: name.trim(),
           description: description || null,
           category: section
-        });
+        }, routineId);
 
         await setStepProducts(stepId, productIds);
         addOrUpdateStep(updatedStep);
