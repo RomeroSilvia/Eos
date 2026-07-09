@@ -43,6 +43,18 @@ Los logs aparecen en Metro/DevTools con estos prefijos:
 
 ## Implicancias para las próximas tareas
 
-- T1.2 debe reducir renders innecesarios compartiendo estado del wizard sin prop drilling y memoizando componentes pesados.
-- T1.3 debe hacer optimistas `Step2 -> Step3` y `Step3 -> Step4`: navegar primero y persistir en backend de forma async/debounced o con estado pendiente.
+- T1.2 reduce renders innecesarios compartiendo estado del wizard sin prop drilling y memoizando componentes pesados.
+- T1.3 hace optimistas `Step2 -> Step3` y `Step3 -> Step4`: `Step2` inicia la creación de rutina en segundo plano y `Step3` pinta sin esperar la red; `Step3` navega a `Step4` antes de persistir `time_of_day`.
 - T1.4 puede reutilizar `markRoutineWizardTransition` y `useRoutineWizardProfiler` como base para un benchmark automatizado.
+
+## T1.3 - Navegación optimista
+
+El flujo actualizado evita que la red bloquee el primer frame de la pantalla siguiente:
+
+1. `Step2` valida el formulario, guarda nombre/objetivo en el reducer e inicia `createRoutineInBackground(...)`.
+2. El `router.push('/routine/Step3')` ocurre inmediatamente después de iniciar la promesa.
+3. Cuando el backend devuelve la rutina, el provider actualiza `state.routineId`.
+4. `Step3` permite continuar cuando existe un `routineId` real.
+5. `Step3 -> Step4` navega primero y ejecuta `updateRoutineDataInBackground(...)` después, dejando `time_of_day` actualizado en el reducer desde el tap.
+
+Si la creación falla, el provider deja el error en `state.error` y se muestra una alerta. Si falla la actualización del tipo de rutina, el usuario ya está en `Step4`, pero recibe una alerta para reintentar.

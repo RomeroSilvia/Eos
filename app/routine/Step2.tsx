@@ -45,8 +45,7 @@ export default function Step2() {
         setDescription,
         setName,
         setSelectedGoalId,
-        createAndStoreRoutine,
-        assignRoutineToPatient
+        createRoutineInBackground
     } = useRoutineWizard();
     useRoutineWizardProfiler('Step2', { flowMode: effectiveClientId ? 'assigned-routine' : 'own-routine' });
 
@@ -60,7 +59,7 @@ export default function Step2() {
         setAssignClientId(effectiveClientId);
     }, [effectiveClientId, setAssignClientId]);
 
-    const handleContinue = async () => {
+    const handleContinue = () => {
         if (!isValid || state.isSubmitting) {
             return;
         }
@@ -97,47 +96,44 @@ export default function Step2() {
             });
         }
 
-        try {
-            setDescription(selectedGoal?.label ?? '');
-            const transitionStartedAt = markRoutineWizardTransition('Step2', 'Step3', {
-                flowMode: effectiveClientId ? 'assigned-routine' : 'own-routine'
-            });
+        setDescription(selectedGoal?.label ?? '');
+        const transitionStartedAt = markRoutineWizardTransition('Step2', 'Step3', {
+            flowMode: effectiveClientId ? 'assigned-routine' : 'own-routine'
+        });
 
-            const routine = effectiveClientId
-                ? await assignRoutineToPatient(effectiveClientId, payload)
-                : await createAndStoreRoutine(payload);
-            logRoutineWizardWork('Step2 create routine before navigation', transitionStartedAt, {
-                flowMode: effectiveClientId ? 'assigned-routine' : 'own-routine'
-            });
-
-            if (!routine?.id) {
-                clearRoutineWizardTransition();
-                Alert.alert('Rutina', 'No pudimos crear la rutina. Intenta nuevamente.');
-                return;
-            }
-
-            router.push({
-                pathname: '/routine/Step3',
-                params: effectiveClientId
-                    ? { routineId: routine.id, assignClientId: effectiveClientId }
-                    : { routineId: routine.id }
-            });
-        } catch (error) {
-            clearRoutineWizardTransition();
-
-            if (process.env.NODE_ENV !== 'production') {
-                console.warn('[routine/Step2:create]', {
-                    assigningToPatient: Boolean(effectiveClientId),
-                    patientId: effectiveClientId,
-                    error
+        createRoutineInBackground(payload, effectiveClientId)
+            .then((routine) => {
+                logRoutineWizardWork('Step2 create routine after navigation', transitionStartedAt, {
+                    flowMode: effectiveClientId ? 'assigned-routine' : 'own-routine'
                 });
-            }
 
-            Alert.alert(
-                'Rutina',
-                getFriendlyErrorMessage(error, 'No pudimos crear la rutina. Intenta nuevamente.')
-            );
-        }
+                if (!routine?.id) {
+                    clearRoutineWizardTransition();
+                    Alert.alert('Rutina', 'No pudimos crear la rutina. Intenta nuevamente.');
+                    return;
+                }
+            })
+            .catch((error) => {
+                clearRoutineWizardTransition();
+
+                if (process.env.NODE_ENV !== 'production') {
+                    console.warn('[routine/Step2:create]', {
+                        assigningToPatient: Boolean(effectiveClientId),
+                        patientId: effectiveClientId,
+                        error
+                    });
+                }
+
+                Alert.alert(
+                    'Rutina',
+                    getFriendlyErrorMessage(error, 'No pudimos crear la rutina. Intenta nuevamente.')
+                );
+            });
+
+        router.push({
+            pathname: '/routine/Step3',
+            params: effectiveClientId ? { assignClientId: effectiveClientId } : undefined
+        });
     };
 
     return (

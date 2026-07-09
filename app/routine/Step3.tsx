@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, Pressable } from 'react-native';
+import { Alert, View, Text, StyleSheet, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors } from '@/constants/colors';
 import { Stepper } from '@/components/Stepper';
@@ -18,7 +18,10 @@ export default function Step3() {
   const router = useRouter();
   const { routineId, assignClientId } = useLocalSearchParams<{ routineId: string; assignClientId?: string }>();
 
-  const { state, setTimeOfDay, updateRoutineData } = useRoutineWizard();
+  const { state, setTimeOfDay, updateRoutineDataInBackground } = useRoutineWizard();
+  const effectiveRoutineId = typeof routineId === 'string' && routineId.trim()
+    ? routineId
+    : state.routineId;
   const type = state.time_of_day ?? 'morning';
   useRoutineWizardProfiler('Step3', { assignClientId: Boolean(assignClientId) });
 
@@ -85,39 +88,40 @@ export default function Step3() {
         </Pressable>
 
         <Pressable
-          disabled={state.isSubmitting}
-          style={[styles.button, state.isSubmitting && styles.buttonDisabled]}
-          onPress={async () => {
-            if (!routineId || typeof routineId !== 'string') return;
+          disabled={!effectiveRoutineId}
+          style={[styles.button, !effectiveRoutineId && styles.buttonDisabled]}
+          onPress={() => {
+            if (!effectiveRoutineId) return;
 
             const selectedTimeOfDay: RoutineTimeOfDay = type === 'night' ? 'night' : 'morning';
             const transitionStartedAt = markRoutineWizardTransition('Step3', 'Step4', {
-              routineId,
+              routineId: effectiveRoutineId,
               assignClientId: Boolean(assignClientId)
             });
-
-            try {
-              await updateRoutineData(routineId as string, {
-                time_of_day: selectedTimeOfDay
-              });
-              logRoutineWizardWork('Step3 update routine before navigation', transitionStartedAt, {
-                routineId
-              });
-            } catch (e) {
-              clearRoutineWizardTransition();
-              console.error(e);
-              return;
-            }
 
             router.push({
               pathname: '/routine/Step4',
               params: assignClientId
-                ? { routineId, assignClientId }
-                : { routineId }
+                ? { routineId: effectiveRoutineId, assignClientId }
+                : { routineId: effectiveRoutineId }
             });
+
+            updateRoutineDataInBackground(effectiveRoutineId, {
+              time_of_day: selectedTimeOfDay
+            })
+              .then(() => {
+                logRoutineWizardWork('Step3 update routine after navigation', transitionStartedAt, {
+                  routineId: effectiveRoutineId
+                });
+              })
+              .catch((error) => {
+                clearRoutineWizardTransition();
+                console.error(error);
+                Alert.alert('Rutina', 'No pudimos guardar el tipo de rutina. Podés intentarlo nuevamente.');
+              });
           }}
         >
-          <Text style={styles.buttonText}>{state.isSubmitting ? 'Guardando...' : 'Continuar'}</Text>
+          <Text style={styles.buttonText}>{effectiveRoutineId ? 'Continuar' : 'Preparando...'}</Text>
         </Pressable>
       </View>
     </SafeAreaView>

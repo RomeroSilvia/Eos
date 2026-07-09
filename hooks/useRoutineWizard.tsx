@@ -114,12 +114,29 @@ type UseRoutineWizardContext = {
     description?: string | null;
     time_of_day?: string | null;
   }) => Promise<Routine>;
+  createRoutineInBackground: (
+    payload: {
+      name: string;
+      description?: string | null;
+      time_of_day?: string | null;
+    },
+    patientId?: string
+  ) => Promise<Routine>;
   assignRoutineToPatient: (patientId: string, payload: {
     name: string;
     description?: string | null;
     time_of_day?: string | null;
   }) => Promise<Routine>;
   updateRoutineData: (
+    id: string,
+    data: {
+      name?: string;
+      description?: string | null;
+      time_of_day?: RoutineTimeOfDay | null;
+      is_active?: boolean;
+    }
+  ) => Promise<Routine>;
+  updateRoutineDataInBackground: (
     id: string,
     data: {
       name?: string;
@@ -268,6 +285,41 @@ export function RoutineWizardProvider({ children }: PropsWithChildren<{}>) {
     [setError]
   );
 
+  const createRoutineInBackground = useCallback(
+    (
+      payload: {
+        name: string;
+        description?: string | null;
+        time_of_day?: string | null;
+      },
+      patientId?: string
+    ) => {
+      setSubmitting(true);
+      setError(null);
+
+      const request = patientId
+        ? assignRoutineToPatient(patientId, toRoutineCreatePayload(payload))
+        : createRoutine(toRoutineCreatePayload(payload));
+
+      return request
+        .then((routine) => {
+          dispatch({ type: 'SET_ROUTINE_FROM_RESPONSE', payload: routine });
+          return routine;
+        })
+        .catch((error) => {
+          console.error(error);
+          setError(patientId
+            ? 'No pudimos asignar la rutina. Intenta nuevamente.'
+            : 'No pudimos crear la rutina. Intenta nuevamente.');
+          throw error;
+        })
+        .finally(() => {
+          setSubmitting(false);
+        });
+    },
+    [setError]
+  );
+
   const updateRoutineData = useCallback(
     async (
       id: string,
@@ -294,6 +346,42 @@ export function RoutineWizardProvider({ children }: PropsWithChildren<{}>) {
       } finally {
         setSubmitting(false);
       }
+    },
+    [setError]
+  );
+
+  const updateRoutineDataInBackground = useCallback(
+    (
+      id: string,
+      data: {
+        name?: string;
+        description?: string | null;
+        time_of_day?: RoutineTimeOfDay | null;
+        is_active?: boolean;
+      }
+    ) => {
+      setError(null);
+
+      if (data.name !== undefined) {
+        dispatch({ type: 'SET_NAME', payload: data.name });
+      }
+      if (data.description !== undefined) {
+        dispatch({ type: 'SET_DESCRIPTION', payload: data.description ?? '' });
+      }
+      if (data.time_of_day !== undefined) {
+        dispatch({ type: 'SET_TIME_OF_DAY', payload: data.time_of_day });
+      }
+
+      return updateRoutine(id, toRoutineUpdatePayload(data))
+        .then((routine) => {
+          dispatch({ type: 'SET_ROUTINE_FROM_RESPONSE', payload: routine });
+          return routine;
+        })
+        .catch((error) => {
+          console.error(error);
+          setError('No pudimos actualizar la rutina. Intenta nuevamente.');
+          throw error;
+        });
     },
     [setError]
   );
@@ -352,8 +440,10 @@ export function RoutineWizardProvider({ children }: PropsWithChildren<{}>) {
       setTimeOfDay,
       setDescription,
       createAndStoreRoutine,
+      createRoutineInBackground,
       assignRoutineToPatient: assignRoutineToPatientWithState,
       updateRoutineData,
+      updateRoutineDataInBackground,
       loadRoutineState,
       refreshSteps,
       addOrUpdateStep,
@@ -369,8 +459,10 @@ export function RoutineWizardProvider({ children }: PropsWithChildren<{}>) {
       setTimeOfDay,
       setDescription,
       createAndStoreRoutine,
+      createRoutineInBackground,
       assignRoutineToPatientWithState,
       updateRoutineData,
+      updateRoutineDataInBackground,
       loadRoutineState,
       refreshSteps,
       addOrUpdateStep,
