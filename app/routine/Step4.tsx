@@ -9,6 +9,11 @@ import { useFocusEffect } from '@react-navigation/native';
 import { useRoutineWizard } from '@/hooks/useRoutineWizard';
 import { deleteStep as deleteStepApi } from '@/services/routines';
 import { AppHeader } from '@/components/navigation/AppHeader';
+import {
+  logRoutineWizardWork,
+  markRoutineWizardTransition,
+  useRoutineWizardProfiler
+} from '@/hooks/useRoutineWizardProfiler';
 
 type SectionItem = {
   id: string;
@@ -30,11 +35,15 @@ export default function Step4() {
   const { routineId, assignClientId } = useLocalSearchParams<{ routineId: string; assignClientId?: string }>();
 
   const { state, loadRoutineState, refreshSteps, removeStepFromState } = useRoutineWizard();
+  useRoutineWizardProfiler('Step4', { assignClientId: Boolean(assignClientId) });
 
   useFocusEffect(
     useCallback(() => {
       if (!routineId) return;
-      void loadRoutineState(routineId);
+      const startedAt = globalThis.performance?.now?.() ?? Date.now();
+      void loadRoutineState(routineId).finally(() => {
+        logRoutineWizardWork('Step4 load routine state on focus', startedAt, { routineId });
+      });
     }, [loadRoutineState, routineId])
   );
 
@@ -172,12 +181,17 @@ export default function Step4() {
 
         <Pressable
           style={styles.button}
-          onPress={() =>
+          onPress={() => {
+            markRoutineWizardTransition('Step4', 'Step5', {
+              routineId,
+              assignClientId: Boolean(assignClientId)
+            });
+
             router.push({
               pathname: '/routine/Step5-products',
               params: assignClientId ? { routineId, assignClientId } : { routineId }
-            })
-          }
+            });
+          }}
         >
           <Text style={styles.buttonText}>Continuar</Text>
         </Pressable>

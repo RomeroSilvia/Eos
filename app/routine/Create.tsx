@@ -5,10 +5,12 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { RoutineIllustration } from '@/components/icons/RoutineIllustration';
 import { AppHeader } from '@/components/navigation/AppHeader';
 import { Stepper } from '@/components/Stepper';
+import { markRoutineWizardTransition, useRoutineWizardProfiler } from '@/hooks/useRoutineWizardProfiler';
 
 export default function CreateRoutineScreen() {
   const router = useRouter();
   const { assignClientId } = useLocalSearchParams<{ assignClientId?: string }>();
+  useRoutineWizardProfiler('Create', { assignClientId: Boolean(assignClientId) });
 
   return (
     <SafeAreaView style={styles.screen}>
@@ -31,12 +33,16 @@ export default function CreateRoutineScreen() {
 
         <Pressable
           style={styles.button}
-          onPress={() =>
+          onPress={() => {
+            markRoutineWizardTransition('Create', 'Step2', {
+              assignClientId: Boolean(assignClientId)
+            });
+
             router.push({
               pathname: '/routine/Step2',
               params: assignClientId ? { assignClientId } : undefined
-            })
-          }
+            });
+          }}
         >
           <Text style={styles.buttonText}>Comenzar</Text>
         </Pressable>

@@ -7,12 +7,18 @@ import { useState } from 'react';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { updateRoutine } from '@/services/routines';
 import { AppHeader } from '@/components/navigation/AppHeader';
+import {
+  logRoutineWizardWork,
+  markRoutineWizardTransition,
+  useRoutineWizardProfiler
+} from '@/hooks/useRoutineWizardProfiler';
 
 export default function Step3() {
   const router = useRouter();
   const { routineId, assignClientId } = useLocalSearchParams<{ routineId: string; assignClientId?: string }>();
 
   const [type, setType] = useState<'mañana' | 'noche'>('mañana');
+  useRoutineWizardProfiler('Step3', { assignClientId: Boolean(assignClientId) });
 
   return (
     <SafeAreaView style={styles.screen}>
@@ -81,9 +87,17 @@ export default function Step3() {
           onPress={async () => {
             if (!routineId || typeof routineId !== 'string') return;
 
+            const transitionStartedAt = markRoutineWizardTransition('Step3', 'Step4', {
+              routineId,
+              assignClientId: Boolean(assignClientId)
+            });
+
             try {
               await updateRoutine(routineId as string, {
                 time_of_day: type === 'mañana' ? 'morning' : 'night'
+              });
+              logRoutineWizardWork('Step3 update routine before navigation', transitionStartedAt, {
+                routineId
               });
             } catch (e) {
               console.error(e);

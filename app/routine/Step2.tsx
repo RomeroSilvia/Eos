@@ -9,6 +9,12 @@ import { createRoutine } from '@/services/routines';
 import { assignRoutineToPatient } from '@/services/specialist';
 import { AppHeader } from '@/components/navigation/AppHeader';
 import { getFriendlyErrorMessage } from '@/services/api/client';
+import {
+    clearRoutineWizardTransition,
+    logRoutineWizardWork,
+    markRoutineWizardTransition,
+    useRoutineWizardProfiler
+} from '@/hooks/useRoutineWizardProfiler';
 
 type IconName = keyof typeof MaterialCommunityIcons.glyphMap;
 
@@ -37,6 +43,7 @@ export default function Step2() {
     const [name, setName] = useState('');
     const [selected, setSelected] = useState<number | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    useRoutineWizardProfiler('Step2', { flowMode: effectiveClientId ? 'assigned-routine' : 'own-routine' });
 
     const isValid = name.trim() !== '' && selected !== null;
 
@@ -79,12 +86,19 @@ export default function Step2() {
 
         try {
             setIsSubmitting(true);
+            const transitionStartedAt = markRoutineWizardTransition('Step2', 'Step3', {
+                flowMode: effectiveClientId ? 'assigned-routine' : 'own-routine'
+            });
 
             const routine = effectiveClientId
                 ? await assignRoutineToPatient(effectiveClientId, payload)
                 : await createRoutine(payload);
+            logRoutineWizardWork('Step2 create routine before navigation', transitionStartedAt, {
+                flowMode: effectiveClientId ? 'assigned-routine' : 'own-routine'
+            });
 
             if (!routine?.id) {
+                clearRoutineWizardTransition();
                 Alert.alert('Rutina', 'No pudimos crear la rutina. Intenta nuevamente.');
                 return;
             }
@@ -96,6 +110,8 @@ export default function Step2() {
                     : { routineId: routine.id }
             });
         } catch (error) {
+            clearRoutineWizardTransition();
+
             if (process.env.NODE_ENV !== 'production') {
                 console.warn('[routine/Step2:create]', {
                     assigningToPatient: Boolean(effectiveClientId),

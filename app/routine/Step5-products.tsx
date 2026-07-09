@@ -5,10 +5,13 @@ import { Stepper } from '@/components/Stepper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { AppHeader } from '@/components/navigation/AppHeader';
+import { markRoutineWizardTransition, useRoutineWizardProfiler } from '@/hooks/useRoutineWizardProfiler';
 
 export default function Step5Products() {
     const router = useRouter();
-    const { routineId } = useLocalSearchParams();
+    const { routineId, assignClientId } = useLocalSearchParams<{ routineId?: string; assignClientId?: string }>();
+    useRoutineWizardProfiler('Step5', { assignClientId: Boolean(assignClientId) });
+
     return (
         <SafeAreaView style={styles.screen}>
             <AppHeader breadcrumb="Rutinas" title="Nueva rutina" />
@@ -73,12 +76,17 @@ export default function Step5Products() {
 
                 <Pressable
                     style={styles.button}
-                    onPress={() =>
+                    onPress={() => {
+                        markRoutineWizardTransition('Step5', 'Step6', {
+                            routineId,
+                            assignClientId: Boolean(assignClientId)
+                        });
+
                         router.push({
                             pathname: '/routine/Step6-confirm',
-                            params: { routineId }
-                        })
-                    }
+                            params: assignClientId ? { routineId, assignClientId } : { routineId }
+                        });
+                    }}
                 >
                     <Text style={styles.buttonText}>Continuar</Text>
                 </Pressable>

@@ -8,6 +8,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { getRoutineById } from '@/services/routines';
 import type { Routine, RoutineStep, RoutineTimeOfDay } from '@/types/routine';
 import { AppHeader } from '@/components/navigation/AppHeader';
+import { logRoutineWizardWork, useRoutineWizardProfiler } from '@/hooks/useRoutineWizardProfiler';
 
 type SectionKey = 'limpieza' | 'tratamientos' | 'hidratacion' | 'proteccion' | 'complementario';
 
@@ -26,6 +27,7 @@ const sections: {
 export default function Step6Confirm() {
   const router = useRouter();
   const { routineId, assignClientId } = useLocalSearchParams<{ routineId: string; assignClientId?: string }>();
+  useRoutineWizardProfiler('Step6', { assignClientId: Boolean(assignClientId) });
 
   const [routine, setRoutine] = useState<Routine | null>(null);
   const [expanded, setExpanded] = useState<Record<SectionKey, boolean>>({
@@ -39,8 +41,12 @@ export default function Step6Confirm() {
   useEffect(() => {
     if (!routineId) return;
 
+    const startedAt = globalThis.performance?.now?.() ?? Date.now();
     getRoutineById(routineId)
-      .then(setRoutine)
+      .then((data) => {
+        setRoutine(data);
+        logRoutineWizardWork('Step6 load routine summary', startedAt, { routineId });
+      })
       .catch((error) => console.error(error));
   }, [routineId]);
 
