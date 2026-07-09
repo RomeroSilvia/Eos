@@ -8,6 +8,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { getRoutineById } from '@/services/routines';
 import type { Routine, RoutineStep, RoutineTimeOfDay } from '@/types/routine';
 import { AppHeader } from '@/components/navigation/AppHeader';
+import { logRoutineWizardWork, useRoutineWizardProfiler } from '@/hooks/useRoutineWizardProfiler';
 
 type SectionKey = 'limpieza' | 'tratamientos' | 'hidratacion' | 'proteccion' | 'complementario';
 
@@ -26,6 +27,7 @@ const sections: {
 export default function Step6Confirm() {
   const router = useRouter();
   const { routineId, assignClientId } = useLocalSearchParams<{ routineId: string; assignClientId?: string }>();
+  useRoutineWizardProfiler('Step6', { assignClientId: Boolean(assignClientId) });
 
   const [routine, setRoutine] = useState<Routine | null>(null);
   const [expanded, setExpanded] = useState<Record<SectionKey, boolean>>({
@@ -39,8 +41,12 @@ export default function Step6Confirm() {
   useEffect(() => {
     if (!routineId) return;
 
+    const startedAt = globalThis.performance?.now?.() ?? Date.now();
     getRoutineById(routineId)
-      .then(setRoutine)
+      .then((data) => {
+        setRoutine(data);
+        logRoutineWizardWork('Step6 load routine summary', startedAt, { routineId });
+      })
       .catch((error) => console.error(error));
   }, [routineId]);
 
@@ -72,7 +78,7 @@ export default function Step6Confirm() {
       <AppHeader breadcrumb={assignClientId ? 'Pacientes / Rutinas' : 'Rutinas'} title="Confirmar rutina" />
       <View style={styles.container}>
         <View style={{ alignItems: 'center' }}>
-          <Stepper current={4} />
+          <Stepper current={6} />
         </View>
 
         <Text style={styles.section}>Confirmacion</Text>
@@ -107,7 +113,13 @@ export default function Step6Confirm() {
 
               return (
                 <View key={section.key}>
-                  <Pressable style={styles.sectionRow} onPress={() => toggle(section.key)}>
+                  <Pressable
+                    accessibilityLabel={`${expanded[section.key] ? 'Contraer' : 'Expandir'} seccion ${section.title}`}
+                    accessibilityRole="button"
+                    accessibilityState={{ expanded: expanded[section.key] }}
+                    style={styles.sectionRow}
+                    onPress={() => toggle(section.key)}
+                  >
                     <View style={styles.row}>
                       <View style={styles.icon}>
                         <MaterialCommunityIcons name={section.icon} size={20} color={colors.surface} />
@@ -138,6 +150,8 @@ export default function Step6Confirm() {
         </ScrollView>
 
         <Pressable
+          accessibilityLabel="Editar pasos de la rutina"
+          accessibilityRole="button"
           style={styles.editBtn}
           onPress={() =>
             router.push({
@@ -150,6 +164,8 @@ export default function Step6Confirm() {
         </Pressable>
 
         <Pressable
+          accessibilityLabel="Confirmar rutina"
+          accessibilityRole="button"
           style={styles.button}
           onPress={() =>
             router.push({

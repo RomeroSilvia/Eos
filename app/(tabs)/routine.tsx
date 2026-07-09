@@ -1,4 +1,4 @@
-import { Alert, ScrollView, StyleSheet, Text, View, Pressable } from 'react-native';
+import { Alert, Platform, ScrollView, StyleSheet, Text, View, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -52,6 +52,16 @@ export default function RoutineScreen() {
   const confirmDeleteRoutine = () => {
     if (!routine) return;
 
+    if (Platform.OS === 'web') {
+      const confirmed = window.confirm(
+        `Eliminar "${routine.name}" con todos sus pasos? Esta acción no se puede deshacer.`
+      );
+
+      if (!confirmed) return;
+      void removeRoutine(routine.id);
+      return;
+    }
+
     Alert.alert(
       'Eliminar rutina',
       `Se eliminara "${routine.name}" con todos sus pasos. Esta accion no se puede deshacer.`,
@@ -67,6 +77,16 @@ export default function RoutineScreen() {
   };
 
   const confirmDeleteStep = (stepId: string, stepName: string) => {
+    if (Platform.OS === 'web') {
+      const confirmed = window.confirm(
+        `Eliminar "${stepName}"? Esta acción no se puede deshacer.`
+      );
+
+      if (!confirmed) return;
+      void removeStep(stepId);
+      return;
+    }
+
     Alert.alert(
       'Eliminar paso',
       `Se eliminara "${stepName}". Esta accion no se puede deshacer.`,

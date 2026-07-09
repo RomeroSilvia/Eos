@@ -38,7 +38,12 @@ Estado actual:
 
 - CRUD completo de rutinas y pasos integrado con Supabase.
 - Wizard de creación en 6 pasos implementado.
-- Edición de rutinas y agregar pasos disponibles.
+- Wizard de creación optimizado para E3: estado centralizado en `useRoutineWizard`, navegación optimista en los pasos que persisten contra backend y profiler de transiciones en desarrollo.
+- Edición de rutinas completa: agregar, editar y eliminar pasos desde rutinas existentes, reutilizando `Add-step`.
+- Backend E3 expone endpoints anidados de pasos: `POST /api/routines/:id/steps`, `PATCH /api/routines/:id/steps/:stepId` y `DELETE /api/routines/:id/steps/:stepId`.
+- Las ediciones de pasos emiten auditoría best-effort mediante `recordAuditLog`, siguiendo el contrato de `docs/e3-contracts.md`.
+- Performance cubierta por `npm run perf:routine-wizard`, que falla si la navegación optimista supera el umbral de 100ms percibidos.
+- Accesibilidad del wizard revisada: labels, roles y estados accesibles en inputs, radios, botones, stepper, acordeones y acciones de pasos.
 - El check de pasos persiste por día en `routine_logs` / `routine_step_logs`.
 
 ## Integrante 3 — Módulo Productos

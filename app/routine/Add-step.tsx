@@ -4,12 +4,13 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors } from '@/constants/colors';
 import { useFocusEffect } from '@react-navigation/native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { createStep, getStepProducts, getStepsByRoutine, setStepProducts, updateStep } from '@/services/routines';
 import { useProducts } from '@/hooks/useProducts';
 import { ProductCard } from '@/components/ProductCard';
 import { ProductSelector } from '@/components/ProductSelector';
 import { AppHeader } from '@/components/navigation/AppHeader';
+import { useRoutineWizard } from '@/hooks/useRoutineWizard';
 import type { Product } from '@/types/product';
 
 export default function AddStep() {
@@ -24,9 +25,15 @@ export default function AddStep() {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [selectedProducts, setSelectedProducts] = useState<Product[]>([]);
+  const [isSaving, setIsSaving] = useState(false);
   const isEditing = typeof stepId === 'string' && stepId.length > 0;
 
   const { products, refreshProducts } = useProducts();
+  const { addOrUpdateStep, refreshSteps } = useRoutineWizard();
+  const selectedProductIds = useMemo(
+    () => selectedProducts.map((product) => product.id),
+    [selectedProducts]
+  );
 
   useFocusEffect(
     useCallback(() => {
@@ -59,18 +66,22 @@ export default function AddStep() {
   }, [isEditing, routineId, stepId]);
 
   const handleSave = async () => {
-    try {
-      if (!routineId || !name.trim()) return;
+    if (!routineId || !name.trim() || isSaving) return;
 
+    try {
+      setIsSaving(true);
       const productIds = selectedProducts.map((p) => p.id);
 
       if (isEditing) {
-        await updateStep(stepId, {
+        const updatedStep = await updateStep(stepId, {
           name: name.trim(),
           description: description || null,
           category: section
-        });
+        }, routineId);
+
         await setStepProducts(stepId, productIds);
+        addOrUpdateStep(updatedStep);
+        await refreshSteps(routineId);
         router.back();
         return;
       }
@@ -89,19 +100,23 @@ export default function AddStep() {
       });
 
       await setStepProducts(newStep.id, productIds);
+      addOrUpdateStep(newStep);
+      await refreshSteps(routineId);
       router.back();
     } catch (e) {
       console.error(e);
+    } finally {
+      setIsSaving(false);
     }
   };
 
-  const handleSelectProduct = (product: Product) => {
+  const handleSelectProduct = useCallback((product: Product) => {
     setSelectedProducts((prev) => [...prev, product]);
-  };
+  }, []);
 
-  const handleRemoveProduct = (id: string) => {
+  const handleRemoveProduct = useCallback((id: string) => {
     setSelectedProducts((prev) => prev.filter((p) => p.id !== id));
-  };
+  }, []);
 
   return (
     <SafeAreaView style={styles.screen}>
@@ -115,6 +130,7 @@ export default function AddStep() {
 
         <Text style={styles.label}>Nombre del paso</Text>
         <TextInput
+          accessibilityLabel="Nombre del paso"
           value={name}
           onChangeText={setName}
           placeholder="Ej. Limpieza simple"
@@ -123,6 +139,7 @@ export default function AddStep() {
 
         <Text style={styles.label}>Descripción (opcional)</Text>
         <TextInput
+          accessibilityLabel="Descripcion del paso"
           value={description}
           onChangeText={setDescription}
           placeholder="Describe el paso o lo que veas relevante"
@@ -145,11 +162,13 @@ export default function AddStep() {
 
         <ProductSelector
           products={products}
-          selectedIds={selectedProducts.map((p) => p.id)}
+          selectedIds={selectedProductIds}
           onSelect={handleSelectProduct}
         />
 
         <Pressable
+          accessibilityLabel="Crear producto y volver al paso"
+          accessibilityRole="button"
           onPress={() => router.push('/products/create?returnTo=add-step')}
           style={({ pressed }) => [styles.outlineButton, { opacity: pressed ? 0.7 : 1 }]}
         >
@@ -157,10 +176,14 @@ export default function AddStep() {
         </Pressable>
 
         <Pressable
+          accessibilityLabel={isSaving ? 'Guardando paso' : 'Guardar paso'}
+          accessibilityRole="button"
+          accessibilityState={{ disabled: isSaving || !name.trim() }}
+          disabled={isSaving || !name.trim()}
           onPress={handleSave}
-          style={styles.button}
+          style={[styles.button, (isSaving || !name.trim()) && styles.buttonDisabled]}
         >
-          <Text style={styles.buttonText}>Guardar</Text>
+          <Text style={styles.buttonText}>{isSaving ? 'Guardando...' : 'Guardar'}</Text>
         </Pressable>
       </ScrollView>
     </SafeAreaView>
@@ -231,6 +254,9 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: 'center',
     marginTop: 8
+  },
+  buttonDisabled: {
+    opacity: 0.5
   },
   buttonText: {
     color: colors.surface,

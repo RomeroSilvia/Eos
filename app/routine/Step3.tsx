@@ -1,18 +1,29 @@
-import { View, Text, StyleSheet, Pressable } from 'react-native';
+import { Alert, View, Text, StyleSheet, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors } from '@/constants/colors';
 import { Stepper } from '@/components/Stepper';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { useState } from 'react';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { updateRoutine } from '@/services/routines';
 import { AppHeader } from '@/components/navigation/AppHeader';
+import { useRoutineWizard } from '@/hooks/useRoutineWizard';
+import {
+  clearRoutineWizardTransition,
+  logRoutineWizardWork,
+  markRoutineWizardTransition,
+  useRoutineWizardProfiler
+} from '@/hooks/useRoutineWizardProfiler';
+import type { RoutineTimeOfDay } from '@/types/routine';
 
 export default function Step3() {
   const router = useRouter();
   const { routineId, assignClientId } = useLocalSearchParams<{ routineId: string; assignClientId?: string }>();
 
-  const [type, setType] = useState<'mañana' | 'noche'>('mañana');
+  const { state, setTimeOfDay, updateRoutineDataInBackground } = useRoutineWizard();
+  const effectiveRoutineId = typeof routineId === 'string' && routineId.trim()
+    ? routineId
+    : state.routineId;
+  const type = state.time_of_day ?? 'morning';
+  useRoutineWizardProfiler('Step3', { assignClientId: Boolean(assignClientId) });
 
   return (
     <SafeAreaView style={styles.screen}>
@@ -29,8 +40,11 @@ export default function Step3() {
         </Text>
 
         <Pressable
-          onPress={() => setType('mañana')}
-          style={[styles.card, type === 'mañana' && styles.cardActive]}
+          accessibilityLabel="Seleccionar rutina matutina"
+          accessibilityRole="radio"
+          accessibilityState={{ selected: type === 'morning' }}
+          onPress={() => setTimeOfDay('morning')}
+          style={[styles.card, type === 'morning' && styles.cardActive]}
         >
           <View style={styles.cardLeft}>
             <View style={[styles.icon, styles.iconActive]}>
@@ -45,7 +59,7 @@ export default function Step3() {
             </View>
           </View>
 
-          {type === 'mañana' && (
+          {type === 'morning' && (
             <View style={styles.checkAbsolute}>
               <MaterialCommunityIcons name="check" size={16} color={colors.surface} />
             </View>
@@ -53,8 +67,11 @@ export default function Step3() {
         </Pressable>
 
         <Pressable
-          onPress={() => setType('noche')}
-          style={[styles.card, type === 'noche' && styles.cardActive]}
+          accessibilityLabel="Seleccionar rutina nocturna"
+          accessibilityRole="radio"
+          accessibilityState={{ selected: type === 'night' }}
+          onPress={() => setTimeOfDay('night')}
+          style={[styles.card, type === 'night' && styles.cardActive]}
         >
           <View style={styles.cardLeft}>
             <View style={[styles.icon, styles.iconActive]}>
@@ -69,7 +86,7 @@ export default function Step3() {
             </View>
           </View>
 
-          {type === 'noche' && (
+          {type === 'night' && (
             <View style={styles.checkAbsolute}>
               <MaterialCommunityIcons name="check" size={16} color={colors.surface} />
             </View>
@@ -77,27 +94,43 @@ export default function Step3() {
         </Pressable>
 
         <Pressable
-          style={styles.button}
-          onPress={async () => {
-            if (!routineId || typeof routineId !== 'string') return;
+          accessibilityLabel={effectiveRoutineId ? 'Continuar a pasos de rutina' : 'Preparando rutina'}
+          accessibilityRole="button"
+          accessibilityState={{ disabled: !effectiveRoutineId }}
+          disabled={!effectiveRoutineId}
+          style={[styles.button, !effectiveRoutineId && styles.buttonDisabled]}
+          onPress={() => {
+            if (!effectiveRoutineId) return;
 
-            try {
-              await updateRoutine(routineId as string, {
-                time_of_day: type === 'mañana' ? 'morning' : 'night'
-              });
-            } catch (e) {
-              console.error(e);
-            }
+            const selectedTimeOfDay: RoutineTimeOfDay = type === 'night' ? 'night' : 'morning';
+            const transitionStartedAt = markRoutineWizardTransition('Step3', 'Step4', {
+              routineId: effectiveRoutineId,
+              assignClientId: Boolean(assignClientId)
+            });
 
             router.push({
               pathname: '/routine/Step4',
               params: assignClientId
-                ? { routineId, assignClientId }
-                : { routineId }
+                ? { routineId: effectiveRoutineId, assignClientId }
+                : { routineId: effectiveRoutineId }
             });
+
+            updateRoutineDataInBackground(effectiveRoutineId, {
+              time_of_day: selectedTimeOfDay
+            })
+              .then(() => {
+                logRoutineWizardWork('Step3 update routine after navigation', transitionStartedAt, {
+                  routineId: effectiveRoutineId
+                });
+              })
+              .catch((error) => {
+                clearRoutineWizardTransition();
+                console.error(error);
+                Alert.alert('Rutina', 'No pudimos guardar el tipo de rutina. Podés intentarlo nuevamente.');
+              });
           }}
         >
-          <Text style={styles.buttonText}>Continuar</Text>
+          <Text style={styles.buttonText}>{effectiveRoutineId ? 'Continuar' : 'Preparando...'}</Text>
         </Pressable>
       </View>
     </SafeAreaView>
@@ -149,6 +182,9 @@ const styles = StyleSheet.create({
     padding: 14,
     borderRadius: 10,
     alignItems: 'center'
+  },
+  buttonDisabled: {
+    opacity: 0.5
   },
   buttonText: { color: colors.surface, fontWeight: '700' }
 });

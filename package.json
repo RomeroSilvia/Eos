@@ -10,6 +10,7 @@
     "web": "expo start --web",
     "doctor": "expo-doctor",
     "lint": "expo lint",
+    "perf:routine-wizard": "node scripts/routine-wizard-performance.js",
     "supabase": "node scripts/supabase-local.js",
     "supabase:db:push": "node scripts/supabase-local.js db push",
     "supabase:types": "node scripts/supabase-local.js gen types typescript --schema public"

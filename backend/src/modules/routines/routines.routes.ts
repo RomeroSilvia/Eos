@@ -38,6 +38,8 @@ routinesRouter.get('/', getUserRoutines);
 routinesRouter.post('/', createRoutine);
 routinesRouter.get('/:id/steps', getStepsByRoutine);
 routinesRouter.post('/:id/steps', createStep);
+routinesRouter.patch('/:id/steps/:stepId', updateStep);
+routinesRouter.delete('/:id/steps/:stepId', deleteStep);
 routinesRouter.get('/:id', getRoutineById);
 routinesRouter.patch('/:id', updateRoutine);
 routinesRouter.delete('/:id', deleteRoutine);

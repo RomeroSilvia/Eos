@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useState } from 'react';
+import { memo, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { colors } from '@/constants/colors';
 import type { Product } from '@/types/product';
@@ -10,14 +10,21 @@ type Props = {
   onSelect: (product: Product) => void;
 };
 
-export function ProductSelector({ products, selectedIds, onSelect }: Props) {
+function ProductSelectorBase({ products, selectedIds, onSelect }: Props) {
   const [open, setOpen] = useState(false);
 
-  const available = products.filter((p) => !selectedIds.includes(p.id));
+  const selectedIdSet = useMemo(() => new Set(selectedIds), [selectedIds]);
+  const available = useMemo(
+    () => products.filter((product) => !selectedIdSet.has(product.id)),
+    [products, selectedIdSet]
+  );
 
   return (
     <View>
       <Pressable
+        accessibilityLabel={open ? 'Cerrar selector de productos' : 'Abrir selector de productos'}
+        accessibilityRole="button"
+        accessibilityState={{ expanded: open }}
         onPress={() => setOpen((prev) => !prev)}
         style={({ pressed }) => [styles.trigger, { opacity: pressed ? 0.8 : 1 }]}
       >
@@ -36,6 +43,8 @@ export function ProductSelector({ products, selectedIds, onSelect }: Props) {
           ) : (
             available.map((product) => (
               <Pressable
+                accessibilityLabel={`Seleccionar producto ${product.name}`}
+                accessibilityRole="button"
                 key={product.id}
                 onPress={() => {
                   onSelect(product);
@@ -55,6 +64,8 @@ export function ProductSelector({ products, selectedIds, onSelect }: Props) {
     </View>
   );
 }
+
+export const ProductSelector = memo(ProductSelectorBase);
 
 const styles = StyleSheet.create({
   trigger: {

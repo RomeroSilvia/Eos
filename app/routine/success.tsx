@@ -58,6 +58,8 @@ export default function SuccessScreen() {
         </View>
 
         <Pressable
+          accessibilityLabel="Ver mi rutina"
+          accessibilityRole="button"
           style={styles.button}
           onPress={() => {
             if (assignClientId) {

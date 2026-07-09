@@ -14,6 +14,7 @@ type CreateRoutineBody = Omit<RoutineInsert, 'user_id'>;
 type UpdateRoutineBody = RoutineUpdate;
 type CreateStepBody = Omit<RoutineStepInsert, 'routine_id'>;
 type UpdateStepBody = RoutineStepUpdate;
+type StepParams = { id?: string; stepId: string };
 
 function roleOf(req: Request): Role {
   return req.user.role ?? 'user';
@@ -126,7 +127,8 @@ export const createStep: RequestHandler<{}, unknown, CreateStepBody> = asyncHand
   res.status(201).json(step);
 });
 
-export const updateStep: RequestHandler<{}, unknown, UpdateStepBody> = asyncHandler(async (req, res) => {
+export const updateStep: RequestHandler<StepParams, unknown, UpdateStepBody> = asyncHandler(async (req, res) => {
+  const routineId = typeof req.params.id === 'string' ? req.params.id : undefined;
   const stepId = requiredParam(req.params.stepId, 'stepId');
   const { name, step_order } = req.body;
 
@@ -138,7 +140,7 @@ export const updateStep: RequestHandler<{}, unknown, UpdateStepBody> = asyncHand
     throw new ApiError(400, 'step_order must be a number');
   }
 
-  const updated = await routinesService.updateStep(stepId, req.user.id, roleOf(req), req.body);
+  const updated = await routinesService.updateStep(stepId, req.user.id, roleOf(req), req.body, routineId);
 
   if (!updated) {
     throw new ApiError(404, 'Paso de rutina no encontrado.');
@@ -148,8 +150,9 @@ export const updateStep: RequestHandler<{}, unknown, UpdateStepBody> = asyncHand
 });
 
 export const deleteStep: RequestHandler = asyncHandler(async (req, res) => {
+  const routineId = typeof req.params.id === 'string' ? req.params.id : undefined;
   const stepId = requiredParam(req.params.stepId, 'stepId');
-  const success = await routinesService.deleteStep(stepId, req.user.id, roleOf(req));
+  const success = await routinesService.deleteStep(stepId, req.user.id, roleOf(req), routineId);
 
   if (!success) {
     throw new ApiError(404, 'Paso de rutina no encontrado.');

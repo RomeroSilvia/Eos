@@ -5,16 +5,19 @@ import { Stepper } from '@/components/Stepper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { AppHeader } from '@/components/navigation/AppHeader';
+import { markRoutineWizardTransition, useRoutineWizardProfiler } from '@/hooks/useRoutineWizardProfiler';
 
 export default function Step5Products() {
     const router = useRouter();
-    const { routineId } = useLocalSearchParams();
+    const { routineId, assignClientId } = useLocalSearchParams<{ routineId?: string; assignClientId?: string }>();
+    useRoutineWizardProfiler('Step5', { assignClientId: Boolean(assignClientId) });
+
     return (
         <SafeAreaView style={styles.screen}>
             <AppHeader breadcrumb="Rutinas" title="Nueva rutina" />
             <View style={styles.container}>
                 <View style={{ alignItems: 'center' }}>
-                    <Stepper current={4} />
+                    <Stepper current={5} />
                 </View>
 
                 <Text style={styles.section}>Productos</Text>
@@ -38,10 +41,21 @@ export default function Step5Products() {
                     <View style={styles.stepCard}>
                         <View style={styles.stepRow}>
                             <Text style={styles.stepTitle}>1 Primer paso</Text>
-                            <MaterialCommunityIcons name="dots-vertical" size={18} color={colors.textSecondary} />
+                            <MaterialCommunityIcons
+                                accessible={false}
+                                name="dots-vertical"
+                                size={18}
+                                color={colors.textSecondary}
+                            />
                         </View>
 
-                        <Pressable style={styles.addProduct}>
+                        <Pressable
+                            accessibilityLabel="Añadir producto al primer paso de limpieza"
+                            accessibilityRole="button"
+                            accessibilityState={{ disabled: true }}
+                            disabled
+                            style={styles.addProduct}
+                        >
                             <Text style={styles.addProductText}>+ Añadir producto</Text>
                         </Pressable>
                     </View>
@@ -49,36 +63,66 @@ export default function Step5Products() {
                     <View style={styles.stepCard}>
                         <View style={styles.stepRow}>
                             <Text style={styles.stepTitle}>2 Segundo paso</Text>
-                            <MaterialCommunityIcons name="dots-vertical" size={18} color={colors.textSecondary} />
+                            <MaterialCommunityIcons
+                                accessible={false}
+                                name="dots-vertical"
+                                size={18}
+                                color={colors.textSecondary}
+                            />
                         </View>
 
-                        <Pressable style={styles.addProduct}>
+                        <Pressable
+                            accessibilityLabel="Añadir producto al segundo paso de limpieza"
+                            accessibilityRole="button"
+                            accessibilityState={{ disabled: true }}
+                            disabled
+                            style={styles.addProduct}
+                        >
                             <Text style={styles.addProductText}>+ Añadir producto</Text>
                         </Pressable>
                     </View>
 
                     <Text style={styles.groupTitle}>Hidratación</Text>
 
-                    <Pressable style={styles.emptyAdd}>
+                    <Pressable
+                        accessibilityLabel="Añadir producto de hidratación"
+                        accessibilityRole="button"
+                        accessibilityState={{ disabled: true }}
+                        disabled
+                        style={styles.emptyAdd}
+                    >
                         <Text style={styles.addProductText}>+ Añadir producto</Text>
                     </Pressable>
 
                     <Text style={styles.groupTitle}>Protección solar</Text>
 
-                    <Pressable style={styles.emptyAdd}>
+                    <Pressable
+                        accessibilityLabel="Añadir producto de protección solar"
+                        accessibilityRole="button"
+                        accessibilityState={{ disabled: true }}
+                        disabled
+                        style={styles.emptyAdd}
+                    >
                         <Text style={styles.addProductText}>+ Añadir producto</Text>
                     </Pressable>
 
                 </ScrollView>
 
                 <Pressable
+                    accessibilityLabel="Continuar a confirmacion de rutina"
+                    accessibilityRole="button"
                     style={styles.button}
-                    onPress={() =>
+                    onPress={() => {
+                        markRoutineWizardTransition('Step5', 'Step6', {
+                            routineId,
+                            assignClientId: Boolean(assignClientId)
+                        });
+
                         router.push({
                             pathname: '/routine/Step6-confirm',
-                            params: { routineId }
-                        })
-                    }
+                            params: assignClientId ? { routineId, assignClientId } : { routineId }
+                        });
+                    }}
                 >
                     <Text style={styles.buttonText}>Continuar</Text>
                 </Pressable>

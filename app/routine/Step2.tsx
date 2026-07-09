@@ -3,12 +3,17 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors } from '@/constants/colors';
 import { Stepper } from '@/components/Stepper';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useMemo } from 'react';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { createRoutine } from '@/services/routines';
-import { assignRoutineToPatient } from '@/services/specialist';
 import { AppHeader } from '@/components/navigation/AppHeader';
 import { getFriendlyErrorMessage } from '@/services/api/client';
+import { useRoutineWizard } from '@/hooks/useRoutineWizard';
+import {
+    clearRoutineWizardTransition,
+    logRoutineWizardWork,
+    markRoutineWizardTransition,
+    useRoutineWizardProfiler
+} from '@/hooks/useRoutineWizardProfiler';
 
 type IconName = keyof typeof MaterialCommunityIcons.glyphMap;
 
@@ -34,20 +39,34 @@ export default function Step2() {
     const patientIdParam = getSingleParam(patientId);
     const clientIdParam = getSingleParam(clientId);
     const effectiveClientId = assignClientIdParam ?? patientIdParam ?? clientIdParam;
-    const [name, setName] = useState('');
-    const [selected, setSelected] = useState<number | null>(null);
-    const [isSubmitting, setIsSubmitting] = useState(false);
+    const {
+        state,
+        setAssignClientId,
+        setDescription,
+        setName,
+        setSelectedGoalId,
+        createRoutineInBackground
+    } = useRoutineWizard();
+    useRoutineWizardProfiler('Step2', { flowMode: effectiveClientId ? 'assigned-routine' : 'own-routine' });
 
-    const isValid = name.trim() !== '' && selected !== null;
+    const selectedGoal = useMemo(
+        () => goals.find((goal) => goal.id === state.selectedGoalId) ?? null,
+        [state.selectedGoalId]
+    );
+    const isValid = state.name.trim() !== '' && state.selectedGoalId !== null;
 
-    const handleContinue = async () => {
-        if (!isValid || isSubmitting) {
+    useEffect(() => {
+        setAssignClientId(effectiveClientId);
+    }, [effectiveClientId, setAssignClientId]);
+
+    const handleContinue = () => {
+        if (!isValid || state.isSubmitting) {
             return;
         }
 
         const payload = {
-            name,
-            description: goals.find(g => g.id === selected)?.label,
+            name: state.name.trim(),
+            description: selectedGoal?.label,
             time_of_day: null
         };
 
@@ -77,40 +96,44 @@ export default function Step2() {
             });
         }
 
-        try {
-            setIsSubmitting(true);
+        setDescription(selectedGoal?.label ?? '');
+        const transitionStartedAt = markRoutineWizardTransition('Step2', 'Step3', {
+            flowMode: effectiveClientId ? 'assigned-routine' : 'own-routine'
+        });
 
-            const routine = effectiveClientId
-                ? await assignRoutineToPatient(effectiveClientId, payload)
-                : await createRoutine(payload);
-
-            if (!routine?.id) {
-                Alert.alert('Rutina', 'No pudimos crear la rutina. Intenta nuevamente.');
-                return;
-            }
-
-            router.push({
-                pathname: '/routine/Step3',
-                params: effectiveClientId
-                    ? { routineId: routine.id, assignClientId: effectiveClientId }
-                    : { routineId: routine.id }
-            });
-        } catch (error) {
-            if (process.env.NODE_ENV !== 'production') {
-                console.warn('[routine/Step2:create]', {
-                    assigningToPatient: Boolean(effectiveClientId),
-                    patientId: effectiveClientId,
-                    error
+        createRoutineInBackground(payload, effectiveClientId)
+            .then((routine) => {
+                logRoutineWizardWork('Step2 create routine after navigation', transitionStartedAt, {
+                    flowMode: effectiveClientId ? 'assigned-routine' : 'own-routine'
                 });
-            }
 
-            Alert.alert(
-                'Rutina',
-                getFriendlyErrorMessage(error, 'No pudimos crear la rutina. Intenta nuevamente.')
-            );
-        } finally {
-            setIsSubmitting(false);
-        }
+                if (!routine?.id) {
+                    clearRoutineWizardTransition();
+                    Alert.alert('Rutina', 'No pudimos crear la rutina. Intenta nuevamente.');
+                    return;
+                }
+            })
+            .catch((error) => {
+                clearRoutineWizardTransition();
+
+                if (process.env.NODE_ENV !== 'production') {
+                    console.warn('[routine/Step2:create]', {
+                        assigningToPatient: Boolean(effectiveClientId),
+                        patientId: effectiveClientId,
+                        error
+                    });
+                }
+
+                Alert.alert(
+                    'Rutina',
+                    getFriendlyErrorMessage(error, 'No pudimos crear la rutina. Intenta nuevamente.')
+                );
+            });
+
+        router.push({
+            pathname: '/routine/Step3',
+            params: effectiveClientId ? { assignClientId: effectiveClientId } : undefined
+        });
     };
 
     return (
@@ -126,7 +149,8 @@ export default function Step2() {
                 {/* Nombre */}
                 <Text style={styles.label}>Nombre de la rutina</Text>
                 <TextInput
-                    value={name}
+                    accessibilityLabel="Nombre de la rutina"
+                    value={state.name}
                     onChangeText={setName}
                     placeholder="Ej. Rutina piel sensible"
                     style={styles.input}
@@ -141,11 +165,14 @@ export default function Step2() {
                 <View style={styles.list}>
                     {goals.map((goal) => (
                         <Pressable
+                            accessibilityLabel={`Objetivo principal ${goal.label}`}
+                            accessibilityRole="radio"
+                            accessibilityState={{ selected: state.selectedGoalId === goal.id }}
                             key={goal.id}
-                            onPress={() => setSelected(goal.id)}
+                            onPress={() => setSelectedGoalId(goal.id)}
                             style={[
                                 styles.item,
-                                selected === goal.id && styles.itemActive
+                                state.selectedGoalId === goal.id && styles.itemActive
                             ]}
                         >
                             <View style={styles.itemLeft}>
@@ -162,21 +189,24 @@ export default function Step2() {
 
                             <View style={[
                                 styles.radio,
-                                selected === goal.id && styles.radioActive
+                                state.selectedGoalId === goal.id && styles.radioActive
                             ]} />
                         </Pressable>
                     ))}
                 </View>
 
                 <Pressable
-                    disabled={!isValid || isSubmitting}
+                    accessibilityLabel={state.isSubmitting ? 'Creando rutina' : 'Continuar al tipo de rutina'}
+                    accessibilityRole="button"
+                    accessibilityState={{ disabled: !isValid || state.isSubmitting }}
+                    disabled={!isValid || state.isSubmitting}
                     onPress={handleContinue}
                     style={[
                         styles.button,
-                        (!isValid || isSubmitting) && styles.disabled
+                        (!isValid || state.isSubmitting) && styles.disabled
                     ]}
                 >
-                    <Text style={styles.buttonText}>{isSubmitting ? 'Creando...' : 'Continuar'}</Text>
+                    <Text style={styles.buttonText}>{state.isSubmitting ? 'Creando...' : 'Continuar'}</Text>
                 </Pressable>
 
             </View>

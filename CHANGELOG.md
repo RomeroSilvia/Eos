@@ -2,11 +2,16 @@
 
 ## Unreleased
 
+- E3-M1: Rutinas avanzadas, wizard optimizado, edicion de pasos, auditoria, tests, performance y accesibilidad.
 - E3-M3: Centros esteticos, asociacion de especialistas a centros y dashboard admin basico por centro.
 - E3-M5: Planes/Suscripciones y metricas globales.
 
 ## Entrega 3
 
+- M1: Rutinas Avanzadas y Performance.
+- Wizard de rutinas con estado centralizado, navegacion optimista y medicion automatizada `perf:routine-wizard`.
+- Edicion completa de pasos en rutinas existentes con endpoints anidados, validaciones de permisos y auditoria best-effort.
+- Accesibilidad del wizard reforzada con labels, roles y estados accesibles.
 - M5: Planes/Suscripciones y Metricas Globales.
 - Backend nuevo: modulos `subscriptions` y `reports` con rutas admin protegidas.
 - Nuevas migraciones E3 para `subscription_plans`, `subscriptions` y vista global de metricas.

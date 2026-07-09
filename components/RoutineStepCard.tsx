@@ -1,4 +1,5 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { memo } from 'react';
 import { StyleSheet, Text, View, Pressable } from 'react-native';
 import { colors } from '@/constants/colors';
 import type { RoutineStep } from '@/types/routine';
@@ -25,7 +26,7 @@ const getIcon = (step: RoutineStep) => {
   return 'bottle-tonic-outline';
 };
 
-export function RoutineStepCard({
+function RoutineStepCardBase({
   step,
   index,
   completed,
@@ -38,6 +39,9 @@ export function RoutineStepCard({
     <Card style={styles.card}>
       <Pressable
         onPress={() => onToggle(step.id)}
+        accessibilityLabel={`${completed ? 'Marcar pendiente' : 'Marcar completado'} el paso ${index + 1}: ${step.name}`}
+        accessibilityRole="checkbox"
+        accessibilityState={{ checked: completed }}
         style={[styles.check, completed ? styles.checkDone : styles.checkPending]}
       >
         <MaterialCommunityIcons
@@ -83,7 +87,7 @@ export function RoutineStepCard({
         <View style={styles.actions}>
           <Pressable
             onPress={() => onEdit(step)}
-            accessibilityLabel="Editar paso"
+            accessibilityLabel={`Editar paso ${index + 1}: ${step.name}`}
             accessibilityRole="button"
             hitSlop={8}
           >
@@ -92,7 +96,7 @@ export function RoutineStepCard({
 
           <Pressable
             onPress={() => onDelete(step)}
-            accessibilityLabel="Eliminar paso"
+            accessibilityLabel={`Eliminar paso ${index + 1}: ${step.name}`}
             accessibilityRole="button"
             hitSlop={8}
           >
@@ -103,6 +107,8 @@ export function RoutineStepCard({
     </Card>
   );
 }
+
+export const RoutineStepCard = memo(RoutineStepCardBase);
 
 const styles = StyleSheet.create({
   card: {

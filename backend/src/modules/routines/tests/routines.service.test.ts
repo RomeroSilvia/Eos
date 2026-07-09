@@ -1,5 +1,6 @@
 import { routinesRepository } from '../routines.repository';
 import { routinesService } from '../routines.service';
+import { recordAuditLog } from '../../audit/audit.service';
 import type { ProductRow, RoutineRow, RoutineStepProductRow } from '../../../database/schema.types';
 
 jest.mock('../routines.repository', () => ({
@@ -8,6 +9,7 @@ jest.mock('../routines.repository', () => ({
     findById: jest.fn(),
     findRawById: jest.fn(),
     findRoutineByStepId: jest.fn(),
+    findStepById: jest.fn(),
     findProductsByIds: jest.fn(),
     create: jest.fn(),
     update: jest.fn(),
@@ -23,7 +25,12 @@ jest.mock('../routines.repository', () => ({
   }
 }));
 
+jest.mock('../../audit/audit.service', () => ({
+  recordAuditLog: jest.fn(async () => undefined)
+}));
+
 const mockedRepo = jest.mocked(routinesRepository);
+const mockedRecordAuditLog = jest.mocked(recordAuditLog);
 
 function makeRoutine(overrides: Partial<RoutineRow> = {}): RoutineRow {
   return {
@@ -146,6 +153,86 @@ describe('routinesService - ownership de rutinas y pasos', () => {
     expect(mockedRepo.updateStep).not.toHaveBeenCalled();
   });
 
+  it('actualiza un step cuando pertenece a la rutina indicada por la ruta anidada', async () => {
+    mockedRepo.findRoutineByStepId.mockResolvedValue(makeRoutine({
+      id: 'routine-1',
+      user_id: 'user-1',
+      assigned_by: null
+    }));
+    mockedRepo.updateStep.mockResolvedValue({
+      id: 'step-1',
+      routine_id: 'routine-1',
+      name: 'Limpieza actualizada',
+      description: null,
+      category: 'limpieza',
+      step_order: 1,
+      is_required: false,
+      created_at: '2026-01-01T00:00:00.000Z',
+      updated_at: '2026-01-01T00:00:00.000Z'
+    });
+
+    const result = await routinesService.updateStep(
+      'step-1',
+      'user-1',
+      'user',
+      { name: 'Limpieza actualizada' },
+      'routine-1'
+    );
+
+    expect(mockedRepo.updateStep).toHaveBeenCalledWith('step-1', expect.objectContaining({
+      name: 'Limpieza actualizada'
+    }));
+    expect(mockedRecordAuditLog).toHaveBeenCalledWith(expect.objectContaining({
+      actorId: 'user-1',
+      action: 'update',
+      entity: 'routine',
+      entityId: 'routine-1',
+      metadata: expect.objectContaining({
+        changeType: 'routine_step',
+        stepId: 'step-1'
+      })
+    }));
+    expect(result?.routine_id).toBe('routine-1');
+  });
+
+  it('rechaza actualizar un step cuando no pertenece a la rutina indicada por la ruta anidada', async () => {
+    mockedRepo.findRoutineByStepId.mockResolvedValue(makeRoutine({
+      id: 'routine-real',
+      user_id: 'user-1',
+      assigned_by: null
+    }));
+
+    await expect(
+      routinesService.updateStep(
+        'step-1',
+        'user-1',
+        'user',
+        { name: 'Paso editado' },
+        'routine-de-la-url'
+      )
+    ).rejects.toMatchObject({
+      statusCode: 404
+    });
+
+    expect(mockedRepo.updateStep).not.toHaveBeenCalled();
+  });
+
+  it('rechaza eliminar un step cuando el cliente intenta modificar una rutina asignada', async () => {
+    mockedRepo.findRoutineByStepId.mockResolvedValue(makeRoutine({
+      id: 'routine-assign-1',
+      user_id: 'client-1',
+      assigned_by: 'specialist-1'
+    }));
+
+    await expect(
+      routinesService.deleteStep('step-1', 'client-1', 'user', 'routine-assign-1')
+    ).rejects.toMatchObject({
+      statusCode: 403
+    });
+
+    expect(mockedRepo.removeStep).not.toHaveBeenCalled();
+  });
+
   it('valida ownership de productos antes de asociarlos a un step', async () => {
     mockedRepo.findRoutineByStepId.mockResolvedValue(makeRoutine({
       id: 'routine-1',
@@ -195,7 +282,55 @@ describe('routinesService - ownership de rutinas y pasos', () => {
       name: 'Limpieza inicial',
       category: 'limpieza'
     }));
+    expect(mockedRecordAuditLog).toHaveBeenCalledWith(expect.objectContaining({
+      actorId: 'specialist-1',
+      actorRole: 'specialist',
+      action: 'create',
+      entity: 'routine',
+      entityId: 'routine-assign-1',
+      metadata: expect.objectContaining({
+        changeType: 'routine_step',
+        stepId: 'step-1'
+      })
+    }));
     expect(result?.routine_id).toBe('routine-assign-1');
+  });
+
+  it('audita la eliminacion de un step editable', async () => {
+    mockedRepo.findRoutineByStepId.mockResolvedValue(makeRoutine({
+      id: 'routine-1',
+      user_id: 'user-1',
+      assigned_by: null
+    }));
+    mockedRepo.findStepById.mockResolvedValue({
+      id: 'step-1',
+      routine_id: 'routine-1',
+      name: 'Limpieza',
+      description: null,
+      category: 'limpieza',
+      step_order: 1,
+      is_required: false,
+      created_at: '2026-01-01T00:00:00.000Z',
+      updated_at: '2026-01-01T00:00:00.000Z'
+    });
+    mockedRepo.removeStep.mockResolvedValue(true);
+
+    const result = await routinesService.deleteStep('step-1', 'user-1', 'user', 'routine-1');
+
+    expect(result).toBe(true);
+    expect(mockedRecordAuditLog).toHaveBeenCalledWith(expect.objectContaining({
+      actorId: 'user-1',
+      action: 'delete',
+      entity: 'routine',
+      entityId: 'routine-1',
+      before: expect.objectContaining({
+        id: 'step-1'
+      }),
+      metadata: expect.objectContaining({
+        changeType: 'routine_step',
+        stepName: 'Limpieza'
+      })
+    }));
   });
 });
 

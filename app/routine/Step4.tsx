@@ -1,18 +1,25 @@
-import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
+import { Alert, Platform, View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors } from '@/constants/colors';
 import { Stepper } from '@/components/Stepper';
 import { RoutineSectionCard } from '@/components/RoutineSectionCard';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
-import { getStepsByRoutine } from '@/services/routines';
+import { useRoutineWizard } from '@/hooks/useRoutineWizard';
+import { deleteStep as deleteStepApi } from '@/services/routines';
 import { AppHeader } from '@/components/navigation/AppHeader';
+import {
+  logRoutineWizardWork,
+  markRoutineWizardTransition,
+  useRoutineWizardProfiler
+} from '@/hooks/useRoutineWizardProfiler';
 
 type SectionItem = {
   id: string;
   nombre: string;
   producto: string;
+  category: string;
 };
 
 type Sections = {
@@ -27,56 +34,105 @@ export default function Step4() {
   const router = useRouter();
   const { routineId, assignClientId } = useLocalSearchParams<{ routineId: string; assignClientId?: string }>();
 
-  const [sections, setSections] = useState<Sections>({
-    limpieza: [],
-    tratamientos: [],
-    hidratacion: [],
-    proteccion: [],
-    complementario: []
-  });
+  const { state, loadRoutineState, refreshSteps, removeStepFromState } = useRoutineWizard();
+  useRoutineWizardProfiler('Step4', { assignClientId: Boolean(assignClientId) });
 
-  useFocusEffect(useCallback(() => {
-    if (!routineId) return;
+  useFocusEffect(
+    useCallback(() => {
+      if (!routineId) return;
+      const startedAt = globalThis.performance?.now?.() ?? Date.now();
+      void loadRoutineState(routineId).finally(() => {
+        logRoutineWizardWork('Step4 load routine state on focus', startedAt, { routineId });
+      });
+    }, [loadRoutineState, routineId])
+  );
 
-    const fetchSteps = async () => {
-      try {
-        const steps = await getStepsByRoutine(routineId);
+  const uniqueSteps = useMemo(
+    () => Array.from(new Map(state.steps.map((step) => [step.id, step])).values()),
+    [state.steps]
+  );
 
-        const grouped: Sections = {
-          limpieza: [],
-          tratamientos: [],
-          hidratacion: [],
-          proteccion: [],
-          complementario: []
-        };
-
-        steps.forEach((step) => {
-          const category = (step.category ?? 'complementario') as keyof Sections;
-
-          if (!grouped[category]) return;
-
-          grouped[category].push({
-            id: step.id,
-            nombre: step.name ?? 'Paso',
-            producto: step.description ?? ''
-          });
-        });
-
-        setSections(grouped);
-      } catch (e) {
-        console.error(e);
-      }
+  const sections = useMemo(() => {
+    const grouped: Sections = {
+      limpieza: [],
+      tratamientos: [],
+      hidratacion: [],
+      proteccion: [],
+      complementario: []
     };
 
-    fetchSteps();
-  }, [routineId]));
+    uniqueSteps.forEach((step) => {
+      const category = (step.category ?? 'complementario') as keyof Sections;
+      if (!grouped[category]) return;
 
-  const goToAddStep = (section: string) => {
+      grouped[category].push({
+        id: step.id,
+        nombre: step.name ?? 'Paso',
+        producto: step.description ?? '',
+        category: category
+      });
+    });
+
+    return grouped;
+  }, [uniqueSteps]);
+
+  const goToAddStep = useCallback((section: string) => {
+    if (!routineId) return;
+
     router.push({
       pathname: '/routine/Add-step',
       params: assignClientId ? { section, routineId, assignClientId } : { section, routineId }
     });
-  };
+  }, [assignClientId, routineId, router]);
+
+  const editStep = useCallback((stepId: string, section: string) => {
+    if (!routineId) return;
+
+    router.push({
+      pathname: '/routine/Add-step',
+      params: assignClientId ? { section, routineId, stepId, assignClientId } : { section, routineId, stepId }
+    });
+  }, [assignClientId, routineId, router]);
+
+  const deleteStep = useCallback(async (stepId: string) => {
+    if (!routineId) return;
+
+    removeStepFromState(stepId);
+
+    try {
+      await deleteStepApi(stepId, routineId);
+      await refreshSteps(routineId);
+    } catch (error) {
+      console.error(error);
+      await loadRoutineState(routineId);
+    }
+  }, [loadRoutineState, refreshSteps, removeStepFromState, routineId]);
+
+  const confirmDeleteStep = useCallback((stepId: string) => {
+    const step = uniqueSteps.find((item) => item.id === stepId);
+    const stepName = step?.name ?? 'este paso';
+
+    if (Platform.OS === 'web') {
+      const confirmed = window.confirm(`Eliminar "${stepName}"? Esta accion no se puede deshacer.`);
+      if (confirmed) {
+        void deleteStep(stepId);
+      }
+      return;
+    }
+
+    Alert.alert(
+      'Eliminar paso',
+      `Se eliminara "${stepName}". Esta accion no se puede deshacer.`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Eliminar',
+          style: 'destructive',
+          onPress: () => void deleteStep(stepId)
+        }
+      ]
+    );
+  }, [deleteStep, uniqueSteps]);
 
   return (
     <SafeAreaView style={styles.screen}>
@@ -104,6 +160,8 @@ export default function Step4() {
             icon="spray-bottle"
             steps={sections.limpieza}
             onAddStep={() => goToAddStep('limpieza')}
+            onEditStep={editStep}
+            onDeleteStep={confirmDeleteStep}
           />
 
           <RoutineSectionCard
@@ -112,6 +170,8 @@ export default function Step4() {
             icon="eyedropper"
             steps={sections.tratamientos}
             onAddStep={() => goToAddStep('tratamientos')}
+            onEditStep={editStep}
+            onDeleteStep={confirmDeleteStep}
           />
 
           <RoutineSectionCard
@@ -120,6 +180,8 @@ export default function Step4() {
             icon="water-outline"
             steps={sections.hidratacion}
             onAddStep={() => goToAddStep('hidratacion')}
+            onEditStep={editStep}
+            onDeleteStep={confirmDeleteStep}
           />
 
           <RoutineSectionCard
@@ -128,6 +190,8 @@ export default function Step4() {
             icon="weather-sunny"
             steps={sections.proteccion}
             onAddStep={() => goToAddStep('proteccion')}
+            onEditStep={editStep}
+            onDeleteStep={confirmDeleteStep}
           />
 
           <RoutineSectionCard
@@ -136,17 +200,26 @@ export default function Step4() {
             icon="face-mask"
             steps={sections.complementario}
             onAddStep={() => goToAddStep('complementario')}
+            onEditStep={editStep}
+            onDeleteStep={confirmDeleteStep}
           />
         </ScrollView>
 
         <Pressable
+          accessibilityLabel="Continuar a productos de rutina"
+          accessibilityRole="button"
           style={styles.button}
-          onPress={() =>
+          onPress={() => {
+            markRoutineWizardTransition('Step4', 'Step5', {
+              routineId,
+              assignClientId: Boolean(assignClientId)
+            });
+
             router.push({
-              pathname: '/routine/Step6-confirm',
+              pathname: '/routine/Step5-products',
               params: assignClientId ? { routineId, assignClientId } : { routineId }
-            })
-          }
+            });
+          }}
         >
           <Text style={styles.buttonText}>Continuar</Text>
         </Pressable>

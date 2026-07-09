@@ -26,6 +26,8 @@ export function ProductCard({ product, onRemove }: Props) {
       </View>
       <Pressable
         onPress={() => onRemove(product.id)}
+        accessibilityLabel={`Quitar producto ${product.name}`}
+        accessibilityRole="button"
         hitSlop={8}
         style={({ pressed }) => [styles.removeBtn, { opacity: pressed ? 0.6 : 1 }]}
       >

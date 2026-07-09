@@ -122,7 +122,7 @@ export function useRoutine() {
   const removeStep = async (id: string) => {
     try {
       setError(null);
-      await deleteStep(id);
+      await deleteStep(id, routine?.id);
 
       if (routine) {
         const updatedRoutine = await getRoutineById(routine.id);

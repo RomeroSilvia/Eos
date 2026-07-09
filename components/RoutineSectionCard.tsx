@@ -1,5 +1,6 @@
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { memo } from 'react';
 import { colors } from '@/constants/colors';
 import { RoutineStepItem } from './RoutineStepItem';
 
@@ -7,6 +8,7 @@ type Step = {
   id: string;
   nombre: string;
   producto?: string;
+  category: string;
 };
 
 type Props = {
@@ -14,15 +16,19 @@ type Props = {
   description: string;
   icon: string;
   steps: Step[];
-  onAddStep: () => void;
+  onAddStep?: () => void;
+  onEditStep?: (stepId: string, category: string) => void;
+  onDeleteStep?: (stepId: string) => void;
 };
 
-export function RoutineSectionCard({
+function RoutineSectionCardBase({
   title,
   description,
   icon,
   steps,
-  onAddStep
+  onAddStep,
+  onEditStep,
+  onDeleteStep
 }: Props) {
   return (
     <View style={styles.card}>
@@ -38,7 +44,14 @@ export function RoutineSectionCard({
           </View>
         </View>
 
-        <MaterialCommunityIcons name="dots-vertical" size={20} color={colors.textSecondary} />
+        {(onAddStep || onEditStep || onDeleteStep) && (
+          <MaterialCommunityIcons
+            accessible={false}
+            name="dots-vertical"
+            size={20}
+            color={colors.textSecondary}
+          />
+        )}
       </View>
 
       {steps.length > 0 && (
@@ -49,17 +62,28 @@ export function RoutineSectionCard({
               index={index + 1}
               title={step.nombre}
               product={step.producto}
+              onPress={onEditStep ? () => onEditStep(step.id, step.category) : undefined}
+              onDelete={onDeleteStep ? () => onDeleteStep(step.id) : undefined}
             />
           ))}
         </View>
       )}
 
-      <Pressable style={styles.add} onPress={onAddStep}>
-        <Text style={styles.addText}>+ Añadir paso</Text>
-      </Pressable>
+      {onAddStep && (
+        <Pressable
+          accessibilityLabel={`Añadir paso en ${title}`}
+          accessibilityRole="button"
+          style={styles.add}
+          onPress={onAddStep}
+        >
+          <Text style={styles.addText}>+ Añadir paso</Text>
+        </Pressable>
+      )}
     </View>
   );
 }
+
+export const RoutineSectionCard = memo(RoutineSectionCardBase);
 
 const styles = StyleSheet.create({
   card: {
