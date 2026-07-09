@@ -59,8 +59,14 @@ export const routinesService = {
     });
   },
 
-  updateStep: async (stepId: string, userId: string, role: Role, data: RoutineStepUpdate) => {
-    await assertStepEditable(stepId, userId, role);
+  updateStep: async (
+    stepId: string,
+    userId: string,
+    role: Role,
+    data: RoutineStepUpdate,
+    expectedRoutineId?: string
+  ) => {
+    await assertStepEditable(stepId, userId, role, expectedRoutineId);
 
     return routinesRepository.updateStep(stepId, {
       ...data,
@@ -68,8 +74,8 @@ export const routinesService = {
     });
   },
 
-  deleteStep: async (stepId: string, userId: string, role: Role) => {
-    await assertStepEditable(stepId, userId, role);
+  deleteStep: async (stepId: string, userId: string, role: Role, expectedRoutineId?: string) => {
+    await assertStepEditable(stepId, userId, role, expectedRoutineId);
     return routinesRepository.removeStep(stepId);
   },
 
@@ -157,10 +163,19 @@ async function assertStepReadable(stepId: string, userId: string, role: Role): P
   return ensureRoutineReadable(routine, userId, role);
 }
 
-async function assertStepEditable(stepId: string, userId: string, role: Role): Promise<RoutineRow> {
+async function assertStepEditable(
+  stepId: string,
+  userId: string,
+  role: Role,
+  expectedRoutineId?: string
+): Promise<RoutineRow> {
   const routine = await routinesRepository.findRoutineByStepId(stepId);
 
   if (!routine) {
+    throw new ApiError(404, 'Paso de rutina no encontrado.');
+  }
+
+  if (expectedRoutineId && routine.id !== expectedRoutineId) {
     throw new ApiError(404, 'Paso de rutina no encontrado.');
   }
 
