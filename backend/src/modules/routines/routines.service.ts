@@ -1,8 +1,10 @@
 import { routinesRepository } from './routines.repository';
 import { ApiError } from '../../utils/ApiError';
+import { recordAuditLog } from '../audit/audit.service';
 import type {
   RoutineInsert,
   RoutineRow,
+  RoutineStepRow,
   RoutineUpdate,
   RoutineStepInsert,
   RoutineStepUpdate
@@ -52,11 +54,23 @@ export const routinesService = {
     await assertRoutineEditable(routineId, userId, role);
     const stepOrder = data.step_order ?? await getNextStepOrder(routineId, data.category ?? null);
 
-    return routinesRepository.createStep({
+    const created = await routinesRepository.createStep({
       ...data,
       routine_id: routineId,
       step_order: stepOrder
     });
+
+    if (created) {
+      recordRoutineStepAudit({
+        actorId: userId,
+        actorRole: role,
+        action: 'create',
+        routineId,
+        after: created
+      });
+    }
+
+    return created;
   },
 
   updateStep: async (
@@ -66,17 +80,44 @@ export const routinesService = {
     data: RoutineStepUpdate,
     expectedRoutineId?: string
   ) => {
-    await assertStepEditable(stepId, userId, role, expectedRoutineId);
+    const routine = await assertStepEditable(stepId, userId, role, expectedRoutineId);
+    const before = await routinesRepository.findStepById(stepId);
 
-    return routinesRepository.updateStep(stepId, {
+    const updated = await routinesRepository.updateStep(stepId, {
       ...data,
       updated_at: new Date().toISOString()
     });
+
+    if (updated) {
+      recordRoutineStepAudit({
+        actorId: userId,
+        actorRole: role,
+        action: 'update',
+        routineId: routine.id,
+        before,
+        after: updated
+      });
+    }
+
+    return updated;
   },
 
   deleteStep: async (stepId: string, userId: string, role: Role, expectedRoutineId?: string) => {
-    await assertStepEditable(stepId, userId, role, expectedRoutineId);
-    return routinesRepository.removeStep(stepId);
+    const routine = await assertStepEditable(stepId, userId, role, expectedRoutineId);
+    const before = await routinesRepository.findStepById(stepId);
+    const removed = await routinesRepository.removeStep(stepId);
+
+    if (removed) {
+      recordRoutineStepAudit({
+        actorId: userId,
+        actorRole: role,
+        action: 'delete',
+        routineId: routine.id,
+        before
+      });
+    }
+
+    return removed;
   },
 
   getProductsByStep: async (stepId: string, userId: string, role: Role) => {
@@ -101,6 +142,33 @@ export const routinesService = {
     return routinesRepository.detachProductFromStep(stepId, productId);
   }
 };
+
+function recordRoutineStepAudit(params: {
+  actorId: string;
+  actorRole: Role;
+  action: 'create' | 'update' | 'delete';
+  routineId: string;
+  before?: RoutineStepRow | null;
+  after?: RoutineStepRow | null;
+}): void {
+  const step = params.after ?? params.before ?? null;
+
+  void recordAuditLog({
+    actorId: params.actorId,
+    actorRole: params.actorRole,
+    action: params.action,
+    entity: 'routine',
+    entityId: params.routineId,
+    before: params.before ?? undefined,
+    after: params.after ?? undefined,
+    metadata: {
+      changeType: 'routine_step',
+      stepId: step?.id ?? null,
+      stepName: step?.name ?? null,
+      category: step?.category ?? null
+    }
+  });
+}
 
 async function getNextStepOrder(routineId: string, category: string | null) {
   const steps = await routinesRepository.findStepsByRoutineId(routineId);

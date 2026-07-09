@@ -1,5 +1,34 @@
 # E3 Contracts
 
+## M1 - Rutinas Avanzadas
+
+M1 consume el contrato de auditoria de M4 en modo best-effort para registrar cambios de pasos.
+
+### Audit
+
+Las operaciones backend de pasos emiten `recordAuditLog`:
+
+- `POST /api/routines/:id/steps` -> `action: 'create'`
+- `PATCH /api/routines/:id/steps/:stepId` -> `action: 'update'`
+- `DELETE /api/routines/:id/steps/:stepId` -> `action: 'delete'`
+
+Como el contrato M4 no define `routine_step` como entidad propia, M1 registra:
+
+```ts
+{
+  entity: 'routine',
+  entityId: routineId,
+  metadata: {
+    changeType: 'routine_step',
+    stepId,
+    stepName,
+    category
+  }
+}
+```
+
+La auditoria no bloquea el flujo principal si falla.
+
 ## M3 - Centros Esteticos y Tablero Admin
 
 M3 publica el contrato de centros usado por pantallas admin y por modulos posteriores de reportes.

@@ -115,6 +115,17 @@ export const routinesRepository = {
     return routinesRepository.findRawById(data.routine_id);
   },
 
+  findStepById: async (stepId: string): Promise<RoutineStepRow | null> => {
+    const { data, error } = await supabase
+      .from('routine_steps')
+      .select('*')
+      .eq('id', stepId)
+      .maybeSingle();
+
+    if (error) throw error;
+    return data ?? null;
+  },
+
   findProductsByIds: async (productIds: string[]): Promise<ProductRow[]> => {
     if (productIds.length === 0) {
       return [];
