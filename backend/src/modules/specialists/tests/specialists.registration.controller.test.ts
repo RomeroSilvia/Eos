@@ -69,7 +69,10 @@ describe('specialistController', () => {
         rejection_reason: 'Documento ilegible',
         specialty: 'dermatologo',
         license_number: 'MN-12345',
-        full_name: 'Marta Lopez'
+        full_name: 'Marta Lopez',
+        center_id: null,
+        centerId: null,
+        center: null
       });
 
       await getSpecialistStatus(
@@ -85,7 +88,10 @@ describe('specialistController', () => {
           rejection_reason: 'Documento ilegible',
           specialty: 'dermatologo',
           license_number: 'MN-12345',
-          full_name: 'Marta Lopez'
+          full_name: 'Marta Lopez',
+          center_id: null,
+          centerId: null,
+          center: null
         }
       });
       expect(json.mock.calls[0][0].specialistProfile).not.toHaveProperty('dni_photo_url');

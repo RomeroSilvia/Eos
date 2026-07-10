@@ -25,3 +25,18 @@ export type ChatMessageResponse = Omit<ChatMessageRow, 'media_path'> & {
   mediaUrl?: string | null;
   mediaAvailable?: boolean;
 };
+
+export type ChatTokenSummary = {
+  used: number;
+  limit: number | null;
+  remaining: number | null;
+  isLimited: boolean;
+};
+
+export type ChatAccessSummary = {
+  hasActiveSubscription: boolean;
+  videoCallsEnabled: boolean;
+  tokenResetWindowHours: number;
+  messageTokens: ChatTokenSummary;
+  imageTokens: ChatTokenSummary;
+};

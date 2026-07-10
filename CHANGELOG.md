@@ -13,9 +13,9 @@
 - Edicion completa de pasos en rutinas existentes con endpoints anidados, validaciones de permisos y auditoria best-effort.
 - Accesibilidad del wizard reforzada con labels, roles y estados accesibles.
 - M5: Planes/Suscripciones y Metricas Globales.
-- Backend nuevo: modulos `subscriptions` y `reports` con rutas admin protegidas.
+- Backend nuevo: modulo `subscriptions` con rutas admin protegidas.
 - Nuevas migraciones E3 para `subscription_plans`, `subscriptions` y vista global de metricas.
-- Frontend admin: pantallas `/(tabs-admin)/plans` y `/(tabs-admin)/reports`.
+- Frontend admin: pantallas `/(tabs-admin)/plans` y `/(tabs-admin)/metrics`.
 - Documentacion nueva: `docs/e3-contracts.md`, `docs/e3-supabase-security.md` y skill `agents/skills/e3-subscriptions-reports/SKILL.md`.
 
 ## 0.1.0 - Scaffold inicial

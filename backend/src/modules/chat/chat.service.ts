@@ -2,7 +2,9 @@ import { ApiError } from '../../utils/ApiError';
 import { env } from '../../config/env';
 import { chatRepository } from './chat.repository';
 import { notificationsService } from '../notifications/notifications.service';
-import type { ChatMessageResponse, ChatMessageRow } from './chat.types';
+import { subscriptionsRepository } from '../subscriptions/subscriptions.repository';
+import type { SubscriptionPlanFeatures } from '../subscriptions/subscriptions.types';
+import type { ChatAccessSummary, ChatMessageResponse, ChatMessageRow, ChatTokenSummary } from './chat.types';
 import {
   ALLOWED_IMAGE_MIME_TYPES,
   CHAT_MEDIA_BUCKET,
@@ -19,6 +21,15 @@ type ResolveRelationInput = {
   relationId?: string;
 };
 
+type ChatSubscriptionContext = {
+  hasSubscription: boolean;
+  features: SubscriptionPlanFeatures;
+};
+
+const NO_PLAN_MESSAGE_TOKENS_PER_MONTH = 10;
+const NO_PLAN_IMAGE_TOKENS_PER_MONTH = 2;
+const TOKEN_RESET_WINDOW_HOURS = 24;
+
 export const chatService = {
   getHealth: () => ({
     module: 'chat',
@@ -29,14 +40,17 @@ export const chatService = {
     const relation = await resolveRelation(input);
     const limit = normalizeLimit(input.limit);
     const participant = await resolveParticipant(relation, input.userId);
+    const subscription = await resolveChatSubscriptionForUser(input.userId);
 
     const messages = await chatRepository.findMessages(relation.id, limit, input.before);
     const messagesWithMedia = await attachSignedMediaUrls(messages);
+    const access = await buildChatAccessSummary(input.userId, subscription);
 
     return {
       relationId: relation.id,
       participant,
-      messages: messagesWithMedia
+      messages: messagesWithMedia,
+      access
     };
   },
 
@@ -56,47 +70,75 @@ export const chatService = {
 
   sendMessage: async (input: ResolveRelationInput & { content: string }) => {
     const relation = await resolveRelation(input);
+    const subscription = await resolveChatSubscriptionForUser(input.userId);
+    await enforceMessageTokens(subscription, input.userId);
     const content = normalizeContent(input.content);
 
-    const message = await chatRepository.createMessage({
-      relation_id: relation.id,
-      sender_id: input.userId,
-      content,
-      message_type: 'text',
-      media_path: null,
-      media_mime_type: null,
-      media_size: null
-    });
+    let message: ChatMessageRow;
+    try {
+      message = await chatRepository.createMessage({
+        relation_id: relation.id,
+        sender_id: input.userId,
+        content,
+        message_type: 'text',
+        media_path: null,
+        media_mime_type: null,
+        media_size: null
+      });
+    } catch (error) {
+      if (isChatInsertRlsError(error)) {
+        throw new ApiError(403, 'No tenes permisos para enviar mensajes en este chat.');
+      }
+
+      throw error;
+    }
 
     notifyRecipientInBackground(relation, input.userId, 'Nuevo mensaje', 'Tenes un nuevo mensaje en el chat.');
 
+    const access = await buildChatAccessSummary(input.userId, subscription);
+
     return {
       relationId: relation.id,
-      message: sanitizeMessage(message)
+      message: sanitizeMessage(message),
+      access
     };
   },
 
   startVideoCall: async (input: ResolveRelationInput) => {
     const relation = await resolveRelation(input);
+    const subscription = await resolveChatSubscriptionForUser(input.userId);
+    enforceVideoCallAccess(subscription);
     const roomName = buildCallRoomName(relation.id);
     const callUrl = buildVideoCallUrl(roomName);
 
-    const message = await chatRepository.createMessage({
-      relation_id: relation.id,
-      sender_id: input.userId,
-      content: JSON.stringify({
-        kind: 'call_invite',
-        title: 'Videollamada iniciada',
-        url: callUrl
-      })
-    });
+    let message: ChatMessageRow;
+    try {
+      message = await chatRepository.createMessage({
+        relation_id: relation.id,
+        sender_id: input.userId,
+        content: JSON.stringify({
+          kind: 'call_invite',
+          title: 'Videollamada iniciada',
+          url: callUrl
+        })
+      });
+    } catch (error) {
+      if (isChatInsertRlsError(error)) {
+        throw new ApiError(403, 'No tenes permisos para iniciar videollamadas en este chat.');
+      }
+
+      throw error;
+    }
 
     notifyRecipientInBackground(relation, input.userId, 'Videollamada iniciada', 'Te invitaron a una videollamada.');
+
+    const access = await buildChatAccessSummary(input.userId, subscription);
 
     return {
       relationId: relation.id,
       callUrl,
-      message: sanitizeMessage(message)
+      message: sanitizeMessage(message),
+      access
     };
   },
 
@@ -104,6 +146,8 @@ export const chatService = {
     input: ResolveRelationInput & { content?: string; file: Express.Multer.File }
   ) => {
     const relation = await resolveRelation(input);
+    const subscription = await resolveChatSubscriptionForUser(input.userId);
+    await enforceImageTokens(subscription, input.userId);
     const content = normalizeOptionalContent(input.content);
     const file = validateImageFile(input.file);
     const mimeType = resolveImageMimeType(file);
@@ -135,9 +179,12 @@ export const chatService = {
 
       notifyRecipientInBackground(relation, input.userId, 'Nueva imagen', 'Te enviaron una imagen en el chat.');
 
+      const access = await buildChatAccessSummary(input.userId, subscription);
+
       return {
         relationId: relation.id,
-        message: await attachSignedMediaUrl(message)
+        message: await attachSignedMediaUrl(message),
+        access
       };
     } catch (error) {
       if (uploaded) {
@@ -343,6 +390,146 @@ function detectImageMimeType(buffer: Buffer): string | null {
   }
 
   return null;
+}
+
+async function resolveChatSubscriptionForUser(userId: string): Promise<ChatSubscriptionContext> {
+  const row = await subscriptionsRepository.findCurrentSubscriptionByUserId(userId);
+
+  if (!row?.subscription_plans) {
+    return {
+      hasSubscription: false,
+      features: {}
+    };
+  }
+
+  return {
+    hasSubscription: true,
+    features: (row.subscription_plans.features ?? {}) as SubscriptionPlanFeatures
+  };
+}
+
+async function buildChatAccessSummary(userId: string, context: ChatSubscriptionContext): Promise<ChatAccessSummary> {
+  const messageLimit = resolveFeatureLimit(context, 'messageTokensPerMonth', NO_PLAN_MESSAGE_TOKENS_PER_MONTH);
+  const imageLimit = resolveFeatureLimit(context, 'imageTokensPerMonth', NO_PLAN_IMAGE_TOKENS_PER_MONTH);
+
+  const range = getRolling24HourRange();
+  const [usedMessages, usedImages] = await Promise.all([
+    chatRepository.countMonthlyTextMessagesBySender({
+      senderId: userId,
+      fromIso: range.fromIso,
+      toIso: range.toIso
+    }),
+    chatRepository.countMonthlyImageMessagesBySender({
+      senderId: userId,
+      fromIso: range.fromIso,
+      toIso: range.toIso
+    })
+  ]);
+
+  return {
+    hasActiveSubscription: context.hasSubscription,
+    videoCallsEnabled: context.hasSubscription && context.features.videoCallsEnabled !== false,
+    tokenResetWindowHours: TOKEN_RESET_WINDOW_HOURS,
+    messageTokens: buildTokenSummary(messageLimit, usedMessages),
+    imageTokens: buildTokenSummary(imageLimit, usedImages)
+  };
+}
+
+function buildTokenSummary(limit: number | null, used: number): ChatTokenSummary {
+  if (limit === null) {
+    return {
+      used,
+      limit: null,
+      remaining: null,
+      isLimited: false
+    };
+  }
+
+  return {
+    used,
+    limit,
+    remaining: Math.max(limit - used, 0),
+    isLimited: true
+  };
+}
+
+function enforceVideoCallAccess(context: ChatSubscriptionContext): void {
+  if (!context.hasSubscription) {
+    throw new ApiError(403, 'Necesitas un plan activo para iniciar videollamadas.');
+  }
+
+  if (context.features.videoCallsEnabled === false) {
+    throw new ApiError(403, 'Tu plan actual no incluye videollamadas.');
+  }
+}
+
+async function enforceMessageTokens(context: ChatSubscriptionContext, senderId: string): Promise<void> {
+  const monthlyLimit = resolveFeatureLimit(context, 'messageTokensPerMonth', NO_PLAN_MESSAGE_TOKENS_PER_MONTH);
+  if (monthlyLimit === null) {
+    return;
+  }
+
+  const range = getRolling24HourRange();
+  const used = await chatRepository.countMonthlyTextMessagesBySender({
+    senderId,
+    fromIso: range.fromIso,
+    toIso: range.toIso
+  });
+
+  if (used >= monthlyLimit) {
+    throw new ApiError(403, 'Superaste tus tokens de mensajes en las ultimas 24 horas.');
+  }
+}
+
+async function enforceImageTokens(context: ChatSubscriptionContext, senderId: string): Promise<void> {
+  const monthlyLimit = resolveFeatureLimit(context, 'imageTokensPerMonth', NO_PLAN_IMAGE_TOKENS_PER_MONTH);
+  if (monthlyLimit === null) {
+    return;
+  }
+
+  const range = getRolling24HourRange();
+  const used = await chatRepository.countMonthlyImageMessagesBySender({
+    senderId,
+    fromIso: range.fromIso,
+    toIso: range.toIso
+  });
+
+  if (used >= monthlyLimit) {
+    throw new ApiError(403, 'Superaste tus tokens de imagenes en las ultimas 24 horas.');
+  }
+}
+
+function resolveFeatureLimit(
+  context: ChatSubscriptionContext,
+  key: 'messageTokensPerMonth' | 'imageTokensPerMonth',
+  fallbackWhenNoPlan: number
+): number | null {
+  if (!context.hasSubscription) {
+    return fallbackWhenNoPlan;
+  }
+
+  const rawValue = context.features[key];
+  if (typeof rawValue === 'undefined' || rawValue === null) {
+    return null;
+  }
+
+  const asNumber = Number(rawValue);
+  if (!Number.isFinite(asNumber) || asNumber < 0) {
+    return null;
+  }
+
+  return Math.floor(asNumber);
+}
+
+function getRolling24HourRange(): { fromIso: string; toIso: string } {
+  const now = new Date();
+  const to = now;
+  const from = new Date(now.getTime() - TOKEN_RESET_WINDOW_HOURS * 60 * 60 * 1000);
+
+  return {
+    fromIso: from.toISOString(),
+    toIso: to.toISOString()
+  };
 }
 
 async function attachSignedMediaUrls(messages: ChatMessageRow[]): Promise<ChatMessageResponse[]> {
@@ -564,6 +751,25 @@ function isMissingChatMediaColumnsError(error: unknown): boolean {
       searchable.includes('media_size')
     )
   );
+}
+
+function isChatInsertRlsError(error: unknown): boolean {
+  if (!error || typeof error !== 'object') {
+    return false;
+  }
+
+  const typedError = error as {
+    code?: string;
+    message?: string;
+    details?: string;
+  };
+
+  if (typedError.code !== '42501') {
+    return false;
+  }
+
+  const searchable = `${typedError.message ?? ''} ${typedError.details ?? ''}`.toLowerCase();
+  return searchable.includes('chat_messages') || searchable.includes('row-level security');
 }
 
 async function resolveParticipant(

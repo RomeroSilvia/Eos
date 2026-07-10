@@ -11,6 +11,10 @@ type MockedSpecialist = {
   specialistProfile: {
     specialty: 'dermatologo' | 'cosmetologo';
     license_status: 'verified';
+    center: {
+      id: string;
+      name: string;
+    } | null;
   };
 };
 
@@ -68,7 +72,8 @@ function makeSpecialist(id = 'specialist-1'): MockedSpecialist {
     },
     specialistProfile: {
       specialty: 'dermatologo',
-      license_status: 'verified'
+      license_status: 'verified',
+      center: null
     }
   };
 }
@@ -91,7 +96,8 @@ describe('specialistsDirectoryService', () => {
           id: 'specialist-1',
           fullName: 'Dra. Ana Perez',
           specialty: 'dermatologo',
-          licenseStatus: 'verified'
+          licenseStatus: 'verified',
+          center: null
         }
       ]);
       expect(result[0]).not.toHaveProperty('email');

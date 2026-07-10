@@ -1,12 +1,23 @@
 export type SubscriptionOwnerType = 'user' | 'center';
 export type SubscriptionStatus = 'active' | 'pending' | 'canceled' | 'expired' | 'past_due';
 
+export type SubscriptionPlanFeatures = {
+  durationDays?: number;
+  chatEnabled?: boolean;
+  chatImagesEnabled?: boolean;
+  videoCallsEnabled?: boolean;
+  maxMonthlyVideoCalls?: number;
+  messageTokensPerMonth?: number;
+  imageTokensPerMonth?: number;
+  canAccessGroupSessions?: boolean;
+};
+
 export type SubscriptionPlan = {
   id: string;
   name: string;
   price: number;
   level: string;
-  features: Record<string, unknown>;
+  features: SubscriptionPlanFeatures;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
@@ -29,7 +40,7 @@ export type CreateSubscriptionPlanInput = {
   name: string;
   price: number;
   level: string;
-  features?: Record<string, unknown>;
+  features?: SubscriptionPlanFeatures;
 };
 
 export type UpdateSubscriptionPlanInput = Partial<CreateSubscriptionPlanInput> & {

@@ -1,6 +1,45 @@
 import { supabase } from '../../config/supabase';
 
 export const subscriptionsRepository = {
+  findUserById: async (userId: string): Promise<any | null> => {
+    const db = supabase as any;
+    const { data, error } = await db
+      .from('profiles')
+      .select('id, role')
+      .eq('id', userId)
+      .eq('role', 'user')
+      .maybeSingle();
+
+    if (error) throw error;
+    return data ?? null;
+  },
+
+  findActiveCenterById: async (centerId: string): Promise<any | null> => {
+    const db = supabase as any;
+    const { data, error } = await db
+      .from('centers')
+      .select('id, is_active')
+      .eq('id', centerId)
+      .eq('is_active', true)
+      .maybeSingle();
+
+    if (error) throw error;
+    return data ?? null;
+  },
+
+  findAdminCenterAssignment: async (adminUserId: string, centerId: string): Promise<any | null> => {
+    const db = supabase as any;
+    const { data, error } = await db
+      .from('center_admins')
+      .select('id, user_id, center_id')
+      .eq('user_id', adminUserId)
+      .eq('center_id', centerId)
+      .maybeSingle();
+
+    if (error) throw error;
+    return data ?? null;
+  },
+
   findCurrentSubscriptionByUserId: async (userId: string): Promise<any | null> => {
     const db = supabase as any;
     const { data, error } = await db

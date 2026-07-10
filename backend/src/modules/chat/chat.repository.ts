@@ -21,6 +21,12 @@ type UploadFileInput = {
   contentType: string;
 };
 
+type MonthlyMessageCountInput = {
+  senderId: string;
+  fromIso: string;
+  toIso: string;
+};
+
 export const chatRepository = {
   findActiveRelationByClientId: async (clientId: string): Promise<RelationRow | null> => {
     const { data, error } = await supabase
@@ -146,5 +152,31 @@ export const chatRepository = {
 
     if (error) throw error;
     return data ?? null;
+  },
+
+  countMonthlyTextMessagesBySender: async (input: MonthlyMessageCountInput): Promise<number> => {
+    const { count, error } = await supabase
+      .from('chat_messages')
+      .select('id', { count: 'exact', head: true })
+      .eq('sender_id', input.senderId)
+      .eq('message_type', 'text')
+      .gte('created_at', input.fromIso)
+      .lt('created_at', input.toIso);
+
+    if (error) throw error;
+    return count ?? 0;
+  },
+
+  countMonthlyImageMessagesBySender: async (input: MonthlyMessageCountInput): Promise<number> => {
+    const { count, error } = await supabase
+      .from('chat_messages')
+      .select('id', { count: 'exact', head: true })
+      .eq('sender_id', input.senderId)
+      .eq('message_type', 'image')
+      .gte('created_at', input.fromIso)
+      .lt('created_at', input.toIso);
+
+    if (error) throw error;
+    return count ?? 0;
   }
 };

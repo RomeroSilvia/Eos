@@ -25,7 +25,8 @@ import {
   updateSubscriptionPlan,
   type AssignableUser,
   type Subscription,
-  type SubscriptionPlan
+  type SubscriptionPlan,
+  type SubscriptionPlanFeatures
 } from '@/services/subscriptions';
 
 const PLAN_LEVEL_OPTIONS = ['basico', 'medio', 'premium'] as const;
@@ -35,6 +36,17 @@ type PlanFormErrors = {
   level?: string;
   price?: string;
   durationDays?: string;
+  maxMonthlyVideoCalls?: string;
+  messageTokensPerMonth?: string;
+  imageTokensPerMonth?: string;
+};
+type PlanFeatureFormValues = {
+  chatEnabled: boolean;
+  chatImagesEnabled: boolean;
+  videoCallsEnabled: boolean;
+  maxMonthlyVideoCalls: string;
+  messageTokensPerMonth: string;
+  imageTokensPerMonth: string;
 };
 type PlanFormValues = {
   name: string;
@@ -58,6 +70,12 @@ export default function AdminPlansScreen() {
   const [newPlanLevel, setNewPlanLevel] = useState<PlanLevelOption>('premium');
   const [newPlanPrice, setNewPlanPrice] = useState('');
   const [newPlanDurationDays, setNewPlanDurationDays] = useState('');
+  const [newPlanChatEnabled, setNewPlanChatEnabled] = useState(false);
+  const [newPlanChatImagesEnabled, setNewPlanChatImagesEnabled] = useState(false);
+  const [newPlanVideoCallsEnabled, setNewPlanVideoCallsEnabled] = useState(false);
+  const [newPlanMaxMonthlyVideoCalls, setNewPlanMaxMonthlyVideoCalls] = useState('');
+  const [newPlanMessageTokensPerMonth, setNewPlanMessageTokensPerMonth] = useState('');
+  const [newPlanImageTokensPerMonth, setNewPlanImageTokensPerMonth] = useState('');
   const [planFormMode, setPlanFormMode] = useState<'create' | 'edit'>('create');
   const [editingPlanId, setEditingPlanId] = useState<string>('');
   const [isEditFormEnabled, setIsEditFormEnabled] = useState(false);
@@ -65,12 +83,17 @@ export default function AdminPlansScreen() {
   const [editPlanLevel, setEditPlanLevel] = useState<PlanLevelOption>('premium');
   const [editPlanPrice, setEditPlanPrice] = useState('');
   const [editPlanDurationDays, setEditPlanDurationDays] = useState('');
+  const [editPlanChatEnabled, setEditPlanChatEnabled] = useState(false);
+  const [editPlanChatImagesEnabled, setEditPlanChatImagesEnabled] = useState(false);
+  const [editPlanVideoCallsEnabled, setEditPlanVideoCallsEnabled] = useState(false);
+  const [editPlanMaxMonthlyVideoCalls, setEditPlanMaxMonthlyVideoCalls] = useState('');
+  const [editPlanMessageTokensPerMonth, setEditPlanMessageTokensPerMonth] = useState('');
+  const [editPlanImageTokensPerMonth, setEditPlanImageTokensPerMonth] = useState('');
   const [editPlanIsActive, setEditPlanIsActive] = useState(true);
   const [editPlanSearchQuery, setEditPlanSearchQuery] = useState('');
   const [editPlanSearchResults, setEditPlanSearchResults] = useState<SubscriptionPlan[]>([]);
   const [isSearchingEditPlans, setIsSearchingEditPlans] = useState(false);
 
-  const [ownerType, setOwnerType] = useState<'user' | 'center'>('user');
   const [ownerId, setOwnerId] = useState('');
   const [ownerEmailQuery, setOwnerEmailQuery] = useState('');
   const [showUserSearchResults, setShowUserSearchResults] = useState(false);
@@ -82,12 +105,7 @@ export default function AdminPlansScreen() {
   const [planSearchResults, setPlanSearchResults] = useState<SubscriptionPlan[]>([]);
   const [isSearchingPlans, setIsSearchingPlans] = useState(false);
 
-  const [planFormErrors, setPlanFormErrors] = useState<{
-    name?: string;
-    level?: string;
-    price?: string;
-    durationDays?: string;
-  }>({});
+  const [planFormErrors, setPlanFormErrors] = useState<PlanFormErrors>({});
   const [assignFormErrors, setAssignFormErrors] = useState<{
     ownerId?: string;
     planId?: string;
@@ -124,13 +142,6 @@ export default function AdminPlansScreen() {
   );
 
   useEffect(() => {
-    if (ownerType !== 'user') {
-      setUserSearchResults([]);
-      setOwnerEmailQuery('');
-      setIsSearchingUsers(false);
-      return;
-    }
-
     const normalizedQuery = ownerEmailQuery.trim();
     if (normalizedQuery.length < 3) {
       setUserSearchResults([]);
@@ -164,9 +175,9 @@ export default function AdminPlansScreen() {
       isCancelled = true;
       clearTimeout(timeoutId);
     };
-  }, [ownerEmailQuery, ownerType]);
+  }, [ownerEmailQuery]);
 
-  const activePlans = useMemo(() => plans.filter((plan) => plan.isActive), [plans]);
+  const activePlans = useMemo(() => plans.filter((plan) => plan.isActive === true), [plans]);
 
   useEffect(() => {
     const normalizedQuery = planSearchQuery.trim().toLowerCase();
@@ -236,6 +247,10 @@ export default function AdminPlansScreen() {
 
     return counts;
   }, [subscriptions]);
+  const userSubscriptions = useMemo(
+    () => subscriptions.filter((subscription) => subscription.ownerType === 'user'),
+    [subscriptions]
+  );
   const hasPlanSearchQuery = planSearchQuery.trim().length > 0;
   const hasOwnerEmailQuery = ownerEmailQuery.trim().length > 0;
   const hasEditPlanSearchQuery = editPlanSearchQuery.trim().length > 0;
@@ -243,7 +258,10 @@ export default function AdminPlansScreen() {
   async function handleCreatePlan() {
     const parsedPrice = Number(newPlanPrice);
     const parsedDurationDays = newPlanDurationDays.trim() ? Number(newPlanDurationDays) : null;
-    const nextErrors: { name?: string; level?: string; price?: string; durationDays?: string } = {};
+    const parsedMaxMonthlyVideoCalls = newPlanMaxMonthlyVideoCalls.trim() ? Number(newPlanMaxMonthlyVideoCalls) : null;
+    const parsedMessageTokensPerMonth = newPlanMessageTokensPerMonth.trim() ? Number(newPlanMessageTokensPerMonth) : null;
+    const parsedImageTokensPerMonth = newPlanImageTokensPerMonth.trim() ? Number(newPlanImageTokensPerMonth) : null;
+    const nextErrors: PlanFormErrors = {};
 
     if (!newPlanName.trim()) {
       nextErrors.name = 'Ingresa un nombre para el plan.';
@@ -264,6 +282,27 @@ export default function AdminPlansScreen() {
       nextErrors.durationDays = 'Ingresa una duracion valida en dias (numero entero mayor a 0).';
     }
 
+    if (
+      parsedMaxMonthlyVideoCalls !== null &&
+      (!Number.isFinite(parsedMaxMonthlyVideoCalls) || parsedMaxMonthlyVideoCalls < 0 || !Number.isInteger(parsedMaxMonthlyVideoCalls))
+    ) {
+      nextErrors.maxMonthlyVideoCalls = 'Ingresa un maximo de videollamadas valido (numero entero mayor o igual a 0).';
+    }
+
+    if (
+      parsedMessageTokensPerMonth !== null &&
+      (!Number.isFinite(parsedMessageTokensPerMonth) || parsedMessageTokensPerMonth < 0 || !Number.isInteger(parsedMessageTokensPerMonth))
+    ) {
+      nextErrors.messageTokensPerMonth = 'Ingresa una cantidad valida de tokens de mensaje (entero mayor o igual a 0).';
+    }
+
+    if (
+      parsedImageTokensPerMonth !== null &&
+      (!Number.isFinite(parsedImageTokensPerMonth) || parsedImageTokensPerMonth < 0 || !Number.isInteger(parsedImageTokensPerMonth))
+    ) {
+      nextErrors.imageTokensPerMonth = 'Ingresa una cantidad valida de tokens de imagen (entero mayor o igual a 0).';
+    }
+
     if (Object.keys(nextErrors).length > 0) {
       setPlanFormErrors(nextErrors);
       return;
@@ -278,11 +317,17 @@ export default function AdminPlansScreen() {
         name: newPlanName,
         level: newPlanLevel,
         price: parsedPrice,
-        features: parsedDurationDays ? { durationDays: parsedDurationDays } : {}
+        features: buildPlanFeatures({
+          durationDays: parsedDurationDays,
+          chatEnabled: newPlanChatEnabled,
+          chatImagesEnabled: newPlanChatImagesEnabled,
+          videoCallsEnabled: newPlanVideoCallsEnabled,
+          maxMonthlyVideoCalls: parsedMaxMonthlyVideoCalls,
+          messageTokensPerMonth: parsedMessageTokensPerMonth,
+          imageTokensPerMonth: parsedImageTokensPerMonth
+        })
       });
-      setNewPlanName('');
-      setNewPlanPrice('');
-      setNewPlanDurationDays('');
+      resetCreatePlanForm();
       await loadData();
       Alert.alert('Plan creado', 'El plan fue creado correctamente.');
     } catch (saveError) {
@@ -297,6 +342,12 @@ export default function AdminPlansScreen() {
     setNewPlanPrice('');
     setNewPlanDurationDays('');
     setNewPlanLevel('premium');
+    setNewPlanChatEnabled(false);
+    setNewPlanChatImagesEnabled(false);
+    setNewPlanVideoCallsEnabled(false);
+    setNewPlanMaxMonthlyVideoCalls('');
+    setNewPlanMessageTokensPerMonth('');
+    setNewPlanImageTokensPerMonth('');
     setPlanFormErrors({});
   }
 
@@ -309,12 +360,17 @@ export default function AdminPlansScreen() {
     setEditPlanLevel('premium');
     setEditPlanPrice('');
     setEditPlanDurationDays('');
+    setEditPlanChatEnabled(false);
+    setEditPlanChatImagesEnabled(false);
+    setEditPlanVideoCallsEnabled(false);
+    setEditPlanMaxMonthlyVideoCalls('');
+    setEditPlanMessageTokensPerMonth('');
+    setEditPlanImageTokensPerMonth('');
     setEditPlanIsActive(true);
     setEditPlanErrors({});
   }
 
   function resetAssignForm() {
-    setOwnerType('user');
     setOwnerId('');
     setOwnerEmailQuery('');
     setShowUserSearchResults(false);
@@ -348,13 +404,63 @@ export default function AdminPlansScreen() {
     }
   }
 
+  function handleCreateFeatureToggleChange(field: keyof PlanFeatureFormValues, value: boolean | string) {
+    if (field === 'chatEnabled') setNewPlanChatEnabled(Boolean(value));
+    if (field === 'chatImagesEnabled') setNewPlanChatImagesEnabled(Boolean(value));
+    if (field === 'videoCallsEnabled') setNewPlanVideoCallsEnabled(Boolean(value));
+    if (field === 'maxMonthlyVideoCalls') {
+      setNewPlanMaxMonthlyVideoCalls(String(value).replace(/[^0-9]/g, ''));
+      if (planFormErrors.maxMonthlyVideoCalls) {
+        setPlanFormErrors((prev) => ({ ...prev, maxMonthlyVideoCalls: undefined }));
+      }
+    }
+
+    if (field === 'messageTokensPerMonth') {
+      setNewPlanMessageTokensPerMonth(String(value).replace(/[^0-9]/g, ''));
+      if (planFormErrors.messageTokensPerMonth) {
+        setPlanFormErrors((prev) => ({ ...prev, messageTokensPerMonth: undefined }));
+      }
+    }
+
+    if (field === 'imageTokensPerMonth') {
+      setNewPlanImageTokensPerMonth(String(value).replace(/[^0-9]/g, ''));
+      if (planFormErrors.imageTokensPerMonth) {
+        setPlanFormErrors((prev) => ({ ...prev, imageTokensPerMonth: undefined }));
+      }
+    }
+  }
+
+  function handleEditFeatureToggleChange(field: keyof PlanFeatureFormValues, value: boolean | string) {
+    if (field === 'chatEnabled') setEditPlanChatEnabled(Boolean(value));
+    if (field === 'chatImagesEnabled') setEditPlanChatImagesEnabled(Boolean(value));
+    if (field === 'videoCallsEnabled') setEditPlanVideoCallsEnabled(Boolean(value));
+    if (field === 'maxMonthlyVideoCalls') {
+      setEditPlanMaxMonthlyVideoCalls(String(value).replace(/[^0-9]/g, ''));
+      if (editPlanErrors.maxMonthlyVideoCalls) {
+        setEditPlanErrors((prev) => ({ ...prev, maxMonthlyVideoCalls: undefined }));
+      }
+    }
+
+    if (field === 'messageTokensPerMonth') {
+      setEditPlanMessageTokensPerMonth(String(value).replace(/[^0-9]/g, ''));
+      if (editPlanErrors.messageTokensPerMonth) {
+        setEditPlanErrors((prev) => ({ ...prev, messageTokensPerMonth: undefined }));
+      }
+    }
+
+    if (field === 'imageTokensPerMonth') {
+      setEditPlanImageTokensPerMonth(String(value).replace(/[^0-9]/g, ''));
+      if (editPlanErrors.imageTokensPerMonth) {
+        setEditPlanErrors((prev) => ({ ...prev, imageTokensPerMonth: undefined }));
+      }
+    }
+  }
+
   async function handleAssignSubscription() {
     const nextErrors: { ownerId?: string; planId?: string } = {};
 
     if (!ownerId.trim()) {
-      nextErrors.ownerId = ownerType === 'center'
-        ? 'Ingresa el ID del centro.'
-        : 'Selecciona un usuario por email.';
+      nextErrors.ownerId = 'Selecciona un usuario por email.';
     }
 
     if (!selectedPlanId) {
@@ -376,7 +482,7 @@ export default function AdminPlansScreen() {
       const endsAt = durationDays ? addDaysFromDate(startedAt, durationDays) : undefined;
 
       const createdSubscription = await assignSubscription({
-        ownerType,
+        ownerType: 'user',
         ownerId: ownerId.trim(),
         planId: selectedPlanId,
         status: 'active',
@@ -388,10 +494,7 @@ export default function AdminPlansScreen() {
         createdSubscription,
         ...current.filter((subscription) => subscription.id !== createdSubscription.id)
       ]);
-
-      setOwnerId('');
-      setOwnerEmailQuery('');
-      setUserSearchResults([]);
+      resetAssignForm();
 
       try {
         await loadData();
@@ -420,6 +523,12 @@ export default function AdminPlansScreen() {
     setEditPlanLevel(toPlanLevelOption(plan.level));
     setEditPlanPrice(String(plan.price ?? ''));
     setEditPlanDurationDays(getPlanDurationDays(plan)?.toString() ?? '');
+    setEditPlanChatEnabled(getFeatureBoolean(plan.features, 'chatEnabled', false));
+    setEditPlanChatImagesEnabled(getFeatureBoolean(plan.features, 'chatImagesEnabled', false));
+    setEditPlanVideoCallsEnabled(getFeatureBoolean(plan.features, 'videoCallsEnabled', false));
+    setEditPlanMaxMonthlyVideoCalls(getFeatureNumber(plan.features, 'maxMonthlyVideoCalls'));
+    setEditPlanMessageTokensPerMonth(getFeatureNumber(plan.features, 'messageTokensPerMonth'));
+    setEditPlanImageTokensPerMonth(getFeatureNumber(plan.features, 'imageTokensPerMonth'));
     setEditPlanIsActive(plan.isActive);
     setEditPlanErrors({});
   }
@@ -432,7 +541,10 @@ export default function AdminPlansScreen() {
 
     const parsedPrice = Number(editPlanPrice);
     const parsedDurationDays = editPlanDurationDays.trim() ? Number(editPlanDurationDays) : null;
-    const nextErrors: { name?: string; level?: string; price?: string; durationDays?: string } = {};
+    const parsedMaxMonthlyVideoCalls = editPlanMaxMonthlyVideoCalls.trim() ? Number(editPlanMaxMonthlyVideoCalls) : null;
+    const parsedMessageTokensPerMonth = editPlanMessageTokensPerMonth.trim() ? Number(editPlanMessageTokensPerMonth) : null;
+    const parsedImageTokensPerMonth = editPlanImageTokensPerMonth.trim() ? Number(editPlanImageTokensPerMonth) : null;
+    const nextErrors: PlanFormErrors = {};
 
     if (!editPlanName.trim()) {
       nextErrors.name = 'Ingresa un nombre para el plan.';
@@ -453,6 +565,27 @@ export default function AdminPlansScreen() {
       nextErrors.durationDays = 'Ingresa una duracion valida en dias (numero entero mayor a 0).';
     }
 
+    if (
+      parsedMaxMonthlyVideoCalls !== null &&
+      (!Number.isFinite(parsedMaxMonthlyVideoCalls) || parsedMaxMonthlyVideoCalls < 0 || !Number.isInteger(parsedMaxMonthlyVideoCalls))
+    ) {
+      nextErrors.maxMonthlyVideoCalls = 'Ingresa un maximo de videollamadas valido (numero entero mayor o igual a 0).';
+    }
+
+    if (
+      parsedMessageTokensPerMonth !== null &&
+      (!Number.isFinite(parsedMessageTokensPerMonth) || parsedMessageTokensPerMonth < 0 || !Number.isInteger(parsedMessageTokensPerMonth))
+    ) {
+      nextErrors.messageTokensPerMonth = 'Ingresa una cantidad valida de tokens de mensaje (entero mayor o igual a 0).';
+    }
+
+    if (
+      parsedImageTokensPerMonth !== null &&
+      (!Number.isFinite(parsedImageTokensPerMonth) || parsedImageTokensPerMonth < 0 || !Number.isInteger(parsedImageTokensPerMonth))
+    ) {
+      nextErrors.imageTokensPerMonth = 'Ingresa una cantidad valida de tokens de imagen (entero mayor o igual a 0).';
+    }
+
     if (Object.keys(nextErrors).length > 0) {
       setEditPlanErrors(nextErrors);
       return;
@@ -466,7 +599,15 @@ export default function AdminPlansScreen() {
         name: editPlanName.trim(),
         level: editPlanLevel,
         price: parsedPrice,
-        features: parsedDurationDays ? { durationDays: parsedDurationDays } : {},
+        features: buildPlanFeatures({
+          durationDays: parsedDurationDays,
+          chatEnabled: editPlanChatEnabled,
+          chatImagesEnabled: editPlanChatImagesEnabled,
+          videoCallsEnabled: editPlanVideoCallsEnabled,
+          maxMonthlyVideoCalls: parsedMaxMonthlyVideoCalls,
+          messageTokensPerMonth: parsedMessageTokensPerMonth,
+          imageTokensPerMonth: parsedImageTokensPerMonth
+        }),
         isActive: editPlanIsActive
       });
 
@@ -487,6 +628,7 @@ export default function AdminPlansScreen() {
         })
       );
 
+      resetEditPlanForm();
       void loadData();
       Alert.alert('Plan actualizado', 'Los cambios del plan fueron guardados.');
     } catch (saveError) {
@@ -500,7 +642,7 @@ export default function AdminPlansScreen() {
     <SafeAreaView style={styles.screen}>
       <FlatList
         contentContainerStyle={[styles.content, isCompact && styles.contentCompact]}
-        data={subscriptions}
+        data={userSubscriptions}
         keyExtractor={(item) => item.id}
         ListHeaderComponent={
           <>
@@ -533,8 +675,17 @@ export default function AdminPlansScreen() {
                 <>
                   <PlanFormFields
                     errors={planFormErrors}
+                    featureValues={{
+                      chatEnabled: newPlanChatEnabled,
+                      chatImagesEnabled: newPlanChatImagesEnabled,
+                      videoCallsEnabled: newPlanVideoCallsEnabled,
+                      maxMonthlyVideoCalls: newPlanMaxMonthlyVideoCalls,
+                      messageTokensPerMonth: newPlanMessageTokensPerMonth,
+                      imageTokensPerMonth: newPlanImageTokensPerMonth
+                    }}
                     isSaving={isSavingPlan}
                     onChangeField={handleCreatePlanFieldChange}
+                    onFeatureValueChange={handleCreateFeatureToggleChange}
                     values={{
                       name: newPlanName,
                       level: newPlanLevel,
@@ -639,8 +790,17 @@ export default function AdminPlansScreen() {
                     <>
                       <PlanFormFields
                         errors={editPlanErrors}
+                        featureValues={{
+                          chatEnabled: editPlanChatEnabled,
+                          chatImagesEnabled: editPlanChatImagesEnabled,
+                          videoCallsEnabled: editPlanVideoCallsEnabled,
+                          maxMonthlyVideoCalls: editPlanMaxMonthlyVideoCalls,
+                          messageTokensPerMonth: editPlanMessageTokensPerMonth,
+                          imageTokensPerMonth: editPlanImageTokensPerMonth
+                        }}
                         isSaving={isSavingPlan}
                         onChangeField={handleEditPlanFieldChange}
+                        onFeatureValueChange={handleEditFeatureToggleChange}
                         values={{
                           name: editPlanName,
                           level: editPlanLevel,
@@ -686,101 +846,62 @@ export default function AdminPlansScreen() {
 
             <Card style={[styles.card, styles.cardSpaced]}>
               <Text style={styles.sectionTitle}>Asignar suscripcion</Text>
-              <View style={styles.switchRow}>
-                <Text style={styles.switchLabel}>Asignar a organizacion</Text>
-                <Switch
-                  accessibilityLabel="Cambiar owner a centro"
-                  onValueChange={(value) => {
-                    const nextOwnerType = value ? 'center' : 'user';
-                    setOwnerType(nextOwnerType);
-                    setOwnerId('');
-                    setOwnerEmailQuery('');
-                    setShowUserSearchResults(false);
-                    setUserSearchResults([]);
-                    if (assignFormErrors.ownerId) {
-                      setAssignFormErrors((prev) => ({ ...prev, ownerId: undefined }));
-                    }
-                  }}
-                  trackColor={{ false: colors.primaryLight, true: colors.primary }}
-                  value={ownerType === 'center'}
-                />
-              </View>
-
-              <Text style={styles.fieldLabel}>{ownerType === 'center' ? 'ID del centro' : 'Usuario (email)'}</Text>
-              {ownerType === 'center' ? (
-                <TextInput
-                  accessibilityLabel="ID owner"
-                  editable={!isAssigningSubscription}
-                  onChangeText={(value) => {
-                    setOwnerId(value);
-                    if (assignFormErrors.ownerId) {
-                      setAssignFormErrors((prev) => ({ ...prev, ownerId: undefined }));
-                    }
-                  }}
-                  placeholder="ID de la organizacion"
-                  placeholderTextColor={colors.textMuted}
-                  style={[styles.input, assignFormErrors.ownerId && styles.inputError]}
-                  value={ownerId}
-                />
-              ) : (
-                <>
-                  <TextInput
-                    accessibilityLabel="Buscar usuario por email"
-                    editable={!isAssigningSubscription}
-                    onChangeText={(value) => {
-                      setOwnerEmailQuery(value);
-                      setOwnerId('');
-                      setShowUserSearchResults(true);
-                      if (assignFormErrors.ownerId) {
-                        setAssignFormErrors((prev) => ({ ...prev, ownerId: undefined }));
-                      }
-                    }}
-                    placeholder="Buscar usuario por email"
-                    placeholderTextColor={colors.textMuted}
-                    style={[styles.input, assignFormErrors.ownerId && styles.inputError]}
-                    value={ownerEmailQuery}
-                  />
-                  {hasOwnerEmailQuery && showUserSearchResults ? (
-                    <View style={[styles.planResultsList, assignFormErrors.ownerId && styles.optionListWrapError]}>
-                      {isSearchingUsers ? (
-                        <View style={styles.userSearchLoadingWrap}>
-                          <ActivityIndicator color={colors.primary} />
-                        </View>
-                      ) : userSearchResults.length === 0 ? (
-                        <Text style={styles.emptySearchText}>Sin resultados.</Text>
-                      ) : (
-                        userSearchResults.map((user) => {
-                          const isSelected = ownerId === user.id;
-
-                          return (
-                            <Pressable
-                              accessibilityLabel={`Usuario ${user.email}`}
-                              key={user.id}
-                              onPress={() => {
-                                setOwnerId(user.id);
-                                setOwnerEmailQuery(user.email);
-                                setShowUserSearchResults(false);
-                                if (assignFormErrors.ownerId) {
-                                  setAssignFormErrors((prev) => ({ ...prev, ownerId: undefined }));
-                                }
-                              }}
-                              style={[styles.planResultItem, isSelected && styles.planResultItemSelected]}
-                            >
-                              <Text style={[styles.planResultTitle, isSelected && styles.planResultTitleSelected]}>
-                                {user.email}
-                              </Text>
-                              <Text style={[styles.planResultMeta, isSelected && styles.planResultMetaSelected]}>
-                                {user.fullName || 'Sin nombre'}
-                              </Text>
-                            </Pressable>
-                          );
-                        })
-                      )}
+              <Text style={styles.fieldLabel}>Usuario (email)</Text>
+              <TextInput
+                accessibilityLabel="Buscar usuario por email"
+                editable={!isAssigningSubscription}
+                onChangeText={(value) => {
+                  setOwnerEmailQuery(value);
+                  setOwnerId('');
+                  setShowUserSearchResults(true);
+                  if (assignFormErrors.ownerId) {
+                    setAssignFormErrors((prev) => ({ ...prev, ownerId: undefined }));
+                  }
+                }}
+                placeholder="Buscar usuario por email"
+                placeholderTextColor={colors.textMuted}
+                style={[styles.input, assignFormErrors.ownerId && styles.inputError]}
+                value={ownerEmailQuery}
+              />
+              {hasOwnerEmailQuery && showUserSearchResults ? (
+                <View style={[styles.planResultsList, assignFormErrors.ownerId && styles.optionListWrapError]}>
+                  {isSearchingUsers ? (
+                    <View style={styles.userSearchLoadingWrap}>
+                      <ActivityIndicator color={colors.primary} />
                     </View>
+                  ) : userSearchResults.length === 0 ? (
+                    <Text style={styles.emptySearchText}>Sin resultados.</Text>
                   ) : (
-                    <Text style={styles.searchIdleHint}>Busca por email.</Text>
+                    userSearchResults.map((user) => {
+                      const isSelected = ownerId === user.id;
+
+                      return (
+                        <Pressable
+                          accessibilityLabel={`Usuario ${user.email}`}
+                          key={user.id}
+                          onPress={() => {
+                            setOwnerId(user.id);
+                            setOwnerEmailQuery(user.email);
+                            setShowUserSearchResults(false);
+                            if (assignFormErrors.ownerId) {
+                              setAssignFormErrors((prev) => ({ ...prev, ownerId: undefined }));
+                            }
+                          }}
+                          style={[styles.planResultItem, isSelected && styles.planResultItemSelected]}
+                        >
+                          <Text style={[styles.planResultTitle, isSelected && styles.planResultTitleSelected]}>
+                            {user.email}
+                          </Text>
+                          <Text style={[styles.planResultMeta, isSelected && styles.planResultMetaSelected]}>
+                            {user.fullName || 'Sin nombre'}
+                          </Text>
+                        </Pressable>
+                      );
+                    })
                   )}
-                </>
+                </View>
+              ) : (
+                <Text style={styles.searchIdleHint}>Busca por email.</Text>
               )}
               {assignFormErrors.ownerId ? <Text style={styles.fieldErrorText}>{assignFormErrors.ownerId}</Text> : null}
 
@@ -890,9 +1011,12 @@ export default function AdminPlansScreen() {
                 <Text style={styles.statusBadgeText}>{getSubscriptionStatusLabel(item.status)}</Text>
               </View>
             </View>
-            <Text style={styles.subscriptionCountText}>
-              {subscribedPeopleCountByPlanId.get(item.planId) ?? 0} personas suscriptas
-            </Text>
+
+            <View style={styles.subscriptionCountPill}>
+              <Text style={styles.subscriptionCountLabel}>Suscripciones activas del plan</Text>
+              <Text style={styles.subscriptionCountValue}>{subscribedPeopleCountByPlanId.get(item.planId) ?? 0}</Text>
+            </View>
+
             <View style={styles.subscriptionMetaRow}>
               {item.plan?.level ? (
                 <View style={styles.subscriptionMetaPill}>
@@ -904,11 +1028,53 @@ export default function AdminPlansScreen() {
                   <Text style={styles.subscriptionMetaPillText}>${item.plan.price}</Text>
                 </View>
               ) : null}
+              {item.plan?.isActive === true ? (
+                <View style={styles.subscriptionMetaPill}>
+                  <Text style={styles.subscriptionMetaPillText}>Plan activo</Text>
+                </View>
+              ) : item.plan ? (
+                <View style={styles.subscriptionMetaPill}>
+                  <Text style={styles.subscriptionMetaPillText}>Plan inactivo</Text>
+                </View>
+              ) : null}
             </View>
+
             <Text style={styles.subscriptionDetailLabel}>Vigencia</Text>
             <Text style={styles.subscriptionDateText}>
               {formatShortDate(item.startedAt)} - {item.endsAt ? formatShortDate(item.endsAt) : 'Sin fin'}
             </Text>
+
+            <Text style={styles.subscriptionDetailLabel}>Capacidades del plan</Text>
+            <View style={styles.featureListWrap}>
+              <View style={styles.capabilityRow}>
+                <Text style={styles.capabilityLabel}>Chat</Text>
+                <Text style={styles.capabilityValue}>{item.plan?.features?.chatEnabled ? 'Habilitado' : 'No incluido'}</Text>
+              </View>
+              <View style={styles.capabilityRow}>
+                <Text style={styles.capabilityLabel}>Imagenes en chat</Text>
+                <Text style={styles.capabilityValue}>{item.plan?.features?.chatImagesEnabled ? 'Habilitado' : 'No incluido'}</Text>
+              </View>
+              <View style={styles.capabilityRow}>
+                <Text style={styles.capabilityLabel}>Videollamadas</Text>
+                <Text style={styles.capabilityValue}>{item.plan?.features?.videoCallsEnabled ? 'Habilitado' : 'No incluido'}</Text>
+              </View>
+              <View style={styles.capabilityRow}>
+                <Text style={styles.capabilityLabel}>Max videollamadas por mes</Text>
+                <Text style={styles.capabilityValue}>{formatFeatureNumber(item.plan?.features?.maxMonthlyVideoCalls)}</Text>
+              </View>
+              <View style={styles.capabilityRow}>
+                <Text style={styles.capabilityLabel}>Tokens de mensajes</Text>
+                <Text style={styles.capabilityValue}>{formatFeatureNumber(item.plan?.features?.messageTokensPerMonth)}</Text>
+              </View>
+              <View style={styles.capabilityRow}>
+                <Text style={styles.capabilityLabel}>Tokens de imagenes</Text>
+                <Text style={styles.capabilityValue}>{formatFeatureNumber(item.plan?.features?.imageTokensPerMonth)}</Text>
+              </View>
+              <View style={[styles.capabilityRow, styles.capabilityRowLast]}>
+                <Text style={styles.capabilityLabel}>Duracion en dias</Text>
+                <Text style={styles.capabilityValue}>{formatFeatureNumber(item.plan?.features?.durationDays)}</Text>
+              </View>
+            </View>
           </Card>
         )}
       />
@@ -1208,7 +1374,10 @@ const styles = StyleSheet.create({
   },
   subscriptionCard: {
     marginTop: 8,
-    gap: 8
+    gap: 10,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface
   },
   subscriptionHeaderRow: {
     alignItems: 'center',
@@ -1247,12 +1416,60 @@ const styles = StyleSheet.create({
   },
   subscriptionTitle: {
     color: colors.textPrimary,
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: '700'
   },
-  subscriptionCountText: {
+  subscriptionCountPill: {
+    borderColor: colors.border,
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    backgroundColor: colors.background,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center'
+  },
+  subscriptionCountLabel: {
+    color: colors.textSecondary,
+    fontSize: 12,
+    fontWeight: '600'
+  },
+  subscriptionCountValue: {
     color: colors.primaryDark,
-    fontSize: 13,
+    fontSize: 18,
+    fontWeight: '800'
+  },
+  featureListWrap: {
+    borderColor: colors.border,
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    gap: 0,
+    backgroundColor: colors.background
+  },
+  capabilityRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border
+  },
+  capabilityRowLast: {
+    borderBottomWidth: 0
+  },
+  capabilityLabel: {
+    color: colors.textSecondary,
+    fontSize: 12,
+    fontWeight: '600',
+    flex: 1,
+    paddingRight: 12
+  },
+  capabilityValue: {
+    color: colors.textPrimary,
+    fontSize: 12,
     fontWeight: '700'
   },
   subscriptionDetailLabel: {
@@ -1266,14 +1483,20 @@ const styles = StyleSheet.create({
   }
 });
 
+function formatFeatureNumber(value: unknown): string {
+  const asNumber = Number(value);
+
+  if (!Number.isFinite(asNumber) || asNumber < 0) {
+    return '-';
+  }
+
+  return String(Math.floor(asNumber));
+}
+
 function addDaysFromDate(startedAtIso: string, days: number): string {
   const target = new Date(startedAtIso);
   target.setDate(target.getDate() + days);
   return target.toISOString();
-}
-
-function getOwnerTypeLabel(ownerType: 'user' | 'center'): string {
-  return ownerType === 'center' ? 'Organizacion' : 'Usuario';
 }
 
 function getSubscriptionStatusLabel(status: string): string {
@@ -1320,12 +1543,52 @@ function getPlanDurationDays(plan: SubscriptionPlan): number | null {
   return Math.floor(asNumber);
 }
 
-function shortId(value: string): string {
-  if (value.length <= 12) {
-    return value;
+function getFeatureBoolean(features: SubscriptionPlanFeatures, key: keyof SubscriptionPlanFeatures, fallback: boolean): boolean {
+  const value = features?.[key];
+  return typeof value === 'boolean' ? value : fallback;
+}
+
+function getFeatureNumber(features: SubscriptionPlanFeatures, key: keyof SubscriptionPlanFeatures): string {
+  const value = Number(features?.[key]);
+  if (!Number.isFinite(value) || value < 0) {
+    return '';
   }
 
-  return `${value.slice(0, 8)}...${value.slice(-4)}`;
+  return String(Math.floor(value));
+}
+
+function buildPlanFeatures(input: {
+  durationDays: number | null;
+  chatEnabled: boolean;
+  chatImagesEnabled: boolean;
+  videoCallsEnabled: boolean;
+  maxMonthlyVideoCalls: number | null;
+  messageTokensPerMonth: number | null;
+  imageTokensPerMonth: number | null;
+}): SubscriptionPlanFeatures {
+  const features: SubscriptionPlanFeatures = {
+    chatEnabled: input.chatEnabled,
+    chatImagesEnabled: input.chatImagesEnabled,
+    videoCallsEnabled: input.videoCallsEnabled
+  };
+
+  if (input.durationDays && input.durationDays > 0) {
+    features.durationDays = input.durationDays;
+  }
+
+  if (input.maxMonthlyVideoCalls !== null && input.maxMonthlyVideoCalls >= 0) {
+    features.maxMonthlyVideoCalls = input.maxMonthlyVideoCalls;
+  }
+
+  if (input.messageTokensPerMonth !== null && input.messageTokensPerMonth >= 0) {
+    features.messageTokensPerMonth = input.messageTokensPerMonth;
+  }
+
+  if (input.imageTokensPerMonth !== null && input.imageTokensPerMonth >= 0) {
+    features.imageTokensPerMonth = input.imageTokensPerMonth;
+  }
+
+  return features;
 }
 
 function formatShortDate(value: string): string {
@@ -1343,11 +1606,20 @@ function toPlanLevelOption(level: string): PlanLevelOption {
 type PlanFormFieldsProps = {
   values: PlanFormValues;
   errors: PlanFormErrors;
+  featureValues: PlanFeatureFormValues;
   isSaving: boolean;
   onChangeField: (field: keyof PlanFormValues, value: string) => void;
+  onFeatureValueChange: (field: keyof PlanFeatureFormValues, value: boolean | string) => void;
 };
 
-function PlanFormFields({ values, errors, isSaving, onChangeField }: PlanFormFieldsProps) {
+function PlanFormFields({
+  values,
+  errors,
+  featureValues,
+  isSaving,
+  onChangeField,
+  onFeatureValueChange
+}: PlanFormFieldsProps) {
   return (
     <>
       <Text style={styles.fieldLabel}>Nombre del plan</Text>
@@ -1407,6 +1679,93 @@ function PlanFormFields({ values, errors, isSaving, onChangeField }: PlanFormFie
         value={values.durationDays}
       />
       {errors.durationDays ? <Text style={styles.fieldErrorText}>{errors.durationDays}</Text> : null}
+
+      <Text style={styles.planPickerLabel}>Capacidades de comunicacion</Text>
+
+      <View style={styles.switchRow}>
+        <Text style={styles.switchLabel}>Chat habilitado</Text>
+        <Switch
+          accessibilityLabel="Habilitar chat para el plan"
+          disabled={isSaving}
+          onValueChange={(value) => onFeatureValueChange('chatEnabled', value)}
+          trackColor={{ false: colors.primaryLight, true: colors.primary }}
+          value={featureValues.chatEnabled}
+        />
+      </View>
+
+      <View style={styles.switchRow}>
+        <Text style={styles.switchLabel}>Imagenes en chat</Text>
+        <Switch
+          accessibilityLabel="Habilitar imagenes en chat"
+          disabled={isSaving}
+          onValueChange={(value) => onFeatureValueChange('chatImagesEnabled', value)}
+          trackColor={{ false: colors.primaryLight, true: colors.primary }}
+          value={featureValues.chatImagesEnabled}
+        />
+      </View>
+
+      <View style={styles.switchRow}>
+        <Text style={styles.switchLabel}>Videollamadas habilitadas</Text>
+        <Switch
+          accessibilityLabel="Habilitar videollamadas para el plan"
+          disabled={isSaving}
+          onValueChange={(value) => onFeatureValueChange('videoCallsEnabled', value)}
+          trackColor={{ false: colors.primaryLight, true: colors.primary }}
+          value={featureValues.videoCallsEnabled}
+        />
+      </View>
+
+      {featureValues.videoCallsEnabled ? (
+        <>
+          <Text style={styles.fieldLabel}>Maximo de videollamadas por mes (opcional)</Text>
+          <TextInput
+            accessibilityLabel="Maximo mensual de videollamadas"
+            editable={!isSaving}
+            keyboardType="number-pad"
+            onChangeText={(value) => onFeatureValueChange('maxMonthlyVideoCalls', value)}
+            placeholder="Ejemplo: 8"
+            placeholderTextColor={colors.textMuted}
+            style={[styles.input, errors.maxMonthlyVideoCalls && styles.inputError]}
+            value={featureValues.maxMonthlyVideoCalls}
+          />
+          {errors.maxMonthlyVideoCalls ? <Text style={styles.fieldErrorText}>{errors.maxMonthlyVideoCalls}</Text> : null}
+        </>
+      ) : null}
+
+      {featureValues.chatEnabled ? (
+        <>
+          <Text style={styles.fieldLabel}>Tokens de mensajes por ventana (24h)</Text>
+          <TextInput
+            accessibilityLabel="Tokens de mensajes"
+            editable={!isSaving}
+            keyboardType="number-pad"
+            onChangeText={(value) => onFeatureValueChange('messageTokensPerMonth', value)}
+            placeholder="Ejemplo: 30"
+            placeholderTextColor={colors.textMuted}
+            style={[styles.input, errors.messageTokensPerMonth && styles.inputError]}
+            value={featureValues.messageTokensPerMonth}
+          />
+          {errors.messageTokensPerMonth ? <Text style={styles.fieldErrorText}>{errors.messageTokensPerMonth}</Text> : null}
+        </>
+      ) : null}
+
+      {featureValues.chatImagesEnabled ? (
+        <>
+          <Text style={styles.fieldLabel}>Tokens de imagenes por ventana (24h)</Text>
+          <TextInput
+            accessibilityLabel="Tokens de imagenes"
+            editable={!isSaving}
+            keyboardType="number-pad"
+            onChangeText={(value) => onFeatureValueChange('imageTokensPerMonth', value)}
+            placeholder="Ejemplo: 8"
+            placeholderTextColor={colors.textMuted}
+            style={[styles.input, errors.imageTokensPerMonth && styles.inputError]}
+            value={featureValues.imageTokensPerMonth}
+          />
+          {errors.imageTokensPerMonth ? <Text style={styles.fieldErrorText}>{errors.imageTokensPerMonth}</Text> : null}
+        </>
+      ) : null}
+
     </>
   );
 }

@@ -6,6 +6,7 @@ import type {
   CreateSubscriptionPlanInput,
   Subscription,
   SubscriptionPlan,
+  SubscriptionPlanFeatures,
   SubscriptionStatus,
   UpdateSubscriptionPlanInput,
   UpdateSubscriptionStatusInput
@@ -27,7 +28,7 @@ export const subscriptionsService = {
       name: normalizeNonEmptyText(input.name, 'El nombre del plan es obligatorio.'),
       level: normalizeNonEmptyText(input.level, 'El nivel del plan es obligatorio.'),
       price: normalizeNonNegativeNumber(input.price, 'El precio del plan es obligatorio.'),
-      features: input.features ?? {},
+      features: normalizePlanFeatures(input.features),
       is_active: true
     };
 
@@ -74,7 +75,7 @@ export const subscriptionsService = {
       payload.price = normalizeNonNegativeNumber(input.price, 'El precio debe ser un numero mayor o igual a 0.');
     }
     if (typeof input.features !== 'undefined') {
-      payload.features = input.features;
+      payload.features = normalizePlanFeatures(input.features);
     }
     if (typeof input.isActive === 'boolean') {
       payload.is_active = input.isActive;
@@ -131,7 +132,15 @@ export const subscriptionsService = {
     });
 
     if (!updated) {
-      throw new ApiError(404, 'Suscripcion no encontrada.');
+      // Idempotency: if another request canceled it between read and update,
+      // return the current row instead of surfacing a false conflict.
+      const latest = await subscriptionsRepository.findSubscriptionById(previous.id);
+
+      if (latest && latest.status === 'canceled') {
+        return mapSubscriptionRow(latest);
+      }
+
+      throw new ApiError(409, 'No pudimos cancelar la suscripcion en este momento. Intenta nuevamente.');
     }
 
     void recordAuditLog({
@@ -167,9 +176,16 @@ export const subscriptionsService = {
     actor: { id: string; role: string }
   ): Promise<Subscription> {
     const ownerType = normalizeOwnerType(input.ownerType);
+
+    if (ownerType !== 'user') {
+      throw new ApiError(400, 'Las suscripciones solo se pueden asignar a usuarios.');
+    }
+
     const ownerId = normalizeNonEmptyText(input.ownerId, 'ownerId es obligatorio.');
     const planId = normalizeNonEmptyText(input.planId, 'planId es obligatorio.');
     const status = normalizeStatus(input.status ?? 'active');
+
+    await validateOwnerForAssignment(ownerType, ownerId, actor.id);
 
     const plan = await subscriptionsRepository.findPlanById(planId);
     if (!plan) {
@@ -262,11 +278,94 @@ function mapPlanRow(row: any): SubscriptionPlan {
     name: row.name,
     price: Number(row.price ?? 0),
     level: row.level,
-    features: (row.features ?? {}) as Record<string, unknown>,
+    features: normalizePlanFeatures(row.features),
     isActive: row.is_active !== false,
     createdAt: row.created_at,
     updatedAt: row.updated_at
   };
+}
+
+function normalizePlanFeatures(value: unknown): SubscriptionPlanFeatures {
+  if (typeof value === 'undefined' || value === null) {
+    return {};
+  }
+
+  if (typeof value !== 'object' || Array.isArray(value)) {
+    throw new ApiError(400, 'features debe ser un objeto valido.');
+  }
+
+  const raw = value as Record<string, unknown>;
+  const normalized: SubscriptionPlanFeatures = {};
+
+  if (typeof raw.durationDays !== 'undefined') {
+    const durationDays = Number(raw.durationDays);
+    if (!Number.isInteger(durationDays) || durationDays <= 0) {
+      throw new ApiError(400, 'features.durationDays debe ser un entero mayor a 0.');
+    }
+
+    normalized.durationDays = durationDays;
+  }
+
+  if (typeof raw.chatEnabled !== 'undefined') {
+    if (typeof raw.chatEnabled !== 'boolean') {
+      throw new ApiError(400, 'features.chatEnabled debe ser booleano.');
+    }
+
+    normalized.chatEnabled = raw.chatEnabled;
+  }
+
+  if (typeof raw.chatImagesEnabled !== 'undefined') {
+    if (typeof raw.chatImagesEnabled !== 'boolean') {
+      throw new ApiError(400, 'features.chatImagesEnabled debe ser booleano.');
+    }
+
+    normalized.chatImagesEnabled = raw.chatImagesEnabled;
+  }
+
+  if (typeof raw.videoCallsEnabled !== 'undefined') {
+    if (typeof raw.videoCallsEnabled !== 'boolean') {
+      throw new ApiError(400, 'features.videoCallsEnabled debe ser booleano.');
+    }
+
+    normalized.videoCallsEnabled = raw.videoCallsEnabled;
+  }
+
+  if (typeof raw.maxMonthlyVideoCalls !== 'undefined') {
+    const maxMonthlyVideoCalls = Number(raw.maxMonthlyVideoCalls);
+    if (!Number.isInteger(maxMonthlyVideoCalls) || maxMonthlyVideoCalls < 0) {
+      throw new ApiError(400, 'features.maxMonthlyVideoCalls debe ser un entero mayor o igual a 0.');
+    }
+
+    normalized.maxMonthlyVideoCalls = maxMonthlyVideoCalls;
+  }
+
+  if (typeof raw.messageTokensPerMonth !== 'undefined') {
+    const messageTokensPerMonth = Number(raw.messageTokensPerMonth);
+    if (!Number.isInteger(messageTokensPerMonth) || messageTokensPerMonth < 0) {
+      throw new ApiError(400, 'features.messageTokensPerMonth debe ser un entero mayor o igual a 0.');
+    }
+
+    normalized.messageTokensPerMonth = messageTokensPerMonth;
+  }
+
+  if (typeof raw.imageTokensPerMonth !== 'undefined') {
+    const imageTokensPerMonth = Number(raw.imageTokensPerMonth);
+    if (!Number.isInteger(imageTokensPerMonth) || imageTokensPerMonth < 0) {
+      throw new ApiError(400, 'features.imageTokensPerMonth debe ser un entero mayor o igual a 0.');
+    }
+
+    normalized.imageTokensPerMonth = imageTokensPerMonth;
+  }
+
+  if (typeof raw.canAccessGroupSessions !== 'undefined') {
+    if (typeof raw.canAccessGroupSessions !== 'boolean') {
+      throw new ApiError(400, 'features.canAccessGroupSessions debe ser booleano.');
+    }
+
+    normalized.canAccessGroupSessions = raw.canAccessGroupSessions;
+  }
+
+  return normalized;
 }
 
 function mapSubscriptionRow(row: any): Subscription {
@@ -359,4 +458,25 @@ function normalizeOptionalEmailSearch(value: unknown): string | null {
   }
 
   return trimmedValue;
+}
+
+async function validateOwnerForAssignment(ownerType: 'user' | 'center', ownerId: string, actorId: string): Promise<void> {
+  if (ownerType === 'user') {
+    const user = await subscriptionsRepository.findUserById(ownerId);
+    if (!user) {
+      throw new ApiError(404, 'Usuario no encontrado para asignar suscripcion.');
+    }
+
+    return;
+  }
+
+  const center = await subscriptionsRepository.findActiveCenterById(ownerId);
+  if (!center) {
+    throw new ApiError(404, 'Centro no encontrado o inactivo para asignar suscripcion.');
+  }
+
+  const assignment = await subscriptionsRepository.findAdminCenterAssignment(actorId, ownerId);
+  if (!assignment) {
+    throw new ApiError(403, 'No tenes permiso para asignar suscripciones a este centro.');
+  }
 }

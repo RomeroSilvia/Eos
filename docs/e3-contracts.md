@@ -112,6 +112,13 @@ Fecha: 2026-07-02
 - `subscription_plans` y `subscriptions` existen para gestion administrativa.
 - `subscriptions.status` es informativo en E3.
 - E3 no aplica enforcement de acceso por estado de plan.
+- `subscription_plans.features` admite capacidades para definir accesos por plan. Campos soportados:
+  - `durationDays: number`
+  - `chatEnabled: boolean`
+  - `chatImagesEnabled: boolean`
+  - `videoCallsEnabled: boolean`
+  - `maxMonthlyVideoCalls: number`
+  - `canAccessGroupSessions: boolean`
 
 ### Contrato backend
 

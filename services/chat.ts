@@ -52,10 +52,26 @@ export type ChatParticipant = {
   email: string | null;
 };
 
+export type ChatTokenSummary = {
+  used: number;
+  limit: number | null;
+  remaining: number | null;
+  isLimited: boolean;
+};
+
+export type ChatAccessInfo = {
+  hasActiveSubscription: boolean;
+  videoCallsEnabled: boolean;
+  tokenResetWindowHours: number;
+  messageTokens: ChatTokenSummary;
+  imageTokens: ChatTokenSummary;
+};
+
 type ChatMessagesResponse = {
   relationId: string;
   participant?: ChatParticipant | null;
   messages: ChatMessage[];
+  access?: ChatAccessInfo;
 };
 
 type RawChatParticipant = Partial<ChatParticipant> & {
@@ -68,21 +84,47 @@ type RawChatMessagesResponse = {
   relation_id?: string;
   participant?: RawChatParticipant | null;
   messages?: RawChatMessage[];
+  access?: RawChatAccessInfo;
+  chat_access?: RawChatAccessInfo;
 };
 
 type ChatSendResponse = {
   relationId: string;
   message: ChatMessage;
+  access?: ChatAccessInfo;
 };
 
 type RawChatSendResponse = {
   relationId?: string;
   relation_id?: string;
   message?: RawChatMessage;
+  access?: RawChatAccessInfo;
+  chat_access?: RawChatAccessInfo;
 };
 
 type ChatVideoCallResponse = ChatSendResponse & {
   callUrl: string;
+};
+
+type RawChatTokenSummary = {
+  used?: number;
+  limit?: number | null;
+  remaining?: number | null;
+  isLimited?: boolean;
+  is_limited?: boolean;
+};
+
+type RawChatAccessInfo = {
+  hasActiveSubscription?: boolean;
+  has_active_subscription?: boolean;
+  videoCallsEnabled?: boolean;
+  video_calls_enabled?: boolean;
+  tokenResetWindowHours?: number;
+  token_reset_window_hours?: number;
+  messageTokens?: RawChatTokenSummary;
+  message_tokens?: RawChatTokenSummary;
+  imageTokens?: RawChatTokenSummary;
+  image_tokens?: RawChatTokenSummary;
 };
 
 export async function getChatMessages(params: {
@@ -280,15 +322,52 @@ function normalizeChatMessagesResponse(response: RawChatMessagesResponse): ChatM
   return {
     relationId: toStringValue(response.relationId ?? response.relation_id),
     participant: normalizeParticipant(response.participant),
-    messages: (response.messages ?? []).map(normalizeChatMessage)
+    messages: (response.messages ?? []).map(normalizeChatMessage),
+    access: normalizeChatAccessInfo(response.access ?? response.chat_access)
   };
 }
 
 function normalizeChatSendResponse(response: RawChatSendResponse): ChatSendResponse {
   return {
     relationId: toStringValue(response.relationId ?? response.relation_id),
-    message: normalizeChatMessage(response.message ?? {})
+    message: normalizeChatMessage(response.message ?? {}),
+    access: normalizeChatAccessInfo(response.access ?? response.chat_access)
   };
+}
+
+function normalizeChatAccessInfo(input?: RawChatAccessInfo): ChatAccessInfo | undefined {
+  if (!input) {
+    return undefined;
+  }
+
+  return {
+    hasActiveSubscription: Boolean(input.hasActiveSubscription ?? input.has_active_subscription),
+    videoCallsEnabled: Boolean(input.videoCallsEnabled ?? input.video_calls_enabled),
+    tokenResetWindowHours: normalizeNumber(input.tokenResetWindowHours ?? input.token_reset_window_hours, 24),
+    messageTokens: normalizeChatTokenSummary(input.messageTokens ?? input.message_tokens),
+    imageTokens: normalizeChatTokenSummary(input.imageTokens ?? input.image_tokens)
+  };
+}
+
+function normalizeChatTokenSummary(input?: RawChatTokenSummary): ChatTokenSummary {
+  const limit = normalizeNullableNumber(input?.limit);
+  const used = normalizeNumber(input?.used, 0);
+  const remaining = normalizeNullableNumber(input?.remaining);
+  const isLimited = typeof input?.isLimited === 'boolean'
+    ? input.isLimited
+    : Boolean(input?.is_limited);
+
+  return {
+    used,
+    limit,
+    remaining,
+    isLimited
+  };
+}
+
+function normalizeNumber(value: unknown, fallback: number): number {
+  const asNumber = Number(value);
+  return Number.isFinite(asNumber) ? asNumber : fallback;
 }
 
 function normalizeParticipant(participant?: RawChatParticipant | null): ChatParticipant | null {

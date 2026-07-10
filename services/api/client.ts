@@ -29,7 +29,7 @@ export function getFriendlyApiErrorMessage(status?: number): string {
   if (status === 401) return 'Tu sesion expiro. Volve a iniciar sesion.';
   if (status === 403) return 'No tenes permisos para realizar esta accion.';
   if (status === 404) return 'No pudimos encontrar la informacion solicitada.';
-  if (status === 409) return 'Ya existe un registro con esos datos.';
+  if (status === 409) return 'No pudimos completar la accion por un conflicto de estado.';
   if (status === 413) return 'La imagen es demasiado grande. Proba con una foto mas liviana.';
   if (status === 500) return 'Ocurrio un error del servidor. Intenta nuevamente mas tarde.';
   return 'No pudimos completar la accion. Intenta nuevamente.';
@@ -46,6 +46,10 @@ export function getFriendlyAuthErrorMessage(status?: number): string {
 
 export function getFriendlyErrorMessage(error: unknown, fallback = 'No pudimos completar la accion. Intenta nuevamente.'): string {
   if (error instanceof ApiRequestError) {
+    if (error.message && !hasTechnicalDetails(error.message) && !isGenericHttpMessage(error.message)) {
+      return error.message;
+    }
+
     return getFriendlyApiErrorMessage(error.status);
   }
 
@@ -54,6 +58,16 @@ export function getFriendlyErrorMessage(error: unknown, fallback = 'No pudimos c
   }
 
   return fallback;
+}
+
+function isGenericHttpMessage(message: string): boolean {
+  const normalizedMessage = message.toLowerCase();
+
+  return (
+    normalizedMessage.startsWith('api request failed with status')
+    || normalizedMessage === 'empty response body'
+    || normalizedMessage.startsWith('{"')
+  );
 }
 
 export class ApiClientError extends ApiRequestError {
@@ -86,10 +100,6 @@ export async function apiRequest<TResponse>({ path, headers, ...options }: ApiRe
     headers: requestHeaders
   });
 
-  if (response.status === 404) {
-    console.error('URL NO EXISTE:', url);
-  }
-
   if (!response.ok) {
     const text = await response.text();
     let parsed: { message?: string; details?: unknown } | undefined;
@@ -98,6 +108,13 @@ export async function apiRequest<TResponse>({ path, headers, ...options }: ApiRe
       parsed = text ? (JSON.parse(text) as { message?: string; details?: unknown }) : undefined;
     } catch {
       parsed = undefined;
+    }
+
+    if (response.status === 404) {
+      const isRouteNotFound = typeof parsed?.message === 'string' && parsed.message.toLowerCase().includes('route not found');
+      if (isRouteNotFound) {
+        console.error('URL NO EXISTE:', url);
+      }
     }
 
     if (response.status !== 401 && response.status !== 403 && response.status !== 409) {
