@@ -14,6 +14,7 @@ jest.mock('../../../config/supabase', () => ({
 
 jest.mock('../admin.repository', () => ({
   adminRepository: {
+    findActiveCentersByIds: jest.fn(),
     findSpecialistById: jest.fn(),
     findPendingSpecialists: jest.fn(),
     findProfilesByIds: jest.fn(),
@@ -62,6 +63,7 @@ describe('adminService', () => {
       createSignedUrl: mockedCreateSignedUrl,
       list: mockedList
     });
+    mockedRepo.findActiveCentersByIds.mockResolvedValue([]);
   });
 
   it('center_admin puede listar especialistas pendientes sin documentos sensibles', async () => {
@@ -89,6 +91,7 @@ describe('adminService', () => {
         licenseStatus: 'pending',
         rejectionReason: null,
         centerId: null,
+        center: null,
         createdAt: '2026-06-19T12:00:00.000Z'
       }
     ]);
@@ -198,6 +201,9 @@ describe('adminService', () => {
       name: 'Centro Norte',
       address: null,
       phone: null,
+      city: null,
+      province: null,
+      image_url: null,
       is_active: true,
       created_at: '2026-07-01T12:00:00.000Z',
       updated_at: '2026-07-01T12:00:00.000Z'
@@ -226,6 +232,9 @@ describe('adminService', () => {
       name: 'Centro Norte',
       address: null,
       phone: null,
+      city: null,
+      province: null,
+      image_url: null,
       is_active: true,
       created_at: '2026-07-01T12:00:00.000Z',
       updated_at: '2026-07-01T12:00:00.000Z'

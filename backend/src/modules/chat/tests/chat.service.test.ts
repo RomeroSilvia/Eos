@@ -16,7 +16,15 @@ jest.mock('../chat.repository', () => ({
     uploadFile: jest.fn(),
     deleteFile: jest.fn(),
     createSignedUrl: jest.fn(),
-    findProfileById: jest.fn()
+    findProfileById: jest.fn(),
+    countMonthlyTextMessagesBySender: jest.fn(),
+    countMonthlyImageMessagesBySender: jest.fn()
+  }
+}));
+
+jest.mock('../../subscriptions/subscriptions.repository', () => ({
+  subscriptionsRepository: {
+    findCurrentSubscriptionByUserId: jest.fn()
   }
 }));
 
@@ -27,10 +35,14 @@ jest.mock('../../notifications/notifications.service', () => ({
 }));
 
 const mockedRepository = jest.mocked(chatRepository);
+const mockedSubscriptionsRepository = jest.mocked(require('../../subscriptions/subscriptions.repository').subscriptionsRepository);
 
 describe('chatService', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockedSubscriptionsRepository.findCurrentSubscriptionByUserId.mockResolvedValue(null);
+    mockedRepository.countMonthlyTextMessagesBySender.mockResolvedValue(0);
+    mockedRepository.countMonthlyImageMessagesBySender.mockResolvedValue(0);
   });
 
   describe('sendMessage', () => {
@@ -155,6 +167,20 @@ describe('chatService', () => {
         statusCode: 400
       } as Partial<ApiError>);
       expect(mockedRepository.createMessage).not.toHaveBeenCalled();
+    });
+
+    it('rechaza mensajes cuando supera tokens mensuales sin plan', async () => {
+      mockedRepository.findRelationById.mockResolvedValue(buildRelation());
+      mockedRepository.countMonthlyTextMessagesBySender.mockResolvedValue(10);
+
+      await expect(
+        chatService.sendMessage({
+          userId: 'user-1',
+          role: 'user',
+          relationId: 'relation-1',
+          content: 'hola'
+        })
+      ).rejects.toMatchObject({ statusCode: 403 } as Partial<ApiError>);
     });
   });
 
@@ -335,6 +361,20 @@ describe('chatService', () => {
       expect(mockedRepository.uploadFile).not.toHaveBeenCalled();
     });
 
+    it('rechaza imagen cuando supera tokens mensuales sin plan', async () => {
+      mockedRepository.findRelationById.mockResolvedValue(buildRelation());
+      mockedRepository.countMonthlyImageMessagesBySender.mockResolvedValue(2);
+
+      await expect(
+        chatService.sendMediaMessage({
+          userId: 'user-1',
+          role: 'user',
+          relationId: 'relation-1',
+          file: buildImageFile()
+        })
+      ).rejects.toMatchObject({ statusCode: 403 } as Partial<ApiError>);
+    });
+
     it('sube imagen a chat-media y guarda media_path sin URL publica', async () => {
       mockedRepository.findRelationById.mockResolvedValue(buildRelation());
       mockedRepository.uploadFile.mockResolvedValue(undefined);
@@ -420,6 +460,20 @@ describe('chatService', () => {
       } as Partial<ApiError>);
       expect(mockedRepository.createMessage).not.toHaveBeenCalled();
       expect(mockedRepository.deleteFile).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('startVideoCall', () => {
+    it('rechaza videollamada cuando el usuario no tiene plan', async () => {
+      mockedRepository.findRelationById.mockResolvedValue(buildRelation());
+
+      await expect(
+        chatService.startVideoCall({
+          userId: 'user-1',
+          role: 'user',
+          relationId: 'relation-1'
+        })
+      ).rejects.toMatchObject({ statusCode: 403 } as Partial<ApiError>);
     });
   });
 

@@ -157,7 +157,8 @@ export default function SettingsScreen() {
             setIsCancelingSubscription(true);
             try {
               await cancelMySubscription();
-              setSubscription(null);
+              const refreshedSubscription = await getMySubscription().catch(() => null);
+              setSubscription(refreshedSubscription);
               Alert.alert('Suscripcion', 'Tu suscripcion fue cancelada.');
             } catch (error) {
               Alert.alert('Suscripcion', getFriendlyErrorMessage(error, 'No pudimos cancelar tu suscripcion.'));

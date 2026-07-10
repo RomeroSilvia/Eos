@@ -8,9 +8,14 @@ export const errorMiddleware: ErrorRequestHandler = (error, _req, res, _next) =>
   const message = isApiError ? error.message : 'Unexpected server error';
 
   if (!isApiError && env.nodeEnv === 'development') {
+    const unexpected = normalizeUnexpectedError(error);
+
     console.error('[unexpected-error]', {
-      name: error instanceof Error ? error.name : typeof error,
-      message: error instanceof Error ? error.message : String(error)
+      name: unexpected.name,
+      message: unexpected.message,
+      ...(unexpected.code ? { code: unexpected.code } : {}),
+      ...(unexpected.details ? { details: unexpected.details } : {}),
+      ...(unexpected.hint ? { hint: unexpected.hint } : {})
     });
   }
 
@@ -27,4 +32,56 @@ function toValidHttpStatus(statusCode: number): number {
   }
 
   return 500;
+}
+
+function normalizeUnexpectedError(error: unknown): {
+  name: string;
+  message: string;
+  code?: string;
+  details?: string;
+  hint?: string;
+} {
+  if (error instanceof Error) {
+    return {
+      name: error.name,
+      message: error.message || 'Unknown error'
+    };
+  }
+
+  if (error && typeof error === 'object') {
+    const candidate = error as {
+      name?: unknown;
+      message?: unknown;
+      code?: unknown;
+      details?: unknown;
+      hint?: unknown;
+      error_description?: unknown;
+    };
+
+    const details = toOptionalString(candidate.details);
+    const hint = toOptionalString(candidate.hint);
+    const message =
+      toOptionalString(candidate.message)
+      ?? toOptionalString(candidate.error_description)
+      ?? details
+      ?? hint
+      ?? 'Unknown error object';
+
+    return {
+      name: toOptionalString(candidate.name) ?? 'object',
+      message,
+      code: toOptionalString(candidate.code),
+      details,
+      hint
+    };
+  }
+
+  return {
+    name: typeof error,
+    message: String(error)
+  };
+}
+
+function toOptionalString(value: unknown): string | undefined {
+  return typeof value === 'string' && value.trim() ? value : undefined;
 }

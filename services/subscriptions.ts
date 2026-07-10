@@ -3,12 +3,23 @@ import { ApiRequestError, apiRequest, getFriendlyApiErrorMessage } from '@/servi
 export type SubscriptionOwnerType = 'user' | 'center';
 export type SubscriptionStatus = 'active' | 'pending' | 'canceled' | 'expired' | 'past_due';
 
+export type SubscriptionPlanFeatures = {
+  durationDays?: number;
+  chatEnabled?: boolean;
+  chatImagesEnabled?: boolean;
+  videoCallsEnabled?: boolean;
+  maxMonthlyVideoCalls?: number;
+  messageTokensPerMonth?: number;
+  imageTokensPerMonth?: number;
+  canAccessGroupSessions?: boolean;
+};
+
 export type SubscriptionPlan = {
   id: string;
   name: string;
   price: number;
   level: string;
-  features: Record<string, unknown>;
+  features: SubscriptionPlanFeatures;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
@@ -27,33 +38,6 @@ export type Subscription = {
   plan: SubscriptionPlan | null;
 };
 
-export type CenterReportSummary = {
-  centerId: string;
-  centerName: string;
-  clients: number;
-  specialists: number;
-  consultations: number;
-  assignedRoutines: number;
-  averageCompliance: number;
-};
-
-export type AdminReportsResponse = {
-  filters: {
-    centerId: string | null;
-    from: string | null;
-    to: string | null;
-  };
-  summary: {
-    clients: number;
-    activeSpecialists: number;
-    consultations: number;
-    assignedRoutines: number;
-    averageCompliance: number;
-  };
-  byCenter: CenterReportSummary[];
-  scopeWarning: string | null;
-};
-
 export type AssignableUser = {
   id: string;
   fullName: string | null;
@@ -66,6 +50,21 @@ type SubscriptionsResponse = { subscriptions: Subscription[] };
 type SubscriptionResponse = { subscription: Subscription };
 type MySubscriptionResponse = { subscription: Subscription | null };
 type AssignableUsersResponse = { users: AssignableUser[] };
+
+async function requestWithLegacyMySubscriptionFallback<T>(
+  request: () => Promise<T>,
+  legacyRequest: () => Promise<T>
+): Promise<T> {
+  try {
+    return await request();
+  } catch (error) {
+    if (error instanceof ApiRequestError && (error.status === 403 || error.status === 404)) {
+      return legacyRequest();
+    }
+
+    throw error;
+  }
+}
 
 export async function getSubscriptionPlans(): Promise<SubscriptionPlan[]> {
   const response = await apiRequest<PlansResponse>({
@@ -80,7 +79,7 @@ export async function createSubscriptionPlan(input: {
   name: string;
   level: string;
   price: number;
-  features?: Record<string, unknown>;
+  features?: SubscriptionPlanFeatures;
 }): Promise<SubscriptionPlan> {
   const response = await apiRequest<PlanResponse>({
     path: '/admin/subscriptions/plans',
@@ -93,7 +92,7 @@ export async function createSubscriptionPlan(input: {
 
 export async function updateSubscriptionPlan(
   planId: string,
-  input: Partial<{ name: string; level: string; price: number; features: Record<string, unknown>; isActive: boolean }>
+  input: Partial<{ name: string; level: string; price: number; features: SubscriptionPlanFeatures; isActive: boolean }>
 ): Promise<SubscriptionPlan> {
   const response = await apiRequest<PlanResponse>({
     path: `/admin/subscriptions/plans/${planId}`,
@@ -114,19 +113,31 @@ export async function getSubscriptions(): Promise<Subscription[]> {
 }
 
 export async function getMySubscription(): Promise<Subscription | null> {
-  const response = await apiRequest<MySubscriptionResponse>({
-    path: '/admin/subscriptions/me',
-    method: 'GET'
-  });
+  const response = await requestWithLegacyMySubscriptionFallback(
+    () => apiRequest<MySubscriptionResponse>({
+      path: '/admin/subscriptions/me',
+      method: 'GET'
+    }),
+    () => apiRequest<MySubscriptionResponse>({
+      path: '/subscriptions/me',
+      method: 'GET'
+    })
+  );
 
   return response.subscription;
 }
 
 export async function cancelMySubscription(): Promise<Subscription> {
-  const response = await apiRequest<SubscriptionResponse>({
-    path: '/admin/subscriptions/me/cancel',
-    method: 'PATCH'
-  });
+  const response = await requestWithLegacyMySubscriptionFallback(
+    () => apiRequest<SubscriptionResponse>({
+      path: '/admin/subscriptions/me/cancel',
+      method: 'PATCH'
+    }),
+    () => apiRequest<SubscriptionResponse>({
+      path: '/subscriptions/me/cancel',
+      method: 'PATCH'
+    })
+  );
 
   return response.subscription;
 }
@@ -171,25 +182,6 @@ export async function updateSubscriptionStatus(
   });
 
   return response.subscription;
-}
-
-export async function getAdminReports(filters?: {
-  centerId?: string;
-  from?: string;
-  to?: string;
-}): Promise<AdminReportsResponse> {
-  const params = new URLSearchParams();
-
-  if (filters?.centerId) params.set('centerId', filters.centerId);
-  if (filters?.from) params.set('from', filters.from);
-  if (filters?.to) params.set('to', filters.to);
-
-  const query = params.toString();
-
-  return apiRequest<AdminReportsResponse>({
-    path: query ? `/admin/reports?${query}` : '/admin/reports',
-    method: 'GET'
-  });
 }
 
 export function getSubscriptionsErrorMessage(error: unknown): string {

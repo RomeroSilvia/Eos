@@ -5,6 +5,8 @@ import { specialistsRegistrationRepository } from '../specialists.registration.r
 import { specialistsRegistrationService } from '../specialists.registration.service';
 import { specialistsSharedRepository } from '../specialists.shared.repository';
 
+type SpecialistProfileWithCenterId = SpecialistProfileRow & { center_id: string | null };
+
 jest.mock('../specialists.registration.repository', () => ({
   specialistsRegistrationRepository: {
     findByLicenseNumber: jest.fn(),
@@ -15,7 +17,8 @@ jest.mock('../specialists.registration.repository', () => ({
 jest.mock('../specialists.shared.repository', () => ({
   specialistsSharedRepository: {
     findSpecialistProfileByUserId: jest.fn(),
-    findProfileById: jest.fn()
+    findProfileById: jest.fn(),
+    findActiveCenterById: jest.fn()
   }
 }));
 
@@ -40,7 +43,7 @@ const validJpegBuffer = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0
 const validPngBuffer = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00]);
 const validWebpBuffer = Buffer.from('RIFFxxxxWEBPVP8 ', 'ascii');
 
-function makeSpecialistProfile(overrides: Partial<SpecialistProfileRow> = {}): SpecialistProfileRow {
+function makeSpecialistProfile(overrides: Partial<SpecialistProfileWithCenterId> = {}): SpecialistProfileWithCenterId {
   return {
     id: overrides.id ?? 'specialist-1',
     user_id: overrides.user_id ?? 'user-1',
@@ -50,6 +53,7 @@ function makeSpecialistProfile(overrides: Partial<SpecialistProfileRow> = {}): S
     title_photo_url: overrides.title_photo_url ?? 'user-1/titulo/titulo.jpg',
     license_status: overrides.license_status ?? 'pending',
     rejection_reason: overrides.rejection_reason ?? null,
+    center_id: overrides.center_id ?? null,
     created_at: overrides.created_at ?? '2026-01-01T00:00:00.000Z',
     updated_at: overrides.updated_at ?? '2026-01-01T00:00:00.000Z'
   };
@@ -87,6 +91,7 @@ describe('specialistsRegistrationService', () => {
       full_name: 'Marta Lopez',
       email: 'marta@example.com'
     });
+    mockedSharedRepo.findActiveCenterById.mockResolvedValue(null);
     mockedSharedRepo.findSpecialistProfileByUserId.mockResolvedValue(null);
   });
 
@@ -390,7 +395,10 @@ describe('specialistsRegistrationService', () => {
         rejection_reason: null,
         specialty: 'dermatologo',
         license_number: 'MN-12345',
-        full_name: 'Marta Lopez'
+        full_name: 'Marta Lopez',
+        center_id: null,
+        centerId: null,
+        center: null
       });
     });
 
@@ -402,7 +410,10 @@ describe('specialistsRegistrationService', () => {
         rejection_reason: 'Documento ilegible',
         specialty: 'dermatologo',
         license_number: 'MN-12345',
-        full_name: 'Marta Lopez'
+        full_name: 'Marta Lopez',
+        center_id: null,
+        centerId: null,
+        center: null
       });
     });
 
@@ -414,7 +425,10 @@ describe('specialistsRegistrationService', () => {
         rejection_reason: null,
         specialty: 'dermatologo',
         license_number: 'MN-12345',
-        full_name: 'Marta Lopez'
+        full_name: 'Marta Lopez',
+        center_id: null,
+        centerId: null,
+        center: null
       });
     });
 
@@ -426,7 +440,10 @@ describe('specialistsRegistrationService', () => {
         rejection_reason: null,
         specialty: null,
         license_number: null,
-        full_name: 'Marta Lopez'
+        full_name: 'Marta Lopez',
+        center_id: null,
+        centerId: null,
+        center: null
       });
     });
 

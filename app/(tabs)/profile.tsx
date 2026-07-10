@@ -9,6 +9,7 @@ import { Card } from '@/components/Card';
 import { RemindersSection } from '@/components/RemindersSection';
 import { colors } from '@/constants/colors';
 import { useProfile } from '@/hooks/useProfile';
+import { getFriendlyErrorMessage } from '@/services/api/client';
 import { logout } from '@/services/auth';
 import { getMySubscription } from '@/services/subscriptions';
 import { formatSkinType } from '@/utils/skinType';
@@ -63,6 +64,8 @@ export default function ProfileScreen() {
             try {
               await unlinkSpecialist();
               setMySpecialist(null);
+            } catch (error) {
+              Alert.alert('Perfil', getFriendlyErrorMessage(error, 'No pudimos desvincular al especialista. Intenta nuevamente.'));
             } finally {
               setUnlinking(false);
             }

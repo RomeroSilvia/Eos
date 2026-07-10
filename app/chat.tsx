@@ -1,5 +1,5 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import {
   AppState,
   Alert,
@@ -36,9 +36,11 @@ import {
   sendChatImage,
   sendChatMessage,
   startChatVideoCall,
+  type ChatAccessInfo,
   type ChatParsedPayload,
   type ChatParticipant,
-  type ChatMessage
+  type ChatMessage,
+  type ChatTokenSummary
 } from '@/services/chat';
 import { prepareSupabaseRealtimeClient } from '@/services/supabase';
 
@@ -67,6 +69,7 @@ type RetryPayload = {
 };
 
 export default function ChatScreen() {
+  const router = useRouter();
   const params = useLocalSearchParams<{ relationId?: string | string[] }>();
   const relationIdFromParams = useMemo(() => {
     if (Array.isArray(params.relationId)) {
@@ -88,6 +91,7 @@ export default function ChatScreen() {
   const [myRole, setMyRole] = useState<string | null>(null);
   const [isRealtimeSubscribed, setIsRealtimeSubscribed] = useState(false);
   const [participant, setParticipant] = useState<ChatParticipant | null>(null);
+  const [chatAccess, setChatAccess] = useState<ChatAccessInfo | null>(null);
   const listRef = useRef<FlatList<ChatListItem> | null>(null);
   const shouldScrollToEndRef = useRef(false);
   const isNearEndRef = useRef(true);
@@ -132,6 +136,7 @@ export default function ChatScreen() {
     setMessages([]);
     setMessageStatusById({});
     setParticipant(null);
+    setChatAccess(null);
     setLocalImageUrisById({});
     isNearEndRef.current = true;
     hasScrolledInitiallyRef.current = false;
@@ -260,6 +265,7 @@ export default function ChatScreen() {
 
       setRelationId(response.relationId);
       setParticipant(response.participant ?? null);
+      setChatAccess(response.access ?? null);
       mergeMessages(response.messages);
       if (response.messages.length > 0) {
         shouldScrollToEndRef.current = true;
@@ -272,6 +278,7 @@ export default function ChatScreen() {
       if (error instanceof ApiClientError && (error.status === 401 || error.status === 403 || error.status === 404)) {
         setMessages([]);
         setParticipant(null);
+        setChatAccess(null);
 
         if (!relationIdFromParams) {
           setRelationId(undefined);
@@ -296,12 +303,14 @@ export default function ChatScreen() {
 
       setRelationId(response.relationId);
       setParticipant(response.participant ?? null);
+      setChatAccess(response.access ?? null);
       mergeMessages(response.messages);
       markChatAsReadInBackground(response.relationId, response.messages);
     } catch (error) {
       if (error instanceof ApiClientError && error.status === 404 && !relationIdFromParams) {
         setMessages([]);
         setParticipant(null);
+        setChatAccess(null);
         setRelationId(undefined);
       }
 
@@ -488,6 +497,11 @@ export default function ChatScreen() {
       return;
     }
 
+    if (!canSendCurrentPayload) {
+      showSubscriptionUpsell(quotaAlertText);
+      return;
+    }
+
     const trimmedContent = messageText.trim();
     const isImageMessage = Boolean(selectedImage);
     const imageToSend = selectedImage;
@@ -539,6 +553,7 @@ export default function ChatScreen() {
         });
 
       setRelationId(response.relationId);
+      setChatAccess(response.access ?? null);
       setMessages((prev) => replaceMessageById(prev, optimisticMessage.id, response.message));
 
       setMessageStatusById((prev) => {
@@ -616,6 +631,7 @@ export default function ChatScreen() {
         });
 
       setRelationId(response.relationId);
+      setChatAccess(response.access ?? null);
       setMessages((prev) => replaceMessageById(prev, messageId, response.message));
 
       delete retryPayloadByLocalIdRef.current[messageId];
@@ -642,6 +658,11 @@ export default function ChatScreen() {
 
   async function handlePickImage() {
     if (isSending) {
+      return;
+    }
+
+    if (isImageTokensExhausted) {
+      showSubscriptionUpsell('Ya usaste todos tus tokens de imagenes. Se resetean en 24h.');
       return;
     }
 
@@ -689,6 +710,11 @@ export default function ChatScreen() {
       return;
     }
 
+    if (chatAccess && !chatAccess.videoCallsEnabled) {
+      showSubscriptionUpsell('Necesitas un plan activo con videollamadas para iniciar una llamada.');
+      return;
+    }
+
     setIsSending(true);
 
     try {
@@ -705,6 +731,20 @@ export default function ChatScreen() {
     } finally {
       setIsSending(false);
     }
+  }
+
+  function showSubscriptionUpsell(message: string) {
+    Alert.alert(
+      'Limite de suscripcion',
+      `${message}\n\nTe recomendamos contratar una suscripcion para tener mas cupo.`,
+      [
+        { text: 'Entendido', style: 'cancel' },
+        {
+          text: 'Ir a Inicio',
+          onPress: () => router.push('/(tabs)/home')
+        }
+      ]
+    );
   }
 
   const orderedMessages = useMemo(() => {
@@ -776,6 +816,19 @@ export default function ChatScreen() {
     [localImageUrisById, messageStatusById, myRole, myUserId]
   );
 
+  const messageTokensRemaining = chatAccess?.messageTokens.remaining ?? null;
+  const imageTokensRemaining = chatAccess?.imageTokens.remaining ?? null;
+  const isMessageTokensExhausted = messageTokensRemaining !== null && messageTokensRemaining <= 0;
+  const isImageTokensExhausted = imageTokensRemaining !== null && imageTokensRemaining <= 0;
+  const isVideoCallsAvailable = chatAccess ? chatAccess.videoCallsEnabled : true;
+  const canSendCurrentPayload = selectedImage ? !isImageTokensExhausted : !isMessageTokensExhausted;
+  const showComposerQuotaWarning = selectedImage ? isImageTokensExhausted : isMessageTokensExhausted;
+  const tokenResetWindowHours = chatAccess?.tokenResetWindowHours ?? 24;
+
+  const quotaAlertText = selectedImage
+    ? `No podes enviar imagenes: agotaste tus tokens. Se resetean cada ${tokenResetWindowHours}h.`
+    : `No podes enviar mensajes: agotaste tus tokens. Se resetean cada ${tokenResetWindowHours}h.`;
+
   const handleContentSizeChange = useCallback(() => {
     if (!shouldScrollToEndRef.current && Date.now() > scrollToEndUntilRef.current) {
       return;
@@ -842,6 +895,14 @@ export default function ChatScreen() {
         <View style={styles.participantTextBlock}>
           <Text style={styles.participantLabel}>Estas chateando con</Text>
           <Text style={styles.participantName}>{formatParticipantName(participant)}</Text>
+          {chatAccess ? (
+            <Text style={[styles.tokenInlineSummary, (isMessageTokensExhausted || isImageTokensExhausted) && styles.tokenInlineSummaryBlocked]}>
+              {buildTokenInlineSummary(chatAccess.messageTokens, chatAccess.imageTokens)}
+            </Text>
+          ) : null}
+          {chatAccess && !isVideoCallsAvailable ? (
+            <Text style={styles.videoCallDisabledHint}>Tu plan actual no incluye videollamadas.</Text>
+          ) : null}
         </View>
         <Pressable
           accessibilityLabel="Iniciar videollamada"
@@ -851,7 +912,7 @@ export default function ChatScreen() {
           style={({ pressed }) => [
             styles.videoCallHeaderButton,
             pressed && styles.iconActionPressed,
-            isSending && styles.iconActionDisabled
+            (isSending || !isVideoCallsAvailable) && styles.iconActionDisabled
           ]}
         >
           <Ionicons color={colors.surface} name="videocam-outline" size={16} />
@@ -898,6 +959,9 @@ export default function ChatScreen() {
             </Pressable>
           </View>
         ) : null}
+
+        {showComposerQuotaWarning ? <Text style={styles.tokenWarningText}>{quotaAlertText}</Text> : null}
+
         <View style={styles.composerRow}>
           <Pressable
             accessibilityLabel="Adjuntar imagen"
@@ -907,7 +971,7 @@ export default function ChatScreen() {
             style={({ pressed }) => [
               styles.iconActionButton,
               pressed && styles.iconActionPressed,
-              isSending && styles.iconActionDisabled
+              (isSending || isImageTokensExhausted) && styles.iconActionDisabled
             ]}
           >
             <Ionicons color={colors.primaryDark} name="image-outline" size={20} />
@@ -1135,6 +1199,21 @@ const styles = StyleSheet.create({
     flex: 1,
     gap: 2
   },
+  tokenInlineSummary: {
+    color: colors.textSecondary,
+    fontSize: 11,
+    fontWeight: '700',
+    marginTop: 3
+  },
+  tokenInlineSummaryBlocked: {
+    color: colors.secondaryDark
+  },
+  videoCallDisabledHint: {
+    color: colors.error,
+    fontSize: 11,
+    fontWeight: '700',
+    marginTop: 3
+  },
   participantLabel: {
     color: colors.textSecondary,
     fontSize: 12,
@@ -1292,6 +1371,11 @@ const styles = StyleSheet.create({
   },
   composer: {
     gap: 10
+  },
+  tokenWarningText: {
+    color: colors.error,
+    fontSize: 12,
+    fontWeight: '700'
   },
   composerRow: {
     alignItems: 'stretch',
@@ -1598,6 +1682,18 @@ function resolveOutgoingStatus(message: ChatMessage, explicitStatus?: OutgoingSt
   }
 
   return 'delivered';
+}
+
+function buildTokenInlineSummary(messageTokens: ChatTokenSummary, imageTokens: ChatTokenSummary): string {
+  const messageValue = messageTokens.isLimited
+    ? `${messageTokens.remaining ?? 0}/${messageTokens.limit ?? 0}`
+    : 'Ilimitado';
+
+  const imageValue = imageTokens.isLimited
+    ? `${imageTokens.remaining ?? 0}/${imageTokens.limit ?? 0}`
+    : 'Ilimitado';
+
+  return `Mensajes ${messageValue} · Imagenes ${imageValue}`;
 }
 
 function mergeChatMessages(

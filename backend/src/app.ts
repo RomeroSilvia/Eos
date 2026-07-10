@@ -10,7 +10,6 @@ import { productsRouter } from './modules/products/products.routes';
 import { profileRouter } from './modules/profile/profile.routes';
 import { progressRouter } from './modules/progress/progress.routes';
 import { quizRouter } from './modules/quiz/quiz.routes';
-import { reportsRouter } from './modules/reports/reports.routes';
 import { routinesRouter } from './modules/routines/routines.routes';
 import { specialistRouter } from './modules/specialists/specialist.legacy.routes';
 import { specialistsRouter } from './modules/specialists/specialists.routes';
@@ -50,7 +49,7 @@ app.use('/api/specialists', specialistsRouter);
 app.use('/api/chat', chatRouter);
 app.use('/api/notifications', notificationsRouter);
 app.use('/api/admin/subscriptions', subscriptionsRouter);
-app.use('/api/admin/reports', reportsRouter);
+app.use('/api/subscriptions', subscriptionsRouter);
 
 app.use(notFoundMiddleware);
 app.use(errorMiddleware);

@@ -21,6 +21,7 @@ specialistsRouter.use(authenticate);
 
 specialistsRouter.post('/link', requireRole('user'), linkSpecialist);
 specialistsRouter.delete('/link', requireRole('user'), unlinkSpecialist);
+specialistsRouter.post('/unlink', requireRole('user'), unlinkSpecialist);
 specialistsRouter.get('/my-specialist', requireRole('user'), getMySpecialist);
 specialistsRouter.get('/my-patients', requireRole('specialist'), getMyPatients);
 specialistsRouter.get('/my-patients/:patientId', requireRole('specialist'), getMyPatientDetail);

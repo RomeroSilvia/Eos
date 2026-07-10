@@ -214,14 +214,13 @@ Implementado:
 - Chat con envío de imágenes via `expo-image-picker`, separadores de fecha y soporte de videollamada.
 - Notificación push al destinatario al recibir un mensaje nuevo (`new-message`).
 
-## Entrega 3 - Módulo 5 (Planes/Suscripciones y Reportes)
+## Entrega 3 - Módulo 5 (Planes/Suscripciones y Metricas)
 
 Implementado:
 
 - Backend `subscriptions` con CRUD de planes y asignación/cambio de suscripciones.
-- Backend `reports` con `GET /api/admin/reports?centerId=&from=&to=`.
 - Migraciones E3 para `subscription_plans`, `subscriptions` e índices/vista de métricas.
-- Pantallas admin: `/(tabs-admin)/plans` y `/(tabs-admin)/reports`.
+- Pantallas admin: `/(tabs-admin)/plans` y `/(tabs-admin)/metrics`.
 - Servicio frontend `services/subscriptions.ts`.
 - Integración best-effort con contrato de auditoría (`recordAuditLog`).
 - Regla de alcance E3 explícita: `subscriptions.status` es informativo y no bloquea features de otros módulos.

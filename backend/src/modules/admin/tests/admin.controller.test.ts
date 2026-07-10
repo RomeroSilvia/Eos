@@ -42,6 +42,7 @@ describe('adminController', () => {
         licenseStatus: 'pending',
         rejectionReason: null,
         centerId: null,
+        center: null,
         createdAt: '2026-06-19T12:00:00.000Z'
       }
     ]);
@@ -75,6 +76,7 @@ describe('adminController', () => {
       licenseStatus: 'verified',
       rejectionReason: null,
       centerId: null,
+      center: null,
       createdAt: '2026-06-19T12:00:00.000Z'
     });
 
@@ -118,6 +120,10 @@ describe('adminController', () => {
       licenseStatus: 'verified',
       rejectionReason: null,
       centerId: 'center-1',
+      center: {
+        id: 'center-1',
+        name: 'Centro Norte'
+      },
       createdAt: '2026-06-19T12:00:00.000Z'
     });
 

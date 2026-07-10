@@ -313,8 +313,8 @@ export async function linkSpecialist(specialistId: string): Promise<void> {
 
 export async function unlinkSpecialist(): Promise<void> {
   await apiRequest({
-    path: '/specialists/link',
-    method: 'DELETE'
+    path: '/specialists/unlink',
+    method: 'POST'
   });
 }
 

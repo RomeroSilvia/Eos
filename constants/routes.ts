@@ -16,8 +16,7 @@ export const routes = {
   profile: '/profile',
   settings: '/settings',
   notifications: '/notifications',
-  adminPlans: '/(tabs-admin)/plans',
-  adminReports: '/(tabs-admin)/reports'
+  adminPlans: '/(tabs-admin)/plans'
 } as const;
 
 export type AppRoute = (typeof routes)[keyof typeof routes];
