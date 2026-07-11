@@ -28,6 +28,10 @@ EXPO_PUBLIC_PROGRESS_USER_ID=
 
 Para probar desde un celular físico, reemplazar `localhost` por la IP local de la máquina (ej. `http://192.168.1.x:3000/api`).
 
+### Sesión en frontend
+
+En iOS y Android la sesión se guarda con `expo-secure-store`. En web se mantiene la estrategia SPA existente basada en `localStorage`; esto permite conservar la sesión entre recargas, pero no protege frente a un XSS que ejecute JavaScript en el origen de la app. Por eso no se deben loguear tokens ni renderizar HTML no confiable.
+
 ## Backend Node.js
 
 Archivo:

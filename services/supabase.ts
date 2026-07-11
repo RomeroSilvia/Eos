@@ -1,10 +1,8 @@
-import * as SecureStore from 'expo-secure-store';
-import { Platform } from 'react-native';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import { getAccessToken } from '@/services/session';
 
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
-const accessTokenKey = 'eos-access-token';
 
 let cachedClient: SupabaseClient | null = null;
 
@@ -15,7 +13,7 @@ export async function prepareSupabaseRealtimeClient(): Promise<SupabaseClient | 
     return null;
   }
 
-  const accessToken = await getStoredAccessToken();
+  const accessToken = await getAccessToken();
 
   if (accessToken) {
     client.realtime.setAuth(accessToken);
@@ -40,12 +38,4 @@ function getSupabaseClient(): SupabaseClient | null {
   }
 
   return cachedClient;
-}
-
-async function getStoredAccessToken(): Promise<string | null> {
-  if (Platform.OS === 'web') {
-    return localStorage.getItem(accessTokenKey);
-  }
-
-  return SecureStore.getItemAsync(accessTokenKey);
 }

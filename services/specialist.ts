@@ -1,8 +1,7 @@
 import type { ImagePickerAsset } from 'expo-image-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
-import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
-import { apiConfig, apiRequest } from '@/services/api/client';
+import { apiRequest } from '@/services/api/client';
 import type { Routine } from '@/types/routine';
 
 export const SPECIALIST_DOCUMENT_MAX_SIZE_BYTES = 5 * 1024 * 1024;
@@ -211,18 +210,12 @@ export async function registerSpecialist(payload: SpecialistRegisterPayload): Pr
   await appendImageToFormData(formData, 'dniPhoto', payload.dniPhoto);
   await appendImageToFormData(formData, 'titlePhoto', payload.titlePhoto);
 
-  const response = await fetch(`${apiConfig.baseUrl}/specialist/register`, {
+  const body = await apiRequest<SpecialistStatusResponse>({
+    path: '/specialist/register',
     method: 'POST',
-    headers: await getMultipartAuthHeaders(),
     body: formData
   });
 
-  if (!response.ok) {
-    await logBackendErrorInDevelopment(response);
-    throw new Error(getFriendlyErrorMessage(response.status));
-  }
-
-  const body = await response.json() as SpecialistStatusResponse;
   return normalizeSpecialistStatusResponse(body);
 }
 
@@ -442,31 +435,6 @@ async function appendImageToFormData(
   } as unknown as Blob);
 }
 
-async function getMultipartAuthHeaders(): Promise<HeadersInit> {
-  const token = await getStoredToken();
-  return token ? { Authorization: `Bearer ${token}` } : {};
-}
-
-async function getStoredToken(): Promise<string | null> {
-  if (Platform.OS === 'web') {
-    return localStorage.getItem('eos-access-token');
-  }
-
-  return SecureStore.getItemAsync('eos-access-token');
-}
-
-async function logBackendErrorInDevelopment(response: Response): Promise<void> {
-  if (process.env.NODE_ENV === 'production') {
-    return;
-  }
-
-  const body = await response.clone().json().catch(() => null);
-  console.warn('[specialist/register]', {
-    status: response.status,
-    body
-  });
-}
-
 async function getPreparedDocument(
   asset: ImagePickerAsset,
   kind: SpecialistDocumentKind,
@@ -557,14 +525,6 @@ function getExtensionFromMimeType(mimeType: SpecialistDocumentMimeType): string 
 
 function isAllowedDocumentMimeType(value: string): value is SpecialistDocumentMimeType {
   return SPECIALIST_DOCUMENT_ALLOWED_MIME_TYPES.includes(value as SpecialistDocumentMimeType);
-}
-
-function getFriendlyErrorMessage(status: number): string {
-  if (status === 400) return 'Datos invalidos. Revisa los campos e intenta de nuevo.';
-  if (status === 401) return 'Sesion vencida. Volve a iniciar sesion.';
-  if (status === 403) return 'No tenes permisos para realizar esta accion.';
-  if (status >= 500) return 'Ocurrio un error en el servidor. Intenta nuevamente en unos minutos.';
-  return 'No pudimos completar la solicitud.';
 }
 
 function hasHttpStatus(error: unknown, status: number): boolean {

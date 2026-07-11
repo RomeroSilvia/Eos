@@ -41,16 +41,39 @@ type AuthUser = {
   user_metadata?: Record<string, unknown>;
 };
 
-type AuthSession = {
+type ProviderSession = {
   access_token: string;
+  refresh_token?: string;
+  expires_at?: number;
+  expires_in?: number;
+  token_type?: string;
+};
+
+type AuthSessionDto = {
+  accessToken: string;
+  refreshToken: string;
+  expiresAt: number | null;
+  expiresIn: number | null;
+  tokenType: string;
+};
+
+type AuthUserDto = {
+  id: string;
+  email: string | null;
+};
+
+type AuthProfileDto = {
+  id: string;
+  name: string;
+  email: string | null;
+  role: UserRole;
+  skinType: string | null;
 };
 
 type AuthResponseBody = {
-  message: string;
-  token: string;
-  session: AuthSession;
-  user: AuthUser;
-  profile: ProfileRow | null;
+  user: AuthUserDto;
+  profile: AuthProfileDto;
+  session: AuthSessionDto;
 };
 
 export function getAuthHealth() {
@@ -116,13 +139,7 @@ export const authService = {
       role: normalizedRole
     });
 
-    return {
-      message: 'User registered successfully',
-      token: sessionData.session.access_token,
-      session: sessionData.session,
-      user: sessionData.user,
-      profile
-    };
+    return buildAuthResponse(sessionData.user, sessionData.session, profile);
   },
 
   login: async (payload: LoginPayload): Promise<AuthResponseBody> => {
@@ -143,18 +160,12 @@ export const authService = {
       throw new ApiError(401, 'Invalid login response');
     }
 
-    const profile = await findProfileSafely(data.user.id);
+    const profile = await findOrCreateProfileForAuthUser(data.user);
 
-    return {
-      message: 'Login successful',
-      token: data.session.access_token,
-      session: data.session,
-      user: data.user,
-      profile
-    };
+    return buildAuthResponse(data.user, data.session, profile);
   },
 
-  googleLogin: async (payload: GoogleLoginPayload): Promise<{ access_token: string; isNewUser: boolean }> => {
+  googleLogin: async (payload: GoogleLoginPayload): Promise<AuthResponseBody> => {
     const { idToken } = payload;
 
     if (!idToken) {
@@ -171,18 +182,9 @@ export const authService = {
       throw new ApiError(401, 'Google authentication failed');
     }
 
-    const existingProfile = await findProfileSafely(data.user.id);
-    let isNewUser = false;
+    const profile = await findOrCreateProfileForAuthUser(data.user);
 
-    if (!existingProfile) {
-      await createProfileFromProviderUser(data.user);
-      isNewUser = true;
-    }
-
-    return {
-      access_token: data.session.access_token,
-      isNewUser
-    };
+    return buildAuthResponse(data.user, data.session, profile);
   },
 
   resetPassword: async (payload: ResetPasswordPayload): Promise<{ message: string }> => {
@@ -350,7 +352,17 @@ async function createOrUpdateProfileSafely(data: {
   }
 }
 
-async function createProfileFromProviderUser(user: AuthUser): Promise<void> {
+async function findOrCreateProfileForAuthUser(user: AuthUser): Promise<ProfileRow> {
+  const existingProfile = await findProfileSafely(user.id);
+
+  if (existingProfile) {
+    return existingProfile;
+  }
+
+  return createProfileFromProviderUser(user);
+}
+
+async function createProfileFromProviderUser(user: AuthUser): Promise<ProfileRow> {
   const metadata = user.user_metadata ?? {};
   const email = user.email ?? '';
   const emailUsername = email.split('@')[0] || user.id;
@@ -371,7 +383,7 @@ async function createProfileFromProviderUser(user: AuthUser): Promise<void> {
       : emailUsername;
 
   try {
-    await authRepository.createProfile({
+    return await authRepository.createProfile({
       id: user.id,
       email,
       full_name: [firstName, lastName].filter(Boolean).join(' ').trim() || username,
@@ -380,4 +392,51 @@ async function createProfileFromProviderUser(user: AuthUser): Promise<void> {
   } catch {
     throw new ApiError(500, 'Ocurrió un error. Intentá nuevamente.');
   }
+}
+
+function buildAuthResponse(user: AuthUser, session: ProviderSession, profile: ProfileRow): AuthResponseBody {
+  return {
+    user: mapAuthUser(user),
+    profile: mapProfile(profile, user),
+    session: mapSession(session)
+  };
+}
+
+function mapAuthUser(user: AuthUser): AuthUserDto {
+  return {
+    id: user.id,
+    email: user.email ?? null
+  };
+}
+
+function mapSession(session: ProviderSession): AuthSessionDto {
+  if (!session.access_token || !session.refresh_token) {
+    throw new ApiError(500, 'Supabase no devolvio una sesion completa.');
+  }
+
+  return {
+    accessToken: session.access_token,
+    refreshToken: session.refresh_token,
+    expiresAt: typeof session.expires_at === 'number' ? session.expires_at : null,
+    expiresIn: typeof session.expires_in === 'number' ? session.expires_in : null,
+    tokenType: session.token_type ?? 'bearer'
+  };
+}
+
+function mapProfile(profile: ProfileRow, user: AuthUser): AuthProfileDto {
+  return {
+    id: profile.id,
+    name: profile.full_name || user.email || 'Usuario',
+    email: profile.email ?? user.email ?? null,
+    role: normalizeProfileRole(profile.role),
+    skinType: profile.skin_type ?? null
+  };
+}
+
+function normalizeProfileRole(role?: string | null): UserRole {
+  if (role === 'specialist' || role === 'center_admin') {
+    return role;
+  }
+
+  return 'user';
 }

@@ -1,7 +1,6 @@
-import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
 import type { Product, ProductCategory, ProductBrand } from '@/types/product';
-import { ApiClientError, apiConfig, apiRequest } from '@/services/api/client';
+import { ApiClientError, apiRequest } from '@/services/api/client';
 
 export type ProductUsageConflict = {
   affectedRoutines: { routineId: string; routineName: string; stepName: string }[];
@@ -92,14 +91,12 @@ export async function createProduct(data: {
     appendBase64ImageToFormData(formData, data);
 
     console.log('[products.service] enviando POST /products...');
-    const res = await fetch(`${apiConfig.baseUrl}/products`, {
+    const row = await apiRequest<Record<string, unknown>>({
+      path: '/products',
       method: 'POST',
-      headers: await getMultipartAuthHeaders(),
       body: formData,
     });
-    console.log('[products.service] respuesta POST /products status:', res.status);
-    if (!res.ok) throw new Error(await getErrorMessage(res, 'Error al crear producto'));
-    return mapToProduct(await res.json() as Record<string, unknown>);
+    return mapToProduct(row);
   } catch (error) {
     console.error('[createProduct]', error);
     throw error instanceof Error ? error : new Error(`Error del servidor: ${String(error)}`);
@@ -126,14 +123,12 @@ export async function updateProduct(id: string, data: {
     appendBase64ImageToFormData(formData, data);
 
     console.log('[products.service] enviando PATCH /products/' + id + '...');
-    const res = await fetch(`${apiConfig.baseUrl}/products/${id}`, {
+    const row = await apiRequest<Record<string, unknown>>({
+      path: `/products/${id}`,
       method: 'PATCH',
-      headers: await getMultipartAuthHeaders(),
       body: formData,
     });
-    console.log('[products.service] respuesta PATCH status:', res.status);
-    if (!res.ok) throw new Error(await getErrorMessage(res, 'Error al actualizar producto'));
-    return mapToProduct(await res.json() as Record<string, unknown>);
+    return mapToProduct(row);
   } catch (error) {
     console.error('[updateProduct]', error);
     throw error instanceof Error ? error : new Error(`Error del servidor: ${String(error)}`);
@@ -152,24 +147,6 @@ function appendBase64ImageToFormData(formData: FormData, data: ProductImagePaylo
   formData.append('imageBase64', data.imageBase64);
   formData.append('imageMimeType', mimeType);
   formData.append('imageFilename', filename);
-}
-
-async function getMultipartAuthHeaders(): Promise<HeadersInit> {
-  const token = await getStoredToken();
-  return token ? { Authorization: `Bearer ${token}` } : {};
-}
-
-async function getStoredToken(): Promise<string | null> {
-  if (Platform.OS === 'web') {
-    return localStorage.getItem('eos-access-token');
-  }
-
-  return SecureStore.getItemAsync('eos-access-token');
-}
-
-async function getErrorMessage(response: Response, fallback: string): Promise<string> {
-  const body = await response.json().catch(() => null) as { message?: string } | null;
-  return body?.message ?? fallback;
 }
 
 export async function deleteProduct(id: string): Promise<void> {

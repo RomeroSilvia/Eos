@@ -1,10 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import * as SecureStore from 'expo-secure-store';
 import { useEffect, useState } from 'react';
-import { Alert, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { apiConfig } from '@/services/api/client';
+import { apiRequest } from '@/services/api/client';
+import { getAccessToken } from '@/services/session';
 
 type SkinProfileResult = {
   ageRange: string;
@@ -31,23 +31,17 @@ export default function QuizResultsScreen() {
   useEffect(() => {
     async function loadSkinProfile() {
       try {
-        const token = await getStoredToken();
+        const token = await getAccessToken();
 
         if (!token) {
           router.replace('/login');
           return;
         }
 
-        const response = await fetch(`${apiConfig.baseUrl}/quiz/profile`, {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        });
+        const data = await apiRequest<QuizProfileResponse>({ path: '/quiz/profile', method: 'GET' });
 
-        const data = (await response.json().catch(() => null)) as QuizProfileResponse | null;
-
-        if (!response.ok || !data?.skinProfile) {
-          throw new Error(data?.message ?? 'No pudimos cargar tus resultados.');
+        if (!data?.skinProfile) {
+          throw new Error('No pudimos cargar tus resultados.');
         }
 
         setSkinProfile({
@@ -111,14 +105,6 @@ export default function QuizResultsScreen() {
       </Pressable>
     </SafeAreaView>
   );
-}
-
-async function getStoredToken() {
-  if (Platform.OS === 'web') {
-    return localStorage.getItem('eos-access-token');
-  }
-
-  return SecureStore.getItemAsync('eos-access-token');
 }
 
 function Badge({ label, variant = 'default' }: { label: string; variant?: 'default' | 'goal' }) {

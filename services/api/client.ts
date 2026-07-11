@@ -1,5 +1,4 @@
-import * as SecureStore from 'expo-secure-store';
-import { Platform } from 'react-native';
+import { clearSession, getAccessToken, refreshAccessToken } from '@/services/session';
 
 const defaultApiUrl = 'http://localhost:3000/api';
 
@@ -81,9 +80,16 @@ export class ApiClientError extends ApiRequestError {
   }
 }
 
-export async function apiRequest<TResponse>({ path, headers, ...options }: ApiRequestOptions): Promise<TResponse> {
+export async function apiRequest<TResponse>(options: ApiRequestOptions): Promise<TResponse> {
+  return apiRequestInternal<TResponse>(options, false);
+}
+
+async function apiRequestInternal<TResponse>(
+  { path, headers, ...options }: ApiRequestOptions,
+  hasRetriedAuth: boolean
+): Promise<TResponse> {
   const url = `${apiConfig.baseUrl}/${path.replace(/^\//, '')}`;
-  const accessToken = await getStoredAccessToken();
+  const accessToken = await getAccessToken();
   const isFormData = typeof FormData !== 'undefined' && options.body instanceof FormData;
   const requestHeaders = new Headers(headers ?? undefined);
 
@@ -101,6 +107,20 @@ export async function apiRequest<TResponse>({ path, headers, ...options }: ApiRe
   });
 
   if (!response.ok) {
+    if (response.status === 401) {
+      if (hasRetriedAuth) {
+        await clearSession();
+      } else if (!shouldSkipAuthRefresh(path) && canRetryRequestBody(options.body)) {
+        const nextAccessToken = await refreshAccessToken().catch(() => null);
+
+        if (nextAccessToken) {
+          return apiRequestInternal<TResponse>({ path, headers, ...options }, true);
+        }
+
+        await clearSession();
+      }
+    }
+
     const text = await response.text();
     let parsed: { message?: string; details?: unknown } | undefined;
 
@@ -134,12 +154,23 @@ export async function apiRequest<TResponse>({ path, headers, ...options }: ApiRe
   return response.json() as Promise<TResponse>;
 }
 
-async function getStoredAccessToken(): Promise<string | null> {
-  if (Platform.OS === 'web') {
-    return localStorage.getItem('eos-access-token');
+function shouldSkipAuthRefresh(path: string): boolean {
+  const normalizedPath = `/${path.replace(/^\//, '').split(/[?#]/)[0]}`;
+
+  return [
+    '/auth/login',
+    '/auth/register',
+    '/auth/google',
+    '/auth/apple'
+  ].includes(normalizedPath);
+}
+
+function canRetryRequestBody(body: RequestInit['body']): boolean {
+  if (!body) {
+    return true;
   }
 
-  return SecureStore.getItemAsync('eos-access-token');
+  return typeof ReadableStream === 'undefined' || !(body instanceof ReadableStream);
 }
 
 function hasTechnicalDetails(message: string): boolean {

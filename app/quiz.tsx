@@ -1,9 +1,9 @@
 import { useRouter } from 'expo-router';
-import * as SecureStore from 'expo-secure-store';
 import { useState } from 'react';
-import { Alert, Image, Platform, Pressable, StyleSheet, Text, View, type DimensionValue } from 'react-native';
+import { Alert, Image, Pressable, StyleSheet, Text, View, type DimensionValue } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { apiConfig } from '@/services/api/client';
+import { apiRequest } from '@/services/api/client';
+import { getAccessToken } from '@/services/session';
 
 type QuizOption = {
   label: string;
@@ -87,7 +87,7 @@ export default function QuizScreen() {
     }
 
     try {
-      const token = await getStoredToken();
+      const token = await getAccessToken();
 
       if (!token) {
         Alert.alert('Sesion requerida', 'Inicia sesion para guardar los resultados del quiz.');
@@ -106,20 +106,11 @@ export default function QuizScreen() {
         routineSteps: getAnswer(finalAnswers, 4)
       };
 
-      const response = await fetch(`${apiConfig.baseUrl}/quiz/save`, {
+      await apiRequest({
+        path: '/quiz/save',
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {})
-        },
         body: JSON.stringify(payload)
       });
-
-      const data = (await response.json().catch(() => null)) as { message?: string } | null;
-
-      if (!response.ok) {
-        throw new Error(data?.message ?? 'No pudimos guardar tus respuestas.');
-      }
 
       router.replace('/resultados');
     } catch (error) {
@@ -132,14 +123,6 @@ export default function QuizScreen() {
     } finally {
       setIsSaving(false);
     }
-  }
-
-  async function getStoredToken() {
-    if (Platform.OS === 'web') {
-      return localStorage.getItem('eos-access-token');
-    }
-
-    return SecureStore.getItemAsync('eos-access-token');
   }
 
   function getAnswer(finalAnswers: Record<number, string>, index: number) {

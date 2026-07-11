@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { getCurrentProfile } from '@/services/auth';
+import { onSessionInvalidated } from '@/services/session';
 import type { UserProfile } from '@/types/user';
 
 export function useProfile() {
@@ -26,8 +27,16 @@ export function useProfile() {
         }
       });
 
+    const unsubscribe = onSessionInvalidated(() => {
+      if (isActive) {
+        setProfile(null);
+        setIsLoading(false);
+      }
+    });
+
     return () => {
       isActive = false;
+      unsubscribe();
     };
   }, []);
 
