@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Alert, Image, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { getLoginErrorMessage, getPostLoginRoute, login as loginUser } from '@/services/auth';
+import { getGoogleSignInErrorMessage, signInWithGoogle } from '@/services/googleAuth';
 
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -19,9 +20,14 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isGoogleSubmitting, setIsGoogleSubmitting] = useState(false);
   const [errors, setErrors] = useState<LoginErrors>({});
 
   async function handleSubmit() {
+    if (isSubmitting || isGoogleSubmitting) {
+      return;
+    }
+
     const validationErrors = validateLogin(email, password);
 
     setErrors(validationErrors);
@@ -48,6 +54,32 @@ export default function LoginScreen() {
     }
   }
 
+  async function handleGoogleSignIn() {
+    if (isSubmitting || isGoogleSubmitting) {
+      return;
+    }
+
+    setErrors({});
+    setIsGoogleSubmitting(true);
+
+    try {
+      const profile = await signInWithGoogle();
+
+      if (!profile) {
+        return;
+      }
+
+      const route = await getPostLoginRoute(profile);
+      router.replace(route as never);
+    } catch (error) {
+      const message = getGoogleSignInErrorMessage(error);
+      setErrors({ form: message });
+      Alert.alert('Google Sign-In', message);
+    } finally {
+      setIsGoogleSubmitting(false);
+    }
+  }
+
   return (
     <SafeAreaView style={styles.screen}>
       <Pressable
@@ -63,9 +95,16 @@ export default function LoginScreen() {
 
         <Text style={styles.title}>Iniciar Sesion</Text>
 
-        <Pressable style={styles.socialButton}>
+        <Pressable
+          accessibilityLabel={isGoogleSubmitting ? 'Conectando con Google' : 'Continuar con Google'}
+          accessibilityRole="button"
+          accessibilityState={{ busy: isGoogleSubmitting, disabled: isSubmitting || isGoogleSubmitting }}
+          disabled={isSubmitting || isGoogleSubmitting}
+          onPress={handleGoogleSignIn}
+          style={[styles.socialButton, (isSubmitting || isGoogleSubmitting) && styles.socialButtonDisabled]}
+        >
           <AntDesign color="#111111" name="google" size={20} style={styles.socialIcon} />
-          <Text style={styles.socialText}>Continuar con Google</Text>
+          <Text style={styles.socialText}>{isGoogleSubmitting ? 'Conectando...' : 'Continuar con Google'}</Text>
         </Pressable>
 
         <Pressable style={styles.socialButton}>
@@ -136,9 +175,9 @@ export default function LoginScreen() {
         </Text>
 
         <Pressable
-          disabled={isSubmitting}
+          disabled={isSubmitting || isGoogleSubmitting}
           onPress={handleSubmit}
-          style={[styles.primaryButton, isSubmitting && styles.primaryButtonDisabled]}
+          style={[styles.primaryButton, (isSubmitting || isGoogleSubmitting) && styles.primaryButtonDisabled]}
         >
           <Text style={styles.primaryButtonText}>{isSubmitting ? 'Continuando...' : 'Continuar'}</Text>
         </Pressable>
@@ -211,6 +250,9 @@ const styles = StyleSheet.create({
   socialIcon: {
     left: 16,
     position: 'absolute'
+  },
+  socialButtonDisabled: {
+    opacity: 0.7
   },
   socialText: {
     color: '#111111',

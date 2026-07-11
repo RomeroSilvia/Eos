@@ -48,9 +48,14 @@ EXPO_PUBLIC_API_URL=http://<ip-de-tu-maquina>:3000/api
 EXPO_PUBLIC_USE_MOCKS=false
 EXPO_PUBLIC_SUPABASE_URL=<tu-url-supabase>
 EXPO_PUBLIC_SUPABASE_ANON_KEY=<tu-anon-key>
+EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID=<google-web-client-id>
+EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID=<google-android-client-id>
+EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID=<google-ios-client-id>
 ```
 
 Con `EXPO_PUBLIC_USE_MOCKS=true` la app funciona sin backend, devolviendo datos hardcodeados.
+
+Google Sign-In con `@react-native-google-signin/google-signin` esta habilitado para Android e iOS. La version publica instalada no implementa el flujo web; para web se requiere un flujo separado con Google Identity Services.
 
 ### 2. Backend (`backend/`)
 

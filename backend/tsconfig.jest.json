@@ -7,5 +7,5 @@
       "@/*": ["*"]
     }
   },
-  "include": ["src/**/*.ts", "../types/**/*.ts", "../utils/**/*.ts", "../constants/**/*.ts"]
+  "include": ["src/**/*.ts", "../types/**/*.ts", "../utils/**/*.ts", "../constants/**/*.ts", "../services/**/*.ts"]
 }

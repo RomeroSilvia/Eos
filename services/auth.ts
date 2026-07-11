@@ -65,6 +65,18 @@ export async function login({ email, password }: LoginPayload): Promise<UserProf
   return mapAuthResponseToProfile(data);
 }
 
+export async function loginWithGoogleIdToken(idToken: string): Promise<UserProfile> {
+  const data = await apiRequest<AuthResponse>({
+    path: '/auth/google',
+    method: 'POST',
+    body: JSON.stringify({ idToken })
+  });
+
+  await persistAuthSession(data);
+  registerPushToken().catch(() => {});
+  return mapAuthResponseToProfile(data);
+}
+
 export async function getPostLoginRoute(profile: Pick<UserProfile, 'role'>): Promise<PostLoginRoute> {
   if (profile.role === 'center_admin') {
     return '/(tabs-admin)';
@@ -153,8 +165,20 @@ export async function updateStoredProfile(profile: UserProfile): Promise<void> {
 }
 
 async function persistAuthSession(data: AuthResponse): Promise<void> {
+  assertCompleteAuthResponse(data);
   const profile = mapAuthResponseToProfile(data);
   await saveSession(profile, data.session);
+}
+
+function assertCompleteAuthResponse(data: AuthResponse): void {
+  if (
+    !data?.user?.id ||
+    !data.profile?.id ||
+    !data.session?.accessToken ||
+    !data.session.refreshToken
+  ) {
+    throw new Error('La respuesta de autenticacion esta incompleta.');
+  }
 }
 
 function mapAuthResponseToProfile(data: AuthResponse): UserProfile {

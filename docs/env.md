@@ -18,6 +18,9 @@ EXPO_PUBLIC_USE_MOCKS=false
 EXPO_PUBLIC_SUPABASE_URL=https://<proyecto>.supabase.co
 EXPO_PUBLIC_SUPABASE_ANON_KEY=<anon_key>
 EXPO_PUBLIC_PROGRESS_USER_ID=
+EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID=<google_web_oauth_client_id>
+EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID=<google_android_oauth_client_id>
+EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID=<google_ios_oauth_client_id>
 ```
 
 - `EXPO_PUBLIC_API_URL` — URL base del backend. Opcional: si no se define, se autodetecta desde `Constants.expoConfig.hostUri` (útil en Expo Go con dispositivos físicos). En Android, `localhost` se mapea automáticamente a `10.0.2.2` para emuladores.
@@ -27,6 +30,24 @@ EXPO_PUBLIC_PROGRESS_USER_ID=
 - `EXPO_PUBLIC_PROGRESS_USER_ID` — ID de usuario para el módulo de progreso en modo mock. Por defecto: `user-marta`.
 
 Para probar desde un celular físico, reemplazar `localhost` por la IP local de la máquina (ej. `http://192.168.1.x:3000/api`).
+
+### Google Sign-In
+
+Variables:
+
+- `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` - OAuth Client ID tipo Web. La app nativa lo usa para solicitar `idToken` y enviarlo a `POST /api/auth/google`.
+- `EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID` - OAuth Client ID tipo Android, asociado al package `com.eos.skincare` y a las huellas SHA del build. La libreria no lo recibe por `configure()`, pero debe existir en Google Cloud para que Android valide el cliente nativo.
+- `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID` - OAuth Client ID tipo iOS, asociado al bundle id `com.eos.skincare`. `app.config.js` deriva el URL scheme `com.googleusercontent.apps...` durante el build/prebuild.
+
+El paquete instalado `@react-native-google-signin/google-signin` en su version publica soporta Android e iOS. En web, la implementacion incluida lanza un error de metodo no implementado; por eso EOS deshabilita este flujo en web. Si se necesita Google Sign-In web, hay que implementar un flujo web separado compatible con Google Identity Services y el contrato `POST /api/auth/google`.
+
+Configuracion requerida:
+
+1. Crear en Google Cloud un OAuth Client ID tipo Web y cargarlo en `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID`.
+2. Crear un OAuth Client ID tipo Android para `com.eos.skincare`, con las huellas SHA-1/SHA-256 del keystore usado por el build, y cargarlo en `EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID`.
+3. Crear un OAuth Client ID tipo iOS para `com.eos.skincare` y cargarlo en `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID`.
+4. Ejecutar el build nativo con esas variables presentes para que `app.config.js` pueda registrar el URL scheme de iOS.
+5. No registrar ni imprimir `idToken`, access tokens ni refresh tokens.
 
 ### Sesión en frontend
 
