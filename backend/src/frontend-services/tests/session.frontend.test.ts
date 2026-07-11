@@ -80,7 +80,7 @@ function installLocalStorage() {
 }
 
 async function loadSessionService() {
-  process.env.EXPO_PUBLIC_SUPABASE_URL = 'https://eos.supabase.co';
+  process.env.EXPO_PUBLIC_SUPABASE_URL = 'http://localhost';
   process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY = 'anon-key';
 
   mockRefreshSession = jest.fn();
