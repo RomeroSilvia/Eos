@@ -89,6 +89,18 @@ type AuthResponseBody = {
   session: AuthSessionDto;
 };
 
+type AuthIdentityResponseBody = {
+  user: AuthUserDto;
+  profile: AuthProfileDto;
+};
+
+type AuthenticatedRequestUser = {
+  id: string;
+  email?: string | null;
+  accessToken: string;
+  role?: UserRole;
+};
+
 export function getAuthHealth() {
   return {
     module: 'auth',
@@ -224,6 +236,17 @@ export const authService = {
     });
 
     return buildAuthResponse(data.user, data.session, profile);
+  },
+
+  getMe: async (requestUser?: AuthenticatedRequestUser): Promise<AuthIdentityResponseBody> => {
+    if (!requestUser?.id || !requestUser.accessToken) {
+      throw new ApiError(401, 'Token invalido o expirado.');
+    }
+
+    const user = await getAuthUserForRequest(requestUser);
+    const profile = await findOrCreateProfileForAuthUser(user);
+
+    return buildAuthIdentityResponse(user, profile);
   },
 
   resetPassword: async (payload: ResetPasswordPayload): Promise<{ message: string }> => {
@@ -401,6 +424,23 @@ async function findOrCreateProfileForAuthUser(user: AuthUser, hint: ProviderProf
   return createProfileFromProviderUser(user, hint);
 }
 
+async function getAuthUserForRequest(requestUser: AuthenticatedRequestUser): Promise<AuthUser> {
+  if (typeof requestUser.email !== 'undefined') {
+    return {
+      id: requestUser.id,
+      email: requestUser.email ?? undefined
+    };
+  }
+
+  const { data, error } = await authRepository.getUserByAccessToken(requestUser.accessToken);
+
+  if (error || !data.user || data.user.id !== requestUser.id) {
+    throw new ApiError(401, 'Token invalido o expirado.');
+  }
+
+  return data.user;
+}
+
 async function createProfileFromProviderUser(user: AuthUser, hint: ProviderProfileHint = {}): Promise<ProfileRow> {
   const metadata = user.user_metadata ?? {};
   const email = user.email ?? hint.email ?? '';
@@ -474,6 +514,13 @@ function buildAuthResponse(user: AuthUser, session: ProviderSession, profile: Pr
     user: mapAuthUser(user),
     profile: mapProfile(profile, user),
     session: mapSession(session)
+  };
+}
+
+function buildAuthIdentityResponse(user: AuthUser, profile: ProfileRow): AuthIdentityResponseBody {
+  return {
+    user: mapAuthUser(user),
+    profile: mapProfile(profile, user)
   };
 }
 

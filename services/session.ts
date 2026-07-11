@@ -24,6 +24,7 @@ export type StoredSessionRecord = {
   profile: UserProfile;
   session: StoredAuthSession;
   savedAt: number;
+  sessionId: string;
 };
 
 type SupabaseSession = {
@@ -52,7 +53,8 @@ export async function saveSession(profile: UserProfile, session: AuthSession): P
   await writeSessionRecord({
     profile,
     session,
-    savedAt: Date.now()
+    savedAt: Date.now(),
+    sessionId: createSessionId()
   });
 }
 
@@ -60,9 +62,14 @@ export async function getStoredSession(): Promise<StoredSessionRecord | null> {
   const stored = await getStoredItem(storageKey);
 
   if (stored) {
+    const alreadyHadSessionId = hasStoredSessionId(stored);
     const parsedSession = parseStoredSession(stored);
 
     if (parsedSession) {
+      if (!alreadyHadSessionId) {
+        await writeSessionRecord(parsedSession);
+      }
+
       return parsedSession;
     }
 
@@ -77,17 +84,26 @@ export async function getStoredProfile(): Promise<UserProfile | null> {
 }
 
 export async function updateStoredProfile(profile: UserProfile): Promise<void> {
+  await updateStoredProfileForSession(profile);
+}
+
+export async function updateStoredProfileForSession(profile: UserProfile, expectedSessionId?: string): Promise<boolean> {
   const storedSession = await getStoredSession();
 
   if (!storedSession) {
-    return;
+    return false;
   }
 
-  await writeSessionRecord({
+  if (expectedSessionId && storedSession.sessionId !== expectedSessionId) {
+    return false;
+  }
+
+  const generationAtStart = sessionGeneration;
+  return writeSessionRecord({
     ...storedSession,
     profile,
     savedAt: Date.now()
-  });
+  }, generationAtStart);
 }
 
 export async function getAccessToken(): Promise<string | null> {
@@ -172,7 +188,8 @@ async function refreshAccessTokenInternal(generationAtStart: number): Promise<st
     {
       profile: currentSession.profile,
       session: nextSession,
-      savedAt: Date.now()
+      savedAt: Date.now(),
+      sessionId: currentSession.sessionId
     },
     generationAtStart
   );
@@ -231,7 +248,8 @@ async function migrateLegacySession(): Promise<StoredSessionRecord | null> {
         expiresIn: null,
         tokenType: 'bearer'
       },
-      savedAt: Date.now()
+      savedAt: Date.now(),
+      sessionId: createSessionId()
     };
 
     await writeSessionRecord(migrated);
@@ -250,9 +268,22 @@ function parseStoredSession(value: string): StoredSessionRecord | null {
       return null;
     }
 
+    if (!parsed.sessionId) {
+      parsed.sessionId = createSessionId();
+    }
+
     return parsed;
   } catch {
     return null;
+  }
+}
+
+function hasStoredSessionId(value: string): boolean {
+  try {
+    const parsed = JSON.parse(value) as Partial<StoredSessionRecord>;
+    return typeof parsed.sessionId === 'string' && parsed.sessionId.length > 0;
+  } catch {
+    return false;
   }
 }
 
@@ -342,4 +373,8 @@ async function deleteStoredSessionItems(): Promise<void> {
 
 function notifySessionInvalidated(): void {
   invalidatedListeners.forEach((listener) => listener());
+}
+
+function createSessionId(): string {
+  return `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }

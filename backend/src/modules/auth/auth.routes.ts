@@ -1,9 +1,11 @@
 import { Router } from 'express';
-import { appleLogin, authHealth, googleLogin, login, register, resetPassword, updatePassword } from './auth.controller';
+import { authenticate } from '../../middlewares/auth.middleware';
+import { appleLogin, authHealth, getMe, googleLogin, login, register, resetPassword, updatePassword } from './auth.controller';
 
 export const authRouter = Router();
 
 authRouter.get('/health', authHealth);
+authRouter.get('/me', authenticate, getMe);
 authRouter.post('/register', register);
 authRouter.post('/login', login);
 authRouter.post('/google', googleLogin);

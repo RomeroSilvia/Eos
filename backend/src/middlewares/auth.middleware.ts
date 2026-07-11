@@ -30,6 +30,7 @@ export const authenticate: RequestHandler = async (req, _res, next) => {
 
     req.user = {
       id: data.user.id,
+      email: data.user.email ?? null,
       role: normalizeRole(profile?.role),
       accessToken: token
     };

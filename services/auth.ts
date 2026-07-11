@@ -3,7 +3,9 @@ import { registerPushToken, unregisterPushToken } from '@/services/notifications
 import {
   clearSession,
   getStoredProfile,
+  getStoredSession,
   saveSession,
+  updateStoredProfileForSession,
   updateStoredProfile as updateSessionProfile,
   type AuthSession
 } from '@/services/session';
@@ -28,6 +30,16 @@ type AuthResponse = {
   session: AuthSession;
   user: AuthUser;
   profile: AuthProfile;
+};
+
+type AuthIdentityResponse = {
+  user: AuthUser;
+  profile: AuthProfile;
+};
+
+export type CurrentAuthenticatedUser = {
+  user: AuthUser;
+  profile: UserProfile;
 };
 
 type LoginPayload = {
@@ -59,6 +71,8 @@ export const mockUserProfile: UserProfile = {
 };
 
 export type PostLoginRoute = '/(tabs-admin)' | '/(tabs)/home' | '/(tabs-specialist)' | '/specialist-status';
+
+let profileSyncInFlight: Promise<UserProfile | null> | null = null;
 
 export async function login({ email, password }: LoginPayload): Promise<UserProfile> {
   const data = await apiRequest<AuthResponse>({
@@ -94,6 +108,34 @@ export async function loginWithAppleIdentityToken(payload: AppleLoginPayload): P
   await persistAuthSession(data);
   registerPushToken().catch(() => {});
   return mapAuthResponseToProfile(data);
+}
+
+export async function getCurrentAuthenticatedUser(): Promise<CurrentAuthenticatedUser> {
+  const data = await apiRequest<AuthIdentityResponse>({
+    path: '/auth/me',
+    method: 'GET'
+  });
+
+  assertCompleteAuthIdentityResponse(data);
+
+  return {
+    user: data.user,
+    profile: mapAuthIdentityResponseToProfile(data)
+  };
+}
+
+export async function synchronizeCurrentProfile(): Promise<UserProfile | null> {
+  if (profileSyncInFlight) {
+    return profileSyncInFlight;
+  }
+
+  profileSyncInFlight = synchronizeCurrentProfileInternal();
+
+  try {
+    return await profileSyncInFlight;
+  } finally {
+    profileSyncInFlight = null;
+  }
 }
 
 export async function getPostLoginRoute(profile: Pick<UserProfile, 'role'>): Promise<PostLoginRoute> {
@@ -200,7 +242,17 @@ function assertCompleteAuthResponse(data: AuthResponse): void {
   }
 }
 
+function assertCompleteAuthIdentityResponse(data: AuthIdentityResponse): void {
+  if (!data?.user?.id || !data.profile?.id) {
+    throw new Error('La respuesta de autenticacion esta incompleta.');
+  }
+}
+
 function mapAuthResponseToProfile(data: AuthResponse): UserProfile {
+  return mapAuthIdentityResponseToProfile(data);
+}
+
+function mapAuthIdentityResponseToProfile(data: AuthIdentityResponse): UserProfile {
   const profile = data.profile;
   const role = getSupportedRole(profile.role);
 
@@ -211,6 +263,31 @@ function mapAuthResponseToProfile(data: AuthResponse): UserProfile {
     role,
     skinType: (profile.skinType ?? profile.skin_type ?? 'mixed') as UserProfile['skinType']
   };
+}
+
+async function synchronizeCurrentProfileInternal(): Promise<UserProfile | null> {
+  const storedSession = await getStoredSession();
+
+  if (!storedSession) {
+    return null;
+  }
+
+  try {
+    const currentUser = await getCurrentAuthenticatedUser();
+    const wasUpdated = await updateStoredProfileForSession(currentUser.profile, storedSession.sessionId);
+
+    if (wasUpdated) {
+      return currentUser.profile;
+    }
+
+    return getStoredProfile();
+  } catch (error) {
+    if (error instanceof ApiRequestError && error.status === 401) {
+      return null;
+    }
+
+    return storedSession.profile;
+  }
 }
 
 function getSupportedRole(role?: string | null): UserProfile['role'] {

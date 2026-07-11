@@ -20,6 +20,12 @@ function makeRequest(token = 'token-valido'): Request {
   } as unknown as Request;
 }
 
+function makeRequestWithAuthorization(authorization?: string): Request {
+  return {
+    header: jest.fn((name: string) => (name === 'Authorization' ? authorization : undefined))
+  } as unknown as Request;
+}
+
 describe('authenticate', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -36,7 +42,7 @@ describe('authenticate', () => {
     const select = jest.fn().mockReturnValue({ eq });
 
     mockedSupabase.auth.getUser.mockResolvedValue({
-      data: { user: { id: 'user-1' } },
+      data: { user: { id: 'user-1', email: 'marta@example.com' } },
       error: null
     } as any);
     mockedSupabase.from.mockReturnValue({ select } as any);
@@ -45,6 +51,7 @@ describe('authenticate', () => {
 
     expect(req.user).toEqual({
       id: 'user-1',
+      email: 'marta@example.com',
       role: 'specialist',
       accessToken: 'token-valido'
     });
@@ -62,7 +69,7 @@ describe('authenticate', () => {
     const select = jest.fn().mockReturnValue({ eq });
 
     mockedSupabase.auth.getUser.mockResolvedValue({
-      data: { user: { id: 'user-1' } },
+      data: { user: { id: 'user-1', email: null } },
       error: null
     } as any);
     mockedSupabase.from.mockReturnValue({ select } as any);
@@ -90,5 +97,27 @@ describe('authenticate', () => {
     const error = next.mock.calls[0][0] as unknown as ApiError;
     expect(error.statusCode).toBe(401);
     expect(error.message).toBe('Token inválido o expirado.');
+  });
+  it('rechaza Authorization ausente sin llamar a Supabase', async () => {
+    const next = jest.fn() as jest.MockedFunction<NextFunction>;
+
+    await authenticate(makeRequestWithAuthorization(undefined), {} as Response, next);
+
+    expect(mockedSupabase.auth.getUser).not.toHaveBeenCalled();
+    expect(next).toHaveBeenCalledWith(expect.any(ApiError));
+    const error = next.mock.calls[0][0] as unknown as ApiError;
+    expect(error.statusCode).toBe(401);
+    expect(error.message).toContain('requerido');
+  });
+
+  it('rechaza Authorization sin esquema Bearer', async () => {
+    const next = jest.fn() as jest.MockedFunction<NextFunction>;
+
+    await authenticate(makeRequestWithAuthorization('Basic abc'), {} as Response, next);
+
+    expect(mockedSupabase.auth.getUser).not.toHaveBeenCalled();
+    expect(next).toHaveBeenCalledWith(expect.any(ApiError));
+    const error = next.mock.calls[0][0] as unknown as ApiError;
+    expect(error.statusCode).toBe(401);
   });
 });

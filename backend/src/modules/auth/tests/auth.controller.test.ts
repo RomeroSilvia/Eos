@@ -1,5 +1,5 @@
 import type { Request, Response } from 'express';
-import { appleLogin, googleLogin, login, register } from '../auth.controller';
+import { appleLogin, getMe, googleLogin, login, register } from '../auth.controller';
 import { supabase } from '../../../config/supabase';
 
 jest.mock('../../../config/supabase', () => ({
@@ -9,7 +9,8 @@ jest.mock('../../../config/supabase', () => ({
         createUser: jest.fn()
       },
       signInWithPassword: jest.fn(),
-      signInWithIdToken: jest.fn()
+      signInWithIdToken: jest.fn(),
+      getUser: jest.fn()
     },
     from: jest.fn()
   }
@@ -58,6 +59,17 @@ function makeAppleRequest(): Request {
   } as Request;
 }
 
+function makeMeRequest(): Request {
+  return {
+    user: {
+      id: 'user-1',
+      email: 'marta@example.com',
+      role: 'user',
+      accessToken: 'access-token'
+    }
+  } as Request;
+}
+
 function makeResponse(): Response & { json: jest.Mock; status: jest.Mock } {
   const response = {
     status: jest.fn().mockReturnThis(),
@@ -84,6 +96,11 @@ async function runGoogleHandler(req: Request, res: Response, next: jest.Mock): P
 
 async function runAppleHandler(req: Request, res: Response, next: jest.Mock): Promise<void> {
   appleLogin(req, res, next);
+  await new Promise((resolve) => setImmediate(resolve));
+}
+
+async function runMeHandler(req: Request, res: Response, next: jest.Mock): Promise<void> {
+  getMe(req, res, next);
   await new Promise((resolve) => setImmediate(resolve));
 }
 
@@ -372,5 +389,29 @@ describe('authController.register', () => {
     });
     expect(res.json.mock.calls[0][0].session).not.toHaveProperty('access_token');
     expect(res.json.mock.calls[0][0].user).not.toHaveProperty('user_metadata');
+  });
+
+  it('devuelve el usuario autenticado en GET /auth/me sin sesion cruda', async () => {
+    const res = makeResponse();
+    const next = jest.fn();
+    mockProfileLookup(makeProfile('user'));
+
+    await runMeHandler(makeMeRequest(), res, next);
+
+    expect(next).not.toHaveBeenCalled();
+    expect(res.json).toHaveBeenCalledWith({
+      user: {
+        id: 'user-1',
+        email: 'marta@example.com'
+      },
+      profile: {
+        id: 'user-1',
+        name: 'Marta Lopez',
+        email: 'marta@example.com',
+        role: 'user',
+        skinType: 'mixed'
+      }
+    });
+    expect(res.json.mock.calls[0][0]).not.toHaveProperty('session');
   });
 });

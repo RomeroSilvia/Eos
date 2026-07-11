@@ -8,7 +8,8 @@ jest.mock('../../config/supabase', () => ({
         createUser: jest.fn()
       },
       signInWithPassword: jest.fn(),
-      signInWithIdToken: jest.fn()
+      signInWithIdToken: jest.fn(),
+      getUser: jest.fn()
     },
     from: jest.fn()
   }
@@ -81,6 +82,19 @@ function mockProfileLookupOnce(profile: ReturnType<typeof makeProfile> | null) {
   const maybeSingle = jest.fn().mockResolvedValue({
     data: profile,
     error: null
+  });
+  const eq = jest.fn().mockReturnValue({ maybeSingle });
+  const select = jest.fn().mockReturnValue({ eq });
+
+  mockedSupabase.from.mockReturnValueOnce({ select } as never);
+
+  return { maybeSingle };
+}
+
+function mockProfileLookupErrorOnce(message = 'database unavailable') {
+  const maybeSingle = jest.fn().mockResolvedValue({
+    data: null,
+    error: { message }
   });
   const eq = jest.fn().mockReturnValue({ maybeSingle });
   const select = jest.fn().mockReturnValue({ eq });
@@ -398,5 +412,108 @@ describe('contrato uniforme de autenticacion', () => {
       role: 'user'
     }));
     expect(result.profile.email).toBe('');
+  });
+
+  it('GET /auth/me devuelve usuario y perfil existente sin exponer tokens', async () => {
+    mockProfileLookupOnce(makeProfile('specialist'));
+
+    const result = await authService.getMe({
+      id: 'user-1',
+      email: 'marta@example.com',
+      accessToken: 'access-token'
+    });
+
+    expect(result).toEqual({
+      user: {
+        id: 'user-1',
+        email: 'marta@example.com'
+      },
+      profile: {
+        id: 'user-1',
+        name: 'Marta Lopez',
+        email: 'marta@example.com',
+        role: 'specialist',
+        skinType: 'mixed'
+      }
+    });
+    expect(result).not.toHaveProperty('session');
+    expect(JSON.stringify(result)).not.toContain('access-token');
+  });
+
+  it('GET /auth/me crea un perfil minimo si no existe', async () => {
+    mockProfileLookupOnce(null);
+    const { insert } = mockProfileInsert(makeAppleProfile({
+      id: 'user-1',
+      email: 'marta@example.com',
+      full_name: 'marta'
+    }));
+
+    const result = await authService.getMe({
+      id: 'user-1',
+      email: 'marta@example.com',
+      accessToken: 'access-token'
+    });
+
+    expect(insert).toHaveBeenCalledWith(expect.objectContaining({
+      id: 'user-1',
+      email: 'marta@example.com',
+      full_name: 'marta',
+      role: 'user'
+    }));
+    expect(result.profile.id).toBe('user-1');
+  });
+
+  it('GET /auth/me maneja email null y role desconocido como user', async () => {
+    mockProfileLookupOnce(makeAppleProfile({
+      id: 'user-1',
+      email: null as never,
+      full_name: 'Usuario sin email',
+      role: 'rol-raro'
+    } as never));
+
+    const result = await authService.getMe({
+      id: 'user-1',
+      email: null,
+      accessToken: 'access-token'
+    });
+
+    expect(result.user.email).toBeNull();
+    expect(result.profile.email).toBeNull();
+    expect(result.profile.role).toBe('user');
+  });
+
+  it('GET /auth/me obtiene el usuario real de Supabase si falta email en req.user', async () => {
+    mockedSupabase.auth.getUser.mockResolvedValue({
+      data: { user: makeUser() },
+      error: null
+    } as never);
+    mockProfileLookupOnce(makeProfile('user'));
+
+    const result = await authService.getMe({
+      id: 'user-1',
+      accessToken: 'access-token'
+    });
+
+    expect(mockedSupabase.auth.getUser).toHaveBeenCalledWith('access-token');
+    expect(result.user.email).toBe('marta@example.com');
+  });
+
+  it('GET /auth/me rechaza ausencia de usuario autenticado con 401', async () => {
+    await expect(authService.getMe()).rejects.toMatchObject({
+      statusCode: 401
+    });
+  });
+
+  it('GET /auth/me no filtra errores del repositorio', async () => {
+    mockProfileLookupErrorOnce('relation profiles does not exist');
+
+    await expect(authService.getMe({
+      id: 'user-1',
+      email: 'marta@example.com',
+      accessToken: 'access-token'
+    })).rejects.toMatchObject({
+      statusCode: 500,
+      message: expect.not.stringContaining('relation profiles')
+    });
   });
 });

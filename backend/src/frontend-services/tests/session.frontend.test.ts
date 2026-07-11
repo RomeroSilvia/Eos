@@ -166,6 +166,22 @@ describe('services/session', () => {
     expect(localStorage.getItem('eos-auth-session-v1')).toContain('legacy-access');
   });
 
+  it('migra una sesion nueva antigua sin sessionId y lo conserva entre lecturas', async () => {
+    localStorageData['eos-auth-session-v1'] = JSON.stringify({
+      profile,
+      session,
+      savedAt: 1000
+    });
+    const service = await loadSessionService();
+
+    const firstRead = await service.getStoredSession();
+    const secondRead = await service.getStoredSession();
+
+    expect(firstRead?.sessionId).toEqual(expect.any(String));
+    expect(secondRead?.sessionId).toBe(firstRead?.sessionId);
+    expect(localStorage.getItem('eos-auth-session-v1')).toContain(firstRead?.sessionId ?? '');
+  });
+
   it('limpia claves nuevas y legacy si la sesion legacy esta corrupta', async () => {
     localStorageData['eos-session'] = '{no-json';
     localStorageData['eos-access-token'] = 'legacy-access';
@@ -294,6 +310,37 @@ describe('services/session', () => {
     await service.clearSession();
 
     expect(listener).toHaveBeenCalledTimes(1);
+  });
+
+  it('actualiza el perfil solo si coincide la sesion esperada', async () => {
+    const service = await loadSessionService();
+    await seedStoredSession(service);
+    const currentSession = await service.getStoredSession();
+    const updatedProfile = {
+      ...profile,
+      name: 'Perfil Real'
+    };
+
+    await expect(service.updateStoredProfileForSession(updatedProfile, currentSession?.sessionId)).resolves.toBe(true);
+    await expect(service.getStoredProfile()).resolves.toEqual(updatedProfile);
+
+    await expect(service.updateStoredProfileForSession(profile, 'otra-sesion')).resolves.toBe(false);
+    await expect(service.getStoredProfile()).resolves.toEqual(updatedProfile);
+  });
+
+  it('mantiene el sessionId cuando refresca tokens', async () => {
+    const service = await loadSessionService();
+    await seedStoredSession(service);
+    const sessionBeforeRefresh = await service.getStoredSession();
+    mockRefreshSession.mockResolvedValue({
+      data: { session: makeSupabaseSession('access-2', 'refresh-2') },
+      error: null
+    });
+
+    await service.refreshAccessToken();
+
+    const sessionAfterRefresh = await service.getStoredSession();
+    expect(sessionAfterRefresh?.sessionId).toBe(sessionBeforeRefresh?.sessionId);
   });
 
   it('fallo de Supabase signOut no impide limpieza local', async () => {

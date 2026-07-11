@@ -47,6 +47,10 @@ export const authRepository = {
     return supabase.auth.signInWithIdToken({ provider, token }) as Promise<SupabaseResult<AuthResponse>>;
   },
 
+  getUserByAccessToken: async (token: string): Promise<SupabaseResult<{ user: AuthUser | null }>> => {
+    return supabase.auth.getUser(token) as Promise<SupabaseResult<{ user: AuthUser | null }>>;
+  },
+
   resetPasswordForEmail: async (email: string, redirectTo: string): Promise<SupabaseResult<Record<string, never>>> => {
     return supabase.auth.resetPasswordForEmail(email, { redirectTo }) as Promise<SupabaseResult<Record<string, never>>>;
   },

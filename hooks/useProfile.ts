@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { getCurrentProfile } from '@/services/auth';
+import { getCurrentProfile, synchronizeCurrentProfile } from '@/services/auth';
 import { onSessionInvalidated } from '@/services/session';
 import type { UserProfile } from '@/types/user';
 
@@ -10,19 +10,25 @@ export function useProfile() {
   useEffect(() => {
     let isActive = true;
 
-    void getCurrentProfile()
-      .then((nextProfile) => {
-        if (isActive) {
-          setProfile(nextProfile);
-        }
-      })
+    async function loadProfile() {
+      const cachedProfile = await getCurrentProfile().catch(() => null);
+
+      if (isActive) {
+        setProfile(cachedProfile);
+      }
+
+      const syncedProfile = await synchronizeCurrentProfile();
+
+      if (isActive) {
+        setProfile(syncedProfile);
+        setIsLoading(false);
+      }
+    }
+
+    void loadProfile()
       .catch(() => {
         if (isActive) {
           setProfile(null);
-        }
-      })
-      .finally(() => {
-        if (isActive) {
           setIsLoading(false);
         }
       });

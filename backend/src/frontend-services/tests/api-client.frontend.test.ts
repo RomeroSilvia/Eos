@@ -74,6 +74,31 @@ describe('services/api/client auth retry', () => {
     expect(getAuthorizationHeader(1)).toBe('Bearer access-2');
   });
 
+  it('ante 401 en /auth/me refresca y reintenta una vez', async () => {
+    const { apiRequest } = await loadApiClient();
+    getAccessTokenMock
+      .mockResolvedValueOnce('access-1')
+      .mockResolvedValueOnce('access-2');
+    refreshAccessTokenMock.mockResolvedValue('access-2');
+    fetchMock
+      .mockResolvedValueOnce(makeResponse({ status: 401, body: { message: 'expired' } }))
+      .mockResolvedValueOnce(makeResponse({
+        status: 200,
+        body: {
+          user: { id: 'user-1', email: 'marta@example.com' },
+          profile: { id: 'user-1', name: 'Marta', role: 'user', skinType: 'mixed' }
+        }
+      }));
+
+    await expect(apiRequest({ path: '/auth/me', method: 'GET' })).resolves.toMatchObject({
+      user: { id: 'user-1' }
+    });
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(refreshAccessTokenMock).toHaveBeenCalledTimes(1);
+    expect(getAuthorizationHeader(1)).toBe('Bearer access-2');
+  });
+
   it('un segundo 401 limpia la sesion y no genera loops', async () => {
     const { apiRequest } = await loadApiClient();
     getAccessTokenMock
