@@ -1,10 +1,10 @@
 import type { PropsWithChildren } from 'react';
-import { StyleSheet, View, type ViewStyle } from 'react-native';
+import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import { colors } from '@/constants/colors';
 
 type CardProps = PropsWithChildren<{
   variant?: 'default' | 'soft';
-  style?: ViewStyle;
+  style?: StyleProp<ViewStyle>;
 }>;
 
 export function Card({ children, variant = 'default', style }: CardProps) {
