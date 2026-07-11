@@ -1,7 +1,10 @@
-import { Stack } from 'expo-router';
+import type { ReactNode } from 'react';
+import { Stack, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { LogBox } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { AuthRouteGuard } from '@/components/auth/AuthRouteGuard';
+import { getStandalonePrivateAllowedRoles, isStandalonePrivateSegment } from '@/services/authNavigation';
 
 LogBox.ignoreLogs([
   'expo-notifications: Android Push notifications',
@@ -12,22 +15,39 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <StatusBar style="dark" />
-      <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="index" />
-        <Stack.Screen name="landing" />
-        <Stack.Screen name="start-diagnosis" />
-        <Stack.Screen name="start-quiz" />
-        <Stack.Screen name="quiz-results" />
-        <Stack.Screen name="resultados" />
-        <Stack.Screen name="specialist-status" />
-        <Stack.Screen name="settings" />
-        <Stack.Screen name="notifications" />
-        <Stack.Screen name="patients/[id]" />
-        <Stack.Screen name="(auth)" />
-        <Stack.Screen name="(tabs)" />
-        <Stack.Screen name="(tabs-admin)" />
-        <Stack.Screen name="(tabs-specialist)" />
-      </Stack>
+      <StandalonePrivateRouteGuard>
+        <Stack screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="index" />
+          <Stack.Screen name="landing" />
+          <Stack.Screen name="start-diagnosis" />
+          <Stack.Screen name="start-quiz" />
+          <Stack.Screen name="quiz-results" />
+          <Stack.Screen name="resultados" />
+          <Stack.Screen name="specialist-status" />
+          <Stack.Screen name="settings" />
+          <Stack.Screen name="notifications" />
+          <Stack.Screen name="patients/[id]" />
+          <Stack.Screen name="(auth)" />
+          <Stack.Screen name="(tabs)" />
+          <Stack.Screen name="(tabs-admin)" />
+          <Stack.Screen name="(tabs-specialist)" />
+        </Stack>
+      </StandalonePrivateRouteGuard>
     </GestureHandlerRootView>
+  );
+}
+
+function StandalonePrivateRouteGuard({ children }: { children: ReactNode }) {
+  const segments = useSegments();
+  const rootSegment = segments[0];
+
+  if (!isStandalonePrivateSegment(rootSegment)) {
+    return children;
+  }
+
+  return (
+    <AuthRouteGuard allowedRoles={getStandalonePrivateAllowedRoles(rootSegment)} mode="private">
+      {children}
+    </AuthRouteGuard>
   );
 }

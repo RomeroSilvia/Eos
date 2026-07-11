@@ -68,8 +68,7 @@ export default function LoginScreen() {
         email: email.trim().toLowerCase(),
         password
       });
-      const route = await getPostLoginRoute(profile);
-      router.replace(route as never);
+      await navigateAfterLogin(profile);
     } catch (error) {
       const message = getLoginErrorMessage(error);
       setErrors({ form: message });
@@ -94,8 +93,7 @@ export default function LoginScreen() {
         return;
       }
 
-      const route = await getPostLoginRoute(profile);
-      router.replace(route as never);
+      await navigateAfterLogin(profile);
     } catch (error) {
       const message = getGoogleSignInErrorMessage(error);
       setErrors({ form: message });
@@ -120,8 +118,7 @@ export default function LoginScreen() {
         return;
       }
 
-      const route = await getPostLoginRoute(profile);
-      router.replace(route as never);
+      await navigateAfterLogin(profile);
     } catch (error) {
       const message = getAppleSignInErrorMessage(error);
       setErrors({ form: message });
@@ -129,6 +126,11 @@ export default function LoginScreen() {
     } finally {
       setIsAppleSubmitting(false);
     }
+  }
+
+  async function navigateAfterLogin(profile: Parameters<typeof getPostLoginRoute>[0]) {
+    const route = await getPostLoginRoute(profile);
+    router.replace(route as never);
   }
 
   return (

@@ -5,9 +5,10 @@ import { Tabs, useRouter, useSegments } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { AuthRouteGuard } from '@/components/auth/AuthRouteGuard';
 import { FloatingActionMenu } from '@/components/FloatingActionMenu';
 import { colors } from '@/constants/colors';
-import { useProfile } from '@/hooks/useProfile';
+import { useAuthSession } from '@/hooks/useAuthSession';
 import { prepareSupabaseRealtimeClient } from '@/services/supabase';
 import { getMyPatients, getSpecialistStatus } from '@/services/specialist';
 
@@ -28,10 +29,18 @@ function formatBadgeCount(count: number): string {
 }
 
 export default function SpecialistTabsLayout() {
+  return (
+    <AuthRouteGuard allowedRoles={['specialist']} mode="private">
+      <SpecialistTabsContent />
+    </AuthRouteGuard>
+  );
+}
+
+function SpecialistTabsContent() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const segments = useSegments();
-  const { isLoading: isProfileLoading, profile } = useProfile();
+  const { isLoading: isProfileLoading, profile } = useAuthSession();
   const [isCheckingAccess, setIsCheckingAccess] = useState(true);
   const [unreadConsultationsCount, setUnreadConsultationsCount] = useState(0);
   const tabBarHeight = TAB_BAR_CONTENT_HEIGHT + insets.bottom;
@@ -49,18 +58,7 @@ export default function SpecialistTabsLayout() {
           return;
         }
 
-        if (!profile) {
-          router.replace('/landing' as never);
-          return;
-        }
-
-        if (profile.role === 'center_admin') {
-          router.replace('/(tabs-admin)' as never);
-          return;
-        }
-
-        if (profile.role !== 'specialist') {
-          router.replace('/(tabs)/home');
+        if (!profile || profile.role !== 'specialist') {
           return;
         }
 

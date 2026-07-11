@@ -1,4 +1,5 @@
 import { ApiRequestError, apiRequest } from '@/services/api/client';
+import { getHomeRouteForRole, type PostLoginRoute } from '@/services/authNavigation';
 import { registerPushToken, unregisterPushToken } from '@/services/notifications';
 import {
   clearSession,
@@ -70,8 +71,6 @@ export const mockUserProfile: UserProfile = {
   skinType: 'mixed'
 };
 
-export type PostLoginRoute = '/(tabs-admin)' | '/(tabs)/home' | '/(tabs-specialist)' | '/specialist-status';
-
 let profileSyncInFlight: Promise<UserProfile | null> | null = null;
 
 export async function login({ email, password }: LoginPayload): Promise<UserProfile> {
@@ -139,21 +138,15 @@ export async function synchronizeCurrentProfile(): Promise<UserProfile | null> {
 }
 
 export async function getPostLoginRoute(profile: Pick<UserProfile, 'role'>): Promise<PostLoginRoute> {
-  if (profile.role === 'center_admin') {
-    return '/(tabs-admin)';
+  if (profile.role === 'specialist') {
+    const status = await getSpecialistStatus().catch(() => null);
+
+    if (status?.license_status !== 'verified') {
+      return '/specialist-status';
+    }
   }
 
-  if (profile.role !== 'specialist') {
-    return '/(tabs)/home';
-  }
-
-  const status = await getSpecialistStatus().catch(() => null);
-
-  if (status?.license_status === 'verified') {
-    return '/(tabs-specialist)';
-  }
-
-  return '/specialist-status';
+  return getHomeRouteForRole(profile.role);
 }
 
 export function getLoginErrorMessage(error: unknown): string {

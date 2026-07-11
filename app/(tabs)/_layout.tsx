@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
 import { View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { AuthRouteGuard } from '@/components/auth/AuthRouteGuard';
 import { FloatingActionMenu } from '@/components/FloatingActionMenu';
 import { colors } from '@/constants/colors';
 
@@ -19,6 +20,14 @@ function tabIcon(name: TabIconName, focusedName: TabIconName) {
 }
 
 export default function TabsLayout() {
+  return (
+    <AuthRouteGuard allowedRoles={['user']} mode="private">
+      <UserTabsLayout />
+    </AuthRouteGuard>
+  );
+}
+
+function UserTabsLayout() {
   const insets = useSafeAreaInsets();
   const tabBarHeight = TAB_CONTENT_HEIGHT + insets.bottom;
 
