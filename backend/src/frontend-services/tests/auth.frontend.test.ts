@@ -71,7 +71,7 @@ beforeEach(() => {
   jest.restoreAllMocks();
 });
 
-describe('services/auth Google frontend', () => {
+describe('services/auth frontend', () => {
   it('consume /auth/google y guarda la sesion uniforme', async () => {
     const service = await loadAuthService();
     mockApiRequest.mockResolvedValue(authResponse);
@@ -132,5 +132,46 @@ describe('services/auth Google frontend', () => {
     await expect(service.loginWithGoogleIdToken('google-id-token')).resolves.toEqual(specialistProfile);
 
     expect(mockSaveSession).toHaveBeenCalledWith(specialistProfile, authResponse.session);
+  });
+
+  it('consume /auth/apple y guarda la sesion uniforme', async () => {
+    const service = await loadAuthService();
+    mockApiRequest.mockResolvedValue(authResponse);
+
+    await expect(service.loginWithAppleIdentityToken({
+      identityToken: 'apple-identity-token',
+      givenName: 'Marta',
+      familyName: 'Lopez',
+      email: 'marta@example.com'
+    })).resolves.toEqual(profile);
+
+    expect(mockApiRequest).toHaveBeenCalledWith({
+      path: '/auth/apple',
+      method: 'POST',
+      body: JSON.stringify({
+        identityToken: 'apple-identity-token',
+        givenName: 'Marta',
+        familyName: 'Lopez',
+        email: 'marta@example.com'
+      })
+    });
+    expect(mockSaveSession).toHaveBeenCalledWith(profile, authResponse.session);
+    expect(mockRegisterPushToken).toHaveBeenCalledTimes(1);
+  });
+
+  it('rechaza una respuesta Apple con profile incompleto y no persiste nada', async () => {
+    const service = await loadAuthService();
+    mockApiRequest.mockResolvedValue({
+      ...authResponse,
+      profile: {
+        ...authResponse.profile,
+        id: null
+      }
+    });
+
+    await expect(service.loginWithAppleIdentityToken({
+      identityToken: 'apple-identity-token'
+    })).rejects.toThrow('La respuesta de autenticacion esta incompleta.');
+    expect(mockSaveSession).not.toHaveBeenCalled();
   });
 });

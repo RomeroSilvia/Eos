@@ -43,6 +43,13 @@ type RegisterPayload = LoginPayload & {
   specialty?: 'dermatologo' | 'cosmetologo';
 };
 
+type AppleLoginPayload = {
+  identityToken: string;
+  givenName?: string;
+  familyName?: string;
+  email?: string;
+};
+
 export const mockUserProfile: UserProfile = {
   id: 'mock-user-1',
   name: 'Usuario EOS',
@@ -70,6 +77,18 @@ export async function loginWithGoogleIdToken(idToken: string): Promise<UserProfi
     path: '/auth/google',
     method: 'POST',
     body: JSON.stringify({ idToken })
+  });
+
+  await persistAuthSession(data);
+  registerPushToken().catch(() => {});
+  return mapAuthResponseToProfile(data);
+}
+
+export async function loginWithAppleIdentityToken(payload: AppleLoginPayload): Promise<UserProfile> {
+  const data = await apiRequest<AuthResponse>({
+    path: '/auth/apple',
+    method: 'POST',
+    body: JSON.stringify(payload)
   });
 
   await persistAuthSession(data);

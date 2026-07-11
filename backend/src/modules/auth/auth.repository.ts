@@ -1,7 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { env } from '../../config/env';
 import { supabase } from '../../config/supabase';
-import type { ProfileInsert, ProfileRow } from '../../database/schema.types';
+import type { ProfileInsert, ProfileRow, ProfileUpdate } from '../../database/schema.types';
 
 type SupabaseResult<TData> = {
   data: TData;
@@ -43,7 +43,7 @@ export const authRepository = {
     return supabase.auth.signInWithPassword({ email, password }) as Promise<SupabaseResult<AuthResponse>>;
   },
 
-  signInWithIdToken: async (provider: 'google', token: string): Promise<SupabaseResult<AuthResponse>> => {
+  signInWithIdToken: async (provider: 'google' | 'apple', token: string): Promise<SupabaseResult<AuthResponse>> => {
     return supabase.auth.signInWithIdToken({ provider, token }) as Promise<SupabaseResult<AuthResponse>>;
   },
 
@@ -89,6 +89,18 @@ export const authRepository = {
     const { data: profile, error } = await supabase
       .from('profiles')
       .insert(data)
+      .select('*')
+      .single();
+
+    if (error) throw error;
+    return profile;
+  },
+
+  updateProfile: async (userId: string, data: ProfileUpdate): Promise<ProfileRow> => {
+    const { data: profile, error } = await supabase
+      .from('profiles')
+      .update(data)
+      .eq('id', userId)
       .select('*')
       .single();
 

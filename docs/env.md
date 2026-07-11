@@ -49,6 +49,20 @@ Configuracion requerida:
 4. Ejecutar el build nativo con esas variables presentes para que `app.config.js` pueda registrar el URL scheme de iOS.
 5. No registrar ni imprimir `idToken`, access tokens ni refresh tokens.
 
+### Apple Sign-In
+
+Apple Sign-In no requiere variables `EXPO_PUBLIC_*` adicionales en la app Expo. El flujo usa `expo-apple-authentication` en iOS y envia el `identityToken` a `POST /api/auth/apple`.
+
+Configuracion requerida:
+
+1. En Apple Developer, habilitar la capability `Sign in with Apple` para el App ID asociado al bundle identifier `com.eos.skincare`.
+2. En Supabase Auth, habilitar el provider Apple y cargar la configuracion de Apple requerida por Supabase.
+3. Configurar en Supabase las redirect URLs que correspondan al entorno publicado o de desarrollo usado para Auth.
+4. Generar un development build o build nativo con la capability habilitada. Expo Go no representa la configuracion nativa final de Apple Sign-In.
+5. No registrar ni imprimir `identityToken`, access tokens ni refresh tokens.
+
+El flujo esta disponible solo donde `expo-apple-authentication` lo reporte como soportado. En Android y web EOS oculta el boton y no intenta iniciar Apple Sign-In.
+
 ### Sesión en frontend
 
 En iOS y Android la sesión se guarda con `expo-secure-store`. En web se mantiene la estrategia SPA existente basada en `localStorage`; esto permite conservar la sesión entre recargas, pero no protege frente a un XSS que ejecute JavaScript en el origen de la app. Por eso no se deben loguear tokens ni renderizar HTML no confiable.

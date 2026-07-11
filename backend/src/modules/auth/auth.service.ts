@@ -25,6 +25,13 @@ type GoogleLoginPayload = {
   idToken?: string;
 };
 
+type AppleLoginPayload = {
+  identityToken?: string;
+  givenName?: string;
+  familyName?: string;
+  email?: string;
+};
+
 type ResetPasswordPayload = {
   email?: string;
 };
@@ -39,6 +46,12 @@ type AuthUser = {
   id: string;
   email?: string;
   user_metadata?: Record<string, unknown>;
+};
+
+type ProviderProfileHint = {
+  givenName?: string;
+  familyName?: string;
+  email?: string;
 };
 
 type ProviderSession = {
@@ -183,6 +196,32 @@ export const authService = {
     }
 
     const profile = await findOrCreateProfileForAuthUser(data.user);
+
+    return buildAuthResponse(data.user, data.session, profile);
+  },
+
+  appleLogin: async (payload: AppleLoginPayload = {}): Promise<AuthResponseBody> => {
+    const { identityToken, givenName, familyName, email } = payload;
+
+    if (!identityToken) {
+      throw new ApiError(400, 'identityToken is required');
+    }
+
+    const { data, error } = await authRepository.signInWithIdToken('apple', identityToken);
+
+    if (error) {
+      throw mapAuthProviderError(error, 401);
+    }
+
+    if (!data.user || !data.session?.access_token) {
+      throw new ApiError(401, 'Apple authentication failed');
+    }
+
+    const profile = await findOrCreateProfileForAuthUser(data.user, {
+      givenName: sanitizeOptionalText(givenName),
+      familyName: sanitizeOptionalText(familyName),
+      email: sanitizeOptionalEmail(email)
+    });
 
     return buildAuthResponse(data.user, data.session, profile);
   },
@@ -352,31 +391,29 @@ async function createOrUpdateProfileSafely(data: {
   }
 }
 
-async function findOrCreateProfileForAuthUser(user: AuthUser): Promise<ProfileRow> {
+async function findOrCreateProfileForAuthUser(user: AuthUser, hint: ProviderProfileHint = {}): Promise<ProfileRow> {
   const existingProfile = await findProfileSafely(user.id);
 
   if (existingProfile) {
-    return existingProfile;
+    return completeExistingProfileSafely(existingProfile, user, hint);
   }
 
-  return createProfileFromProviderUser(user);
+  return createProfileFromProviderUser(user, hint);
 }
 
-async function createProfileFromProviderUser(user: AuthUser): Promise<ProfileRow> {
+async function createProfileFromProviderUser(user: AuthUser, hint: ProviderProfileHint = {}): Promise<ProfileRow> {
   const metadata = user.user_metadata ?? {};
-  const email = user.email ?? '';
+  const email = user.email ?? hint.email ?? '';
   const emailUsername = email.split('@')[0] || user.id;
   const fullName = typeof metadata.name === 'string' ? metadata.name : '';
   const [fallbackFirstName = '', ...fallbackLastNameParts] = fullName.split(' ');
+  const metadataGivenName =
+    typeof metadata.given_name === 'string' && metadata.given_name ? metadata.given_name : undefined;
+  const metadataFamilyName =
+    typeof metadata.family_name === 'string' && metadata.family_name ? metadata.family_name : undefined;
 
-  const firstName =
-    typeof metadata.given_name === 'string' && metadata.given_name
-      ? metadata.given_name
-      : fallbackFirstName;
-  const lastName =
-    typeof metadata.family_name === 'string' && metadata.family_name
-      ? metadata.family_name
-      : fallbackLastNameParts.join(' ');
+  const firstName = hint.givenName ?? metadataGivenName ?? fallbackFirstName;
+  const lastName = hint.familyName ?? metadataFamilyName ?? fallbackLastNameParts.join(' ');
   const username =
     typeof metadata.preferred_username === 'string' && metadata.preferred_username
       ? metadata.preferred_username
@@ -392,6 +429,44 @@ async function createProfileFromProviderUser(user: AuthUser): Promise<ProfileRow
   } catch {
     throw new ApiError(500, 'Ocurrió un error. Intentá nuevamente.');
   }
+}
+
+async function completeExistingProfileSafely(
+  profile: ProfileRow,
+  user: AuthUser,
+  hint: ProviderProfileHint
+): Promise<ProfileRow> {
+  const update: { email?: string; full_name?: string } = {};
+  const nextEmail = user.email ?? hint.email;
+  const nextFullName = [hint.givenName, hint.familyName].filter(Boolean).join(' ').trim();
+
+  if (!profile.email && nextEmail) {
+    update.email = nextEmail;
+  }
+
+  if (!profile.full_name && nextFullName) {
+    update.full_name = nextFullName;
+  }
+
+  if (Object.keys(update).length === 0) {
+    return profile;
+  }
+
+  try {
+    return await authRepository.updateProfile(profile.id, update);
+  } catch {
+    throw new ApiError(500, 'Ocurrio un error. Intenta nuevamente.');
+  }
+}
+
+function sanitizeOptionalText(value?: string): string | undefined {
+  const trimmedValue = value?.trim();
+  return trimmedValue || undefined;
+}
+
+function sanitizeOptionalEmail(value?: string): string | undefined {
+  const trimmedValue = value?.trim().toLowerCase();
+  return trimmedValue || undefined;
 }
 
 function buildAuthResponse(user: AuthUser, session: ProviderSession, profile: ProfileRow): AuthResponseBody {

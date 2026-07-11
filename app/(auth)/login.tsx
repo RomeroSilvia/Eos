@@ -1,9 +1,11 @@
 import { AntDesign, Ionicons } from '@expo/vector-icons';
+import * as AppleAuthentication from 'expo-apple-authentication';
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Alert, Image, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { getLoginErrorMessage, getPostLoginRoute, login as loginUser } from '@/services/auth';
+import { getAppleSignInErrorMessage, isAppleSignInAvailable, signInWithApple } from '@/services/appleAuth';
 import { getGoogleSignInErrorMessage, signInWithGoogle } from '@/services/googleAuth';
 
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -21,10 +23,33 @@ export default function LoginScreen() {
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isGoogleSubmitting, setIsGoogleSubmitting] = useState(false);
+  const [isAppleAvailable, setIsAppleAvailable] = useState(false);
+  const [isAppleSubmitting, setIsAppleSubmitting] = useState(false);
   const [errors, setErrors] = useState<LoginErrors>({});
+  const isAuthActionDisabled = isSubmitting || isGoogleSubmitting || isAppleSubmitting;
+
+  useEffect(() => {
+    let isMounted = true;
+
+    isAppleSignInAvailable()
+      .then((isAvailable) => {
+        if (isMounted) {
+          setIsAppleAvailable(isAvailable);
+        }
+      })
+      .catch(() => {
+        if (isMounted) {
+          setIsAppleAvailable(false);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   async function handleSubmit() {
-    if (isSubmitting || isGoogleSubmitting) {
+    if (isAuthActionDisabled) {
       return;
     }
 
@@ -55,7 +80,7 @@ export default function LoginScreen() {
   }
 
   async function handleGoogleSignIn() {
-    if (isSubmitting || isGoogleSubmitting) {
+    if (isAuthActionDisabled) {
       return;
     }
 
@@ -80,6 +105,32 @@ export default function LoginScreen() {
     }
   }
 
+  async function handleAppleSignIn() {
+    if (isAuthActionDisabled) {
+      return;
+    }
+
+    setErrors({});
+    setIsAppleSubmitting(true);
+
+    try {
+      const profile = await signInWithApple();
+
+      if (!profile) {
+        return;
+      }
+
+      const route = await getPostLoginRoute(profile);
+      router.replace(route as never);
+    } catch (error) {
+      const message = getAppleSignInErrorMessage(error);
+      setErrors({ form: message });
+      Alert.alert('Apple Sign-In', message);
+    } finally {
+      setIsAppleSubmitting(false);
+    }
+  }
+
   return (
     <SafeAreaView style={styles.screen}>
       <Pressable
@@ -98,19 +149,26 @@ export default function LoginScreen() {
         <Pressable
           accessibilityLabel={isGoogleSubmitting ? 'Conectando con Google' : 'Continuar con Google'}
           accessibilityRole="button"
-          accessibilityState={{ busy: isGoogleSubmitting, disabled: isSubmitting || isGoogleSubmitting }}
-          disabled={isSubmitting || isGoogleSubmitting}
+          accessibilityState={{ busy: isGoogleSubmitting, disabled: isAuthActionDisabled }}
+          disabled={isAuthActionDisabled}
           onPress={handleGoogleSignIn}
-          style={[styles.socialButton, (isSubmitting || isGoogleSubmitting) && styles.socialButtonDisabled]}
+          style={[styles.socialButton, isAuthActionDisabled && styles.socialButtonDisabled]}
         >
           <AntDesign color="#111111" name="google" size={20} style={styles.socialIcon} />
           <Text style={styles.socialText}>{isGoogleSubmitting ? 'Conectando...' : 'Continuar con Google'}</Text>
         </Pressable>
 
-        <Pressable style={styles.socialButton}>
-          <Ionicons color="#111111" name="logo-apple" size={22} style={styles.socialIcon} />
-          <Text style={styles.socialText}>Continuar con Apple</Text>
-        </Pressable>
+        {isAppleAvailable ? (
+          <AppleAuthentication.AppleAuthenticationButton
+            accessibilityLabel={isAppleSubmitting ? 'Conectando con Apple' : 'Continuar con Apple'}
+            accessibilityState={{ busy: isAppleSubmitting, disabled: isAuthActionDisabled }}
+            buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
+            buttonType={AppleAuthentication.AppleAuthenticationButtonType.CONTINUE}
+            cornerRadius={8}
+            onPress={handleAppleSignIn}
+            style={[styles.appleButton, isAuthActionDisabled && styles.socialButtonDisabled]}
+          />
+        ) : null}
 
         <View style={styles.divider}>
           <View style={styles.dividerLine} />
@@ -175,9 +233,9 @@ export default function LoginScreen() {
         </Text>
 
         <Pressable
-          disabled={isSubmitting || isGoogleSubmitting}
+          disabled={isAuthActionDisabled}
           onPress={handleSubmit}
-          style={[styles.primaryButton, (isSubmitting || isGoogleSubmitting) && styles.primaryButtonDisabled]}
+          style={[styles.primaryButton, isAuthActionDisabled && styles.primaryButtonDisabled]}
         >
           <Text style={styles.primaryButtonText}>{isSubmitting ? 'Continuando...' : 'Continuar'}</Text>
         </Pressable>
@@ -253,6 +311,11 @@ const styles = StyleSheet.create({
   },
   socialButtonDisabled: {
     opacity: 0.7
+  },
+  appleButton: {
+    height: 50,
+    marginBottom: 12,
+    width: '100%'
   },
   socialText: {
     color: '#111111',

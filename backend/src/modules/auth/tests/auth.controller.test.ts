@@ -1,5 +1,5 @@
 import type { Request, Response } from 'express';
-import { googleLogin, login, register } from '../auth.controller';
+import { appleLogin, googleLogin, login, register } from '../auth.controller';
 import { supabase } from '../../../config/supabase';
 
 jest.mock('../../../config/supabase', () => ({
@@ -47,6 +47,17 @@ function makeGoogleRequest(): Request {
   } as Request;
 }
 
+function makeAppleRequest(): Request {
+  return {
+    body: {
+      identityToken: 'apple-identity-token',
+      givenName: 'Ana',
+      familyName: 'Apple',
+      email: 'private@privaterelay.appleid.com'
+    }
+  } as Request;
+}
+
 function makeResponse(): Response & { json: jest.Mock; status: jest.Mock } {
   const response = {
     status: jest.fn().mockReturnThis(),
@@ -68,6 +79,11 @@ async function runLoginHandler(req: Request, res: Response, next: jest.Mock): Pr
 
 async function runGoogleHandler(req: Request, res: Response, next: jest.Mock): Promise<void> {
   googleLogin(req, res, next);
+  await new Promise((resolve) => setImmediate(resolve));
+}
+
+async function runAppleHandler(req: Request, res: Response, next: jest.Mock): Promise<void> {
+  appleLogin(req, res, next);
   await new Promise((resolve) => setImmediate(resolve));
 }
 
@@ -307,6 +323,54 @@ describe('authController.register', () => {
         tokenType: 'bearer'
       }
     });
+    expect(res.json.mock.calls[0][0].user).not.toHaveProperty('user_metadata');
+  });
+
+  it('devuelve el mismo contrato uniforme en Apple backend', async () => {
+    const res = makeResponse();
+    const next = jest.fn();
+
+    mockedSupabase.auth.signInWithIdToken.mockResolvedValue({
+      data: {
+        user: { id: 'user-1', email: 'private@privaterelay.appleid.com', user_metadata: {} },
+        session: makeSupabaseSession('apple-access', 'apple-refresh')
+      },
+      error: null
+    } as never);
+    mockProfileLookup({
+      ...makeProfile('user'),
+      email: 'private@privaterelay.appleid.com',
+      full_name: 'Ana Apple'
+    });
+
+    await runAppleHandler(makeAppleRequest(), res, next);
+
+    expect(next).not.toHaveBeenCalled();
+    expect(mockedSupabase.auth.signInWithIdToken).toHaveBeenCalledWith({
+      provider: 'apple',
+      token: 'apple-identity-token'
+    });
+    expect(res.json).toHaveBeenCalledWith({
+      user: {
+        id: 'user-1',
+        email: 'private@privaterelay.appleid.com'
+      },
+      profile: {
+        id: 'user-1',
+        name: 'Ana Apple',
+        email: 'private@privaterelay.appleid.com',
+        role: 'user',
+        skinType: 'mixed'
+      },
+      session: {
+        accessToken: 'apple-access',
+        refreshToken: 'apple-refresh',
+        expiresAt: 123456,
+        expiresIn: 3600,
+        tokenType: 'bearer'
+      }
+    });
+    expect(res.json.mock.calls[0][0].session).not.toHaveProperty('access_token');
     expect(res.json.mock.calls[0][0].user).not.toHaveProperty('user_metadata');
   });
 });

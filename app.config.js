@@ -13,6 +13,10 @@ function getGoogleIosUrlScheme(clientId) {
 const googleIosUrlScheme = getGoogleIosUrlScheme(process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID);
 const plugins = [...(appJson.expo.plugins ?? [])];
 
+function hasPlugin(pluginName) {
+  return plugins.some((plugin) => plugin === pluginName || (Array.isArray(plugin) && plugin[0] === pluginName));
+}
+
 if (googleIosUrlScheme) {
   plugins.push([
     '@react-native-google-signin/google-signin',
@@ -22,9 +26,17 @@ if (googleIosUrlScheme) {
   ]);
 }
 
+if (!hasPlugin('expo-apple-authentication')) {
+  plugins.push('expo-apple-authentication');
+}
+
 module.exports = {
   expo: {
     ...appJson.expo,
+    ios: {
+      ...(appJson.expo.ios ?? {}),
+      usesAppleSignIn: true
+    },
     plugins,
     extra: {
       ...(appJson.expo.extra ?? {}),

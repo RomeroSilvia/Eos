@@ -12,6 +12,7 @@ Proyecto académico — UTN, cuarto año, Aplicaciones Móviles.
 - expo-router (navegación basada en archivos)
 - expo-secure-store (almacenamiento de tokens JWT)
 - expo-notifications (notificaciones locales y push)
+- expo-apple-authentication
 - expo-image-picker (selección de fotos)
 - expo-image-manipulator (compresión de imágenes antes del upload)
 - @react-native-async-storage/async-storage
@@ -56,6 +57,8 @@ EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID=<google-ios-client-id>
 Con `EXPO_PUBLIC_USE_MOCKS=true` la app funciona sin backend, devolviendo datos hardcodeados.
 
 Google Sign-In con `@react-native-google-signin/google-signin` esta habilitado para Android e iOS. La version publica instalada no implementa el flujo web; para web se requiere un flujo separado con Google Identity Services.
+
+Apple Sign-In no requiere variables `EXPO_PUBLIC_*`. Funciona solo en iOS con un build nativo que tenga el capability "Sign in with Apple" habilitado para el bundle identifier `com.eos.skincare`. Tambien debe estar configurado el provider Apple en Supabase Auth. No esta disponible como flujo funcional en Android ni web.
 
 ### 2. Backend (`backend/`)
 

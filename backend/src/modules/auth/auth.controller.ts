@@ -20,6 +20,11 @@ export const googleLogin = asyncHandler(async (req, res) => {
   res.json(result);
 });
 
+export const appleLogin = asyncHandler(async (req, res) => {
+  const result = await authService.appleLogin(req.body);
+  res.json(result);
+});
+
 export const resetPassword = asyncHandler(async (req, res) => {
   const result = await authService.resetPassword(req.body);
   res.status(200).json(result);
