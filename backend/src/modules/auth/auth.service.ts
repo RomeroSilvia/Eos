@@ -1,6 +1,7 @@
 import { env } from '../../config/env';
 import type { ProfileRow } from '../../database/schema.types';
 import { ApiError } from '../../utils/ApiError';
+import { recordAuditLog } from '../audit/audit.service';
 import { authRepository } from './auth.repository';
 
 type UserRole = 'user' | 'specialist' | 'center_admin';
@@ -114,6 +115,15 @@ export const authService = {
       email: normalizedEmail,
       full_name: fullName,
       role: normalizedRole
+    });
+
+    void recordAuditLog({
+      actorId: createdUser.user.id,
+      actorRole: normalizedRole,
+      action: 'create',
+      entity: 'user_profile',
+      entityId: createdUser.user.id,
+      after: profile
     });
 
     return {

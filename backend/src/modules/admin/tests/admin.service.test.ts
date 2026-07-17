@@ -1,6 +1,7 @@
 import { ApiError } from '../../../utils/ApiError';
 import { supabase } from '../../../config/supabase';
 import { ensureAdminCanAccessActiveCenter } from '../../centers/centers.service';
+import { recordAuditLog } from '../../audit/audit.service';
 import { adminRepository } from '../admin.repository';
 import { adminService, normalizeSpecialistDocumentPath } from '../admin.service';
 
@@ -28,8 +29,13 @@ jest.mock('../../centers/centers.service', () => ({
   ensureAdminCanAccessActiveCenter: jest.fn()
 }));
 
+jest.mock('../../audit/audit.service', () => ({
+  recordAuditLog: jest.fn(async () => undefined)
+}));
+
 const mockedRepo = jest.mocked(adminRepository);
 const mockedEnsureCenterAccess = jest.mocked(ensureAdminCanAccessActiveCenter);
+const mockedRecordAuditLog = jest.mocked(recordAuditLog);
 const mockedStorageFrom = supabase.storage.from as jest.Mock;
 let mockedCreateSignedUrl: jest.Mock;
 let mockedList: jest.Mock;
@@ -64,6 +70,7 @@ describe('adminService', () => {
       list: mockedList
     });
     mockedRepo.findActiveCentersByIds.mockResolvedValue([]);
+    mockedRepo.findSpecialistById.mockResolvedValue(makeSpecialist());
   });
 
   it('center_admin puede listar especialistas pendientes sin documentos sensibles', async () => {
@@ -107,7 +114,7 @@ describe('adminService', () => {
 
     const result = await adminService.updateSpecialistStatus('specialist-profile-1', {
       licenseStatus: 'verified'
-    });
+    }, 'admin-1');
 
     expect(mockedRepo.updateSpecialistStatus).toHaveBeenCalledWith('specialist-profile-1', {
       license_status: 'verified',
@@ -116,6 +123,16 @@ describe('adminService', () => {
     expect(mockedEnsureCenterAccess).not.toHaveBeenCalled();
     expect(result.licenseStatus).toBe('verified');
     expect(result.rejectionReason).toBeNull();
+    expect(mockedRecordAuditLog).toHaveBeenCalledWith(
+      expect.objectContaining({
+        actorId: 'admin-1',
+        actorRole: 'center_admin',
+        action: 'approve',
+        entity: 'specialist_profile',
+        entityId: 'specialist-profile-1',
+        before: makeSpecialist()
+      })
+    );
   });
 
   it('center_admin puede rechazar especialista con motivo', async () => {
@@ -130,7 +147,7 @@ describe('adminService', () => {
     const result = await adminService.updateSpecialistStatus('specialist-profile-1', {
       licenseStatus: 'rejected',
       rejectionReason: 'Documento ilegible'
-    });
+    }, 'admin-1');
 
     expect(mockedRepo.updateSpecialistStatus).toHaveBeenCalledWith('specialist-profile-1', {
       license_status: 'rejected',
@@ -139,6 +156,26 @@ describe('adminService', () => {
     expect(mockedEnsureCenterAccess).not.toHaveBeenCalled();
     expect(result.licenseStatus).toBe('rejected');
     expect(result.rejectionReason).toBe('Documento ilegible');
+    expect(mockedRecordAuditLog).toHaveBeenCalledWith(
+      expect.objectContaining({
+        actorId: 'admin-1',
+        actorRole: 'center_admin',
+        action: 'reject',
+        entity: 'specialist_profile',
+        entityId: 'specialist-profile-1'
+      })
+    );
+  });
+
+  it('no registra auditoría si no se conoce el admin que aprueba/rechaza', async () => {
+    mockedRepo.updateSpecialistStatus.mockResolvedValue(makeSpecialist({ license_status: 'verified' }));
+    mockedRepo.findProfilesByIds.mockResolvedValue([
+      { id: 'user-1', full_name: 'Marta Lopez', email: 'marta@example.com' }
+    ]);
+
+    await adminService.updateSpecialistStatus('specialist-profile-1', { licenseStatus: 'verified' });
+
+    expect(mockedRecordAuditLog).not.toHaveBeenCalled();
   });
 
   it('rechazar sin motivo devuelve 400', async () => {

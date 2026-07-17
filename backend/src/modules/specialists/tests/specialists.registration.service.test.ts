@@ -1,6 +1,7 @@
 import { supabase } from '../../../config/supabase';
 import { ApiError } from '../../../utils/ApiError';
 import type { SpecialistProfileRow } from '../../../database/schema.types';
+import { recordAuditLog } from '../../audit/audit.service';
 import { specialistsRegistrationRepository } from '../specialists.registration.repository';
 import { specialistsRegistrationService } from '../specialists.registration.service';
 import { specialistsSharedRepository } from '../specialists.shared.repository';
@@ -35,9 +36,14 @@ jest.mock('../../../config/supabase', () => {
   };
 });
 
+jest.mock('../../audit/audit.service', () => ({
+  recordAuditLog: jest.fn(async () => undefined)
+}));
+
 const mockedRepo = jest.mocked(specialistsRegistrationRepository);
 const mockedSharedRepo = jest.mocked(specialistsSharedRepository);
 const mockedStorageFrom = supabase.storage.from as jest.Mock;
+const mockedRecordAuditLog = jest.mocked(recordAuditLog);
 
 const validJpegBuffer = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46]);
 const validPngBuffer = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00]);
@@ -151,6 +157,16 @@ describe('specialistsRegistrationService', () => {
         expect.any(Object)
       );
       expect(result).toEqual(created);
+      expect(mockedRecordAuditLog).toHaveBeenCalledWith(
+        expect.objectContaining({
+          actorId: 'user-1',
+          actorRole: 'specialist',
+          action: 'create',
+          entity: 'specialist_profile',
+          entityId: created.id,
+          after: created
+        })
+      );
     });
 
     it('usa el userId autenticado y no el user_id enviado en el body', async () => {
