@@ -366,7 +366,7 @@ function normalizeFilters(rawFilters: {
     throw new ApiError(400, 'El parámetro "from" no puede ser posterior a "to".');
   }
 
-  const page = normalizePositiveInt(rawFilters.page, 1, 1);
+  const page = normalizePositiveInt(rawFilters.page, 1, Number.MAX_SAFE_INTEGER);
   const limit = normalizePositiveInt(rawFilters.limit, DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE);
 
   return {

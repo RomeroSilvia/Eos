@@ -121,6 +121,12 @@ describe('auditService.getAuditLogs', () => {
     await expect(getAuditLogs({ page: 'abc' })).rejects.toThrow(ApiError);
   });
 
+  it('respeta el "page" solicitado en vez de recortarlo a 1', async () => {
+    await getAuditLogs({ page: '3' });
+
+    expect(mockedRepo.findAuditLogs).toHaveBeenCalledWith(expect.objectContaining({ page: 3 }));
+  });
+
   it('resuelve actor "Usuario" para actorRole=user con su nombre de perfil', async () => {
     mockedRepo.findAuditLogs.mockResolvedValue({
       data: [makeAuditLog({ actor_id: 'user-1', actor_role: 'user' })],
