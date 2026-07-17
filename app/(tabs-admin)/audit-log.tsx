@@ -323,9 +323,16 @@ function AuditLogCard({
   expanded: boolean;
   onToggle: () => void;
 }) {
+  const isDelete = entry.action === 'delete';
+  const isCreate = entry.action === 'create';
+
   const diffRows = buildDiffRows(entry.before, entry.after);
-  const metadataRows = buildValueRows(entry.metadata);
-  const hasDetails = diffRows.length > 0 || metadataRows.length > 0;
+  const createRows = buildValueRows(entry.after);
+
+  const showStepBox = entry.routineStepDetail !== null && isCreate;
+
+  const actionDetailPresent = isCreate ? createRows.length > 0 : diffRows.length > 0;
+  const hasDetails = isDelete || actionDetailPresent || showStepBox;
 
   return (
     <Card style={styles.entryCard}>
@@ -357,31 +364,92 @@ function AuditLogCard({
 
       {expanded ? (
         <View style={styles.detailBox}>
-          {diffRows.map((row) => (
-            <DiffRowBlock key={row.label} row={row} />
-          ))}
-          {metadataRows.length > 0 ? (
-            <View style={styles.detailBlock}>
-              <Text style={styles.detailLabel}>Información adicional</Text>
-              {metadataRows.map((row) => (
-                <Text key={row.label} style={styles.detailValue}>
-                  {row.label}: {row.value}
-                </Text>
-              ))}
-            </View>
-          ) : null}
+          {isDelete ? <DeleteSummaryBlock entry={entry} /> : null}
+          {!isDelete && isCreate ? <CreateBlock rows={createRows} /> : null}
+          {!isDelete && !isCreate && diffRows.length > 0 ? <UpdateDiffBlocks rows={diffRows} /> : null}
+          {showStepBox && entry.routineStepDetail ? <RoutineStepBlock detail={entry.routineStepDetail} /> : null}
         </View>
       ) : null}
     </Card>
   );
 }
 
-function DiffRowBlock({ row }: { row: DiffRow }) {
+function DeleteSummaryBlock({ entry }: { entry: AuditLogEntry }) {
   return (
     <View style={styles.detailBlock}>
-      <Text style={styles.detailLabel}>{row.label}</Text>
-      <Text style={styles.detailValue}>Antes: {row.before}</Text>
-      <Text style={styles.detailValue}>Después: {row.after}</Text>
+      <Text style={styles.detailValue}>Elemento eliminado: {entry.entityLabel}</Text>
+      <Text style={styles.detailValue}>Fecha: {formatDateTimeLabel(entry.createdAt)}</Text>
+      <Text style={styles.detailValue}>Realizado por: {entry.actorName}</Text>
+    </View>
+  );
+}
+
+function CreateBlock({ rows }: { rows: ValueRow[] }) {
+  return (
+    <View style={styles.detailBlock}>
+      <Text style={styles.detailLabel}>Datos creados</Text>
+      {rows.map((row) => (
+        <FieldValue key={row.label} label={row.label} value={row.value} />
+      ))}
+    </View>
+  );
+}
+
+function UpdateDiffBlocks({ rows }: { rows: DiffRow[] }) {
+  return (
+    <View style={styles.updateSection}>
+      <View style={styles.detailBlock}>
+        <Text style={styles.detailLabel}>Antes</Text>
+        {rows.map((row) => (
+          <FieldValue key={row.label} label={row.label} value={row.before} />
+        ))}
+      </View>
+      <View style={styles.detailBlock}>
+        <Text style={styles.detailLabel}>Después</Text>
+        {rows.map((row) => (
+          <FieldValue key={row.label} label={row.label} value={row.after} />
+        ))}
+      </View>
+    </View>
+  );
+}
+
+function FieldValue({ label, value, depth = 0 }: { label: string; value: unknown; depth?: number }) {
+  if (isPlainObject(value)) {
+    const entries = Object.entries(value).filter(([key]) => !HIDDEN_FIELD_KEYS.has(key));
+
+    return (
+      <View>
+        <Text style={[styles.detailValue, depth > 0 && { marginLeft: depth * 12 }]}>
+          {depth > 0 ? '• ' : ''}
+          {label}:
+        </Text>
+        {entries.length === 0 ? (
+          <Text style={[styles.detailValue, { marginLeft: (depth + 1) * 12 }]}>Sin datos</Text>
+        ) : (
+          entries.map(([key, entryValue]) => (
+            <FieldValue key={key} label={humanizeKey(key)} value={entryValue} depth={depth + 1} />
+          ))
+        )}
+      </View>
+    );
+  }
+
+  return (
+    <Text style={[styles.detailValue, depth > 0 && { marginLeft: depth * 12 }]}>
+      {depth > 0 ? '• ' : ''}
+      {label}: {formatValue(value)}
+    </Text>
+  );
+}
+
+function RoutineStepBlock({ detail }: { detail: NonNullable<AuditLogEntry['routineStepDetail']> }) {
+  return (
+    <View style={styles.detailBlock}>
+      <Text style={styles.detailLabel}>Paso de rutina</Text>
+      <Text style={styles.detailValue}>Categoría: {detail.category ?? 'Sin categoría'}</Text>
+      <Text style={styles.detailValue}>Paso: {detail.stepName ?? 'Sin nombre'}</Text>
+      <Text style={styles.detailValue}>Productos agregados: {detail.hasProducts ? 'Sí' : 'No'}</Text>
     </View>
   );
 }
@@ -395,8 +463,20 @@ function EntryMetaItem({ label, value }: { label: string; value: string }) {
   );
 }
 
-type DiffRow = { label: string; before: string; after: string };
-type ValueRow = { label: string; value: string };
+type DiffRow = { label: string; before: unknown; after: unknown };
+type ValueRow = { label: string; value: unknown };
+
+const HIDDEN_FIELD_KEYS = new Set([
+  'id',
+  'created_at',
+  'updated_at',
+  'createdAt',
+  'updatedAt',
+  'plan_id',
+  'planId',
+  'owner_id',
+  'ownerId'
+]);
 
 const FIELD_LABELS: Record<string, string> = {
   name: 'Nombre',
@@ -449,7 +529,8 @@ const FIELD_LABELS: Record<string, string> = {
   skin_type: 'Tipo de piel',
   skinType: 'Tipo de piel',
   id: 'ID',
-  subscription_plans: 'Plan de suscripción'
+  owner: 'Titular',
+  subscription_plans: 'Plan'
 };
 
 function buildDiffRows(before: unknown, after: unknown): DiffRow[] {
@@ -462,6 +543,8 @@ function buildDiffRows(before: unknown, after: unknown): DiffRow[] {
   const rows: DiffRow[] = [];
 
   for (const key of keys) {
+    if (HIDDEN_FIELD_KEYS.has(key)) continue;
+
     const beforeValue = beforeObj ? beforeObj[key] : undefined;
     const afterValue = afterObj ? afterObj[key] : undefined;
 
@@ -471,8 +554,8 @@ function buildDiffRows(before: unknown, after: unknown): DiffRow[] {
 
     rows.push({
       label: humanizeKey(key),
-      before: beforeObj ? formatValue(beforeValue) : '—',
-      after: afterObj ? formatValue(afterValue) : '—'
+      before: beforeObj ? beforeValue : undefined,
+      after: afterObj ? afterValue : undefined
     });
   }
 
@@ -482,10 +565,12 @@ function buildDiffRows(before: unknown, after: unknown): DiffRow[] {
 function buildValueRows(value: unknown): ValueRow[] {
   if (!isPlainObject(value)) return [];
 
-  return Object.entries(value as Record<string, unknown>).map(([key, entryValue]) => ({
-    label: humanizeKey(key),
-    value: formatValue(entryValue)
-  }));
+  return Object.entries(value as Record<string, unknown>)
+    .filter(([key]) => !HIDDEN_FIELD_KEYS.has(key))
+    .map(([key, entryValue]) => ({
+      label: humanizeKey(key),
+      value: entryValue
+    }));
 }
 
 function humanizeKey(key: string): string {
@@ -777,6 +862,14 @@ const styles = StyleSheet.create({
   },
   detailBox: {
     gap: 10
+  },
+  updateSection: {
+    gap: 10
+  },
+  detailSectionLabel: {
+    color: colors.textSecondary,
+    fontSize: 12,
+    fontWeight: '800'
   },
   detailBlock: {
     backgroundColor: colors.primarySuperLight,

@@ -2,6 +2,12 @@ export type AuditAction = 'create' | 'update' | 'delete' | 'approve' | 'reject' 
 
 export type AuditEntity = 'routine' | 'specialist_profile' | 'center' | 'subscription' | 'product' | 'user_profile';
 
+export type RoutineStepDetail = {
+  category: string | null;
+  stepName: string | null;
+  hasProducts: boolean;
+};
+
 export type AuditLogEntry = {
   id: string;
   actorId: string | null;
@@ -12,6 +18,7 @@ export type AuditLogEntry = {
   entity: AuditEntity | string;
   entityId: string;
   entityLabel: string;
+  routineStepDetail: RoutineStepDetail | null;
   before: unknown;
   after: unknown;
   metadata: unknown;
