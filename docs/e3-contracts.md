@@ -171,8 +171,8 @@ Query params (todos opcionales):
 - `entityId`: filtra por entidad exacta.
 - `actorId`: filtra por usuario que ejecuto la accion.
 - `from` / `to`: rango de fechas en formato `YYYY-MM-DD`, inclusive, sobre `created_at`. `from` no puede ser posterior a `to`.
-- `page`: entero positivo, default `1`.
-- `limit`: entero positivo, default `20`, maximo `100`.
+- `page`: entero positivo, sin tope (default `1`).
+- `limit`: entero positivo, default `10`, maximo `100`.
 
 Respuesta:
 
@@ -182,9 +182,17 @@ Respuesta:
     id: string;
     actorId: string | null;
     actorRole: string | null;
+    actorName: string;               // resuelto: full_name, o "Administrador de Centro" / "Sistema"
+    actorProfile: string | null;     // "Usuario" | "Especialista - {specialty}" | "Administrador de Centro"
     action: string;
     entity: string;
     entityId: string;
+    entityLabel: string;             // nombre legible del registro afectado (o el mensaje de "no disponible")
+    routineStepDetail: {             // solo si metadata es de un paso de rutina (M1), si no null
+      category: string | null;
+      stepName: string | null;
+      hasProducts: boolean;
+    } | null;
     before: unknown;
     after: unknown;
     metadata: unknown;
@@ -198,11 +206,24 @@ Respuesta:
 
 Query params invalidos (fecha con formato incorrecto, `from` > `to`, `page`/`limit` no numericos o no positivos) devuelven `400` con mensaje en espanol.
 
+### Saneamiento de `before`/`after`
+
+El backend no devuelve los snapshots crudos tal cual quedaron guardados en `audit_logs`:
+
+- **`entityLabel`**: se resuelve primero contra la tabla en vivo (por eso una edicion muestra el nombre actual); si el registro ya no existe (caso `delete`), cae a un fallback que deriva el nombre desde el propio `before`/`after` guardado en el evento (`name`, `full_name`, `specialty`, o el plan anidado de una suscripcion), antes de mostrar el mensaje generico de "no disponible".
+- **`subscription`**: `owner_id`/`ownerId` se reemplazan por `owner` (nombre resuelto via `profiles` o `centers` segun `owner_type`) — el id crudo del titular no viaja en la respuesta.
+- El resto de la limpieza (ocultar `id`, fechas administrativas, `plan_id`, `routine_id`, etc.) se hace en el frontend (`HIDDEN_FIELD_KEYS` en `app/(tabs-admin)/audit-log.tsx`), no en el backend — `before`/`after` siguen trayendo esos campos por si otro consumidor los necesita.
+
 ### Frontend
 
 - Pantalla: `app/(tabs-admin)/audit-log.tsx`, accesible desde el panel admin (`app/(tabs-admin)/index.tsx`) y `constants/routes.ts#adminAuditLog`.
 - Servicio: `services/audit.ts` (`getAuditLogs`, `getAuditLogErrorMessage`).
 - Tipos compartidos: `types/audit.ts`.
+- El detalle expandible de cada evento se arma distinto segun `action`:
+  - `delete`: un solo recuadro con "Elemento eliminado" (actor y fecha ya se muestran arriba, en el meta grid Actor/Perfil/Registro/Fecha de la tarjeta).
+  - `create`: un recuadro con los campos de `after` (`FieldValue`, recursivo con bullets para objetos anidados).
+  - cualquier otra accion con `before`/`after`: dos recuadros, "Antes" y "Despues", solo con los campos que cambiaron.
+  - `routineStepDetail` (categoria, nombre de paso, si tiene productos) se muestra en un recuadro aparte, unicamente cuando `action === 'create'` (se agrega un paso).
 
 ### Pendiente / fuera de alcance de esta iteracion
 
