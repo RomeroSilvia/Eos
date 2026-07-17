@@ -50,6 +50,12 @@ export type AuditLogFilters = {
   limit: number;
 };
 
+export type RoutineStepDetail = {
+  category: string | null;
+  stepName: string | null;
+  hasProducts: boolean;
+};
+
 export type AuditLogEntry = {
   id: string;
   actorId: string | null;
@@ -60,6 +66,7 @@ export type AuditLogEntry = {
   entity: string;
   entityId: string;
   entityLabel: string;
+  routineStepDetail: RoutineStepDetail | null;
   before: unknown;
   after: unknown;
   metadata: unknown;

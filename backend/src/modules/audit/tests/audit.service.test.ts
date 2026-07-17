@@ -13,7 +13,8 @@ jest.mock('../audit.repository', () => ({
     findSpecialistProfileRows: jest.fn(),
     findSpecialtyByUserIds: jest.fn(),
     findSubscriptionRows: jest.fn(),
-    findSubscriptionPlanNamesByIds: jest.fn()
+    findSubscriptionPlanNamesByIds: jest.fn(),
+    findStepsWithProducts: jest.fn()
   }
 }));
 
@@ -48,6 +49,7 @@ describe('auditService.getAuditLogs', () => {
     mockedRepo.findSpecialtyByUserIds.mockResolvedValue(new Map());
     mockedRepo.findSubscriptionRows.mockResolvedValue([]);
     mockedRepo.findSubscriptionPlanNamesByIds.mockResolvedValue(new Map());
+    mockedRepo.findStepsWithProducts.mockResolvedValue(new Set());
   });
 
   it('devuelve una página con los defaults de paginación cuando no se pasan filtros', async () => {
@@ -60,7 +62,7 @@ describe('auditService.getAuditLogs', () => {
       from: undefined,
       to: undefined,
       page: 1,
-      limit: 20
+      limit: 10
     });
     expect(result).toEqual({
       items: [
@@ -74,6 +76,7 @@ describe('auditService.getAuditLogs', () => {
           entity: 'center',
           entityId: 'center-1',
           entityLabel: 'Centro Norte',
+          routineStepDetail: null,
           before: { name: 'Antes' },
           after: { name: 'Después' },
           metadata: null,
@@ -82,7 +85,7 @@ describe('auditService.getAuditLogs', () => {
       ],
       total: 1,
       page: 1,
-      limit: 20
+      limit: 10
     });
   });
 
@@ -145,12 +148,148 @@ describe('auditService.getAuditLogs', () => {
     expect(result.items[0].actorProfile).toBe('Especialista - dermatologo');
   });
 
-  it('marca entidad no encontrada cuando el lookup no devuelve nombre', async () => {
+  it('marca entidad no encontrada cuando el lookup no devuelve nombre ni hay fallback en before/after', async () => {
+    mockedRepo.findAuditLogs.mockResolvedValue({
+      data: [makeAuditLog({ before: { status: 'active' }, after: null })],
+      total: 1
+    });
     mockedRepo.findCenterNamesByIds.mockResolvedValue(new Map());
 
     const result = await getAuditLogs({});
 
     expect(result.items[0].entityLabel).toBe('Registro eliminado o no disponible');
+  });
+
+  it('usa el nombre de "before" como entityLabel cuando el registro ya no existe (eliminado)', async () => {
+    mockedRepo.findAuditLogs.mockResolvedValue({
+      data: [makeAuditLog({ action: 'delete', before: { name: 'Centro Sur' }, after: null })],
+      total: 1
+    });
+    mockedRepo.findCenterNamesByIds.mockResolvedValue(new Map());
+
+    const result = await getAuditLogs({});
+
+    expect(result.items[0].entityLabel).toBe('Centro Sur');
+  });
+
+  it('arma routineStepDetail cuando el metadata es de un paso de rutina, marcando hasProducts', async () => {
+    mockedRepo.findAuditLogs.mockResolvedValue({
+      data: [
+        makeAuditLog({
+          entity: 'routine',
+          entity_id: 'routine-1',
+          metadata: { changeType: 'routine_step', stepId: 'step-1', stepName: 'Limpieza facial', category: 'am' }
+        })
+      ],
+      total: 1
+    });
+    mockedRepo.findRoutineNamesByIds.mockResolvedValue(new Map([['routine-1', 'Rutina de Marta']]));
+    mockedRepo.findStepsWithProducts.mockResolvedValue(new Set(['step-1']));
+
+    const result = await getAuditLogs({});
+
+    expect(mockedRepo.findStepsWithProducts).toHaveBeenCalledWith(['step-1']);
+    expect(result.items[0].routineStepDetail).toEqual({
+      category: 'am',
+      stepName: 'Limpieza facial',
+      hasProducts: true
+    });
+  });
+
+  it('routineStepDetail.hasProducts es false cuando el paso no tiene productos vinculados', async () => {
+    mockedRepo.findAuditLogs.mockResolvedValue({
+      data: [
+        makeAuditLog({
+          entity: 'routine',
+          entity_id: 'routine-1',
+          metadata: { changeType: 'routine_step', stepId: 'step-2', stepName: 'Hidratación', category: 'pm' }
+        })
+      ],
+      total: 1
+    });
+    mockedRepo.findRoutineNamesByIds.mockResolvedValue(new Map([['routine-1', 'Rutina de Marta']]));
+    mockedRepo.findStepsWithProducts.mockResolvedValue(new Set());
+
+    const result = await getAuditLogs({});
+
+    expect(result.items[0].routineStepDetail).toEqual({
+      category: 'pm',
+      stepName: 'Hidratación',
+      hasProducts: false
+    });
+  });
+
+  it('routineStepDetail es null cuando metadata no tiene forma de paso de rutina', async () => {
+    const result = await getAuditLogs({});
+
+    expect(mockedRepo.findStepsWithProducts).toHaveBeenCalledWith([]);
+    expect(result.items[0].routineStepDetail).toBeNull();
+  });
+
+  it('reemplaza owner_id por el nombre resuelto cuando owner_type es user', async () => {
+    mockedRepo.findAuditLogs.mockResolvedValue({
+      data: [
+        makeAuditLog({
+          entity: 'subscription',
+          entity_id: 'sub-1',
+          before: null,
+          after: { id: 'sub-1', status: 'active', owner_id: 'user-1', owner_type: 'user', plan_id: 'plan-1' }
+        })
+      ],
+      total: 1
+    });
+    mockedRepo.findProfileNamesByIds.mockResolvedValue(new Map([['user-1', 'Marta Gómez']]));
+
+    const result = await getAuditLogs({});
+
+    expect(result.items[0].after).toEqual({
+      id: 'sub-1',
+      status: 'active',
+      owner_type: 'user',
+      plan_id: 'plan-1',
+      owner: 'Marta Gómez'
+    });
+  });
+
+  it('reemplaza owner_id por el nombre resuelto cuando owner_type es center', async () => {
+    mockedRepo.findAuditLogs.mockResolvedValue({
+      data: [
+        makeAuditLog({
+          entity: 'subscription',
+          entity_id: 'sub-2',
+          before: null,
+          after: { id: 'sub-2', status: 'active', owner_id: 'center-1', owner_type: 'center', plan_id: 'plan-1' }
+        })
+      ],
+      total: 1
+    });
+    mockedRepo.findCenterNamesByIds.mockResolvedValue(new Map([['center-1', 'Centro Norte']]));
+
+    const result = await getAuditLogs({});
+
+    expect(result.items[0].after).toEqual(
+      expect.objectContaining({ owner: 'Centro Norte' })
+    );
+    expect(result.items[0].after).not.toHaveProperty('owner_id');
+  });
+
+  it('usa "No disponible" cuando el owner_id no se resuelve en profiles ni centers', async () => {
+    mockedRepo.findAuditLogs.mockResolvedValue({
+      data: [
+        makeAuditLog({
+          entity: 'subscription',
+          entity_id: 'sub-3',
+          before: null,
+          after: { id: 'sub-3', owner_id: 'user-inexistente', owner_type: 'user' }
+        })
+      ],
+      total: 1
+    });
+    mockedRepo.findProfileNamesByIds.mockResolvedValue(new Map());
+
+    const result = await getAuditLogs({});
+
+    expect(result.items[0].after).toEqual(expect.objectContaining({ owner: 'No disponible' }));
   });
 
   it('filtro entity=user_profile resuelve ids con role=user y los pasa como entityIdIn', async () => {
@@ -170,7 +309,7 @@ describe('auditService.getAuditLogs', () => {
     const result = await getAuditLogs({ entity: 'user_profile' });
 
     expect(mockedRepo.findAuditLogs).not.toHaveBeenCalled();
-    expect(result).toEqual({ items: [], total: 0, page: 1, limit: 20 });
+    expect(result).toEqual({ items: [], total: 0, page: 1, limit: 10 });
   });
 });
 

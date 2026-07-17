@@ -158,5 +158,16 @@ export const auditRepository = {
     if (error) throw error;
 
     return new Map((data ?? []).map((row: { id: string; name: string }) => [row.id, row.name]));
+  },
+
+  findStepsWithProducts: async (stepIds: string[]): Promise<Set<string>> => {
+    if (stepIds.length === 0) return new Set();
+
+    const db = supabase as any;
+    const { data, error } = await db.from(TABLE_NAMES.routineStepProducts).select('step_id').in('step_id', stepIds);
+
+    if (error) throw error;
+
+    return new Set((data ?? []).map((row: { step_id: string }) => row.step_id));
   }
 };

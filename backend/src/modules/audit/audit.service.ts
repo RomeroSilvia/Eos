@@ -4,7 +4,7 @@ import { auditRepository } from './audit.repository';
 import type { AuditLogEntry, AuditLogFilters, AuditLogPage, AuditLogRow, RecordAuditLogParams } from './audit.types';
 
 const MAX_PAGE_SIZE = 100;
-const DEFAULT_PAGE_SIZE = 20;
+const DEFAULT_PAGE_SIZE = 10;
 const ISO_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const ENTITY_NOT_FOUND_LABEL = 'Registro eliminado o no disponible';
 
@@ -92,17 +92,31 @@ async function enrichAuditLogEntries(rows: AuditLogRow[]): Promise<AuditLogEntry
   const namedActorIds = [
     ...new Set(rows.filter((row) => row.actor_role !== 'center_admin' && row.actor_id).map((row) => row.actor_id as string))
   ];
+  const routineStepIds = [
+    ...new Set(
+      rows
+        .map((row) => getRoutineStepMetadata(row.metadata)?.stepId)
+        .filter((stepId): stepId is string => Boolean(stepId))
+    )
+  ];
 
-  const [actorNames, actorSpecialties] = await Promise.all([
+  const [actorNames, actorSpecialties, stepsWithProducts, subscriptionOwnerNames] = await Promise.all([
     auditRepository.findProfileNamesByIds(namedActorIds),
-    auditRepository.findSpecialtyByUserIds(specialistActorIds)
+    auditRepository.findSpecialtyByUserIds(specialistActorIds),
+    auditRepository.findStepsWithProducts(routineStepIds),
+    resolveSubscriptionOwnerNames(rows)
   ]);
 
   const entityLabelsByEntity = await resolveEntityLabelsByType(groupEntityIdsByType(rows));
 
   return rows.map((row) => {
     const { actorName, actorProfile } = resolveActor(row, actorNames, actorSpecialties);
-    const entityLabel = entityLabelsByEntity.get(row.entity)?.get(row.entity_id) ?? ENTITY_NOT_FOUND_LABEL;
+    const entityLabel =
+      entityLabelsByEntity.get(row.entity)?.get(row.entity_id) ??
+      deriveFallbackEntityLabel(row.entity, row.before, row.after) ??
+      ENTITY_NOT_FOUND_LABEL;
+
+    const isSubscription = row.entity === 'subscription';
 
     return {
       id: row.id,
@@ -114,12 +128,122 @@ async function enrichAuditLogEntries(rows: AuditLogRow[]): Promise<AuditLogEntry
       entity: row.entity,
       entityId: row.entity_id,
       entityLabel,
-      before: row.before,
-      after: row.after,
+      routineStepDetail: buildRoutineStepDetail(row.metadata, stepsWithProducts),
+      before: isSubscription ? sanitizeSubscriptionPayload(row.before, subscriptionOwnerNames) : row.before,
+      after: isSubscription ? sanitizeSubscriptionPayload(row.after, subscriptionOwnerNames) : row.after,
       metadata: row.metadata,
       createdAt: row.created_at
     };
   });
+}
+
+async function resolveSubscriptionOwnerNames(rows: AuditLogRow[]): Promise<Map<string, string>> {
+  const userOwnerIds = new Set<string>();
+  const centerOwnerIds = new Set<string>();
+
+  for (const row of rows) {
+    if (row.entity !== 'subscription') continue;
+
+    for (const payload of [row.before, row.after]) {
+      if (!isPlainObject(payload)) continue;
+
+      const ownerId = payload.owner_id ?? payload.ownerId;
+      const ownerType = payload.owner_type ?? payload.ownerType;
+
+      if (typeof ownerId !== 'string') continue;
+
+      if (ownerType === 'center') {
+        centerOwnerIds.add(ownerId);
+      } else {
+        userOwnerIds.add(ownerId);
+      }
+    }
+  }
+
+  const [userNames, centerNames] = await Promise.all([
+    auditRepository.findProfileNamesByIds([...userOwnerIds]),
+    auditRepository.findCenterNamesByIds([...centerOwnerIds])
+  ]);
+
+  return new Map([...userNames, ...centerNames]);
+}
+
+function sanitizeSubscriptionPayload(payload: unknown, ownerNames: Map<string, string>): unknown {
+  if (!isPlainObject(payload)) return payload;
+
+  const { owner_id, ownerId, ...rest } = payload;
+  const rawOwnerId = owner_id ?? ownerId;
+
+  if (typeof rawOwnerId !== 'string') {
+    return rest;
+  }
+
+  return { ...rest, owner: ownerNames.get(rawOwnerId) ?? 'No disponible' };
+}
+
+type RoutineStepMetadata = { changeType: 'routine_step'; stepId: string | null; stepName: string | null; category: string | null };
+
+function getRoutineStepMetadata(metadata: unknown): RoutineStepMetadata | null {
+  if (!isPlainObject(metadata) || metadata.changeType !== 'routine_step') {
+    return null;
+  }
+
+  return metadata as unknown as RoutineStepMetadata;
+}
+
+function buildRoutineStepDetail(
+  metadata: unknown,
+  stepsWithProducts: Set<string>
+): AuditLogEntry['routineStepDetail'] {
+  const stepMetadata = getRoutineStepMetadata(metadata);
+
+  if (!stepMetadata) {
+    return null;
+  }
+
+  return {
+    category: stepMetadata.category,
+    stepName: stepMetadata.stepName,
+    hasProducts: Boolean(stepMetadata.stepId) && stepsWithProducts.has(stepMetadata.stepId as string)
+  };
+}
+
+function deriveFallbackEntityLabel(entity: string, before: unknown, after: unknown): string | undefined {
+  const beforeObj = isPlainObject(before) ? before : null;
+  const afterObj = isPlainObject(after) ? after : null;
+
+  switch (entity) {
+    case 'routine':
+    case 'product':
+    case 'center': {
+      const name = readStringField(beforeObj, 'name') ?? readStringField(afterObj, 'name');
+      return name ?? undefined;
+    }
+    case 'user_profile': {
+      const name = readStringField(beforeObj, 'full_name') ?? readStringField(afterObj, 'full_name');
+      return name ?? undefined;
+    }
+    case 'specialist_profile': {
+      const specialty = readStringField(beforeObj, 'specialty') ?? readStringField(afterObj, 'specialty');
+      return specialty ? `Especialista (${specialty})` : undefined;
+    }
+    case 'subscription': {
+      const plan = beforeObj?.subscription_plans ?? afterObj?.subscription_plans;
+      const planName = isPlainObject(plan) ? readStringField(plan, 'name') : undefined;
+      return planName ? `Suscripción ${planName}` : undefined;
+    }
+    default:
+      return undefined;
+  }
+}
+
+function readStringField(value: Record<string, unknown> | null, key: string): string | undefined {
+  const fieldValue = value?.[key];
+  return typeof fieldValue === 'string' && fieldValue.length > 0 ? fieldValue : undefined;
+}
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 function resolveActor(
