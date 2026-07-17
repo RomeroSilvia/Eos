@@ -65,6 +65,7 @@ export default function AuditLogScreen() {
   const loadData = useCallback(async (targetPage: number) => {
     setIsLoading(true);
     setError(null);
+    setEntries([]);
 
     try {
       const result = await getAuditLogs({
@@ -284,39 +285,32 @@ export default function AuditLogScreen() {
           </View>
         }
         ListFooterComponent={
-          !error && entries.length > 0 ? (
-            isLoading ? (
-              <View style={styles.paginationLoading}>
-                <ActivityIndicator color={colors.primary} />
-                <Text style={styles.stateText}>Cargando página...</Text>
-              </View>
-            ) : (
-              <View style={styles.pagination}>
-                <Pressable
-                  accessibilityLabel="Página anterior"
-                  accessibilityRole="button"
-                  accessibilityState={{ disabled: !hasPreviousPage }}
-                  disabled={!hasPreviousPage}
-                  onPress={() => goToPage(page - 1)}
-                  style={[styles.paginationButton, !hasPreviousPage && styles.disabled]}
-                >
-                  <Text style={styles.paginationButtonText}>Anterior</Text>
-                </Pressable>
-                <Text style={styles.paginationLabel}>
-                  Página {page} de {totalPages}
-                </Text>
-                <Pressable
-                  accessibilityLabel="Página siguiente"
-                  accessibilityRole="button"
-                  accessibilityState={{ disabled: !hasNextPage }}
-                  disabled={!hasNextPage}
-                  onPress={() => goToPage(page + 1)}
-                  style={[styles.paginationButton, !hasNextPage && styles.disabled]}
-                >
-                  <Text style={styles.paginationButtonText}>Siguiente</Text>
-                </Pressable>
-              </View>
-            )
+          !isLoading && !error && entries.length > 0 ? (
+            <View style={styles.pagination}>
+              <Pressable
+                accessibilityLabel="Página anterior"
+                accessibilityRole="button"
+                accessibilityState={{ disabled: !hasPreviousPage }}
+                disabled={!hasPreviousPage}
+                onPress={() => goToPage(page - 1)}
+                style={[styles.paginationButton, !hasPreviousPage && styles.disabled]}
+              >
+                <Text style={styles.paginationButtonText}>Anterior</Text>
+              </Pressable>
+              <Text style={styles.paginationLabel}>
+                Página {page} de {totalPages}
+              </Text>
+              <Pressable
+                accessibilityLabel="Página siguiente"
+                accessibilityRole="button"
+                accessibilityState={{ disabled: !hasNextPage }}
+                disabled={!hasNextPage}
+                onPress={() => goToPage(page + 1)}
+                style={[styles.paginationButton, !hasNextPage && styles.disabled]}
+              >
+                <Text style={styles.paginationButtonText}>Siguiente</Text>
+              </Pressable>
+            </View>
           ) : null
         }
         renderItem={({ item }) => (
@@ -909,14 +903,6 @@ const styles = StyleSheet.create({
     gap: 12,
     justifyContent: 'space-between',
     marginTop: 8
-  },
-  paginationLoading: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: 10,
-    justifyContent: 'center',
-    marginTop: 8,
-    minHeight: 44
   },
   paginationButton: {
     alignItems: 'center',
