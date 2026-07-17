@@ -147,7 +147,29 @@ create policy "Usuarios actualizan sus propias notificaciones"
 -- database/e5_chat_messages_media_realtime.sql
 ```
 
-### 8. Entrega 3 Módulo 5 - Planes y Reportes
+## Migraciones de base de datos — Entrega 3
+
+Ejecutar en Supabase SQL Editor luego de las migraciones de Entrega 2.
+
+### 1. Centros estéticos (Módulo 3)
+
+```sql
+-- supabase/migrations/20260701000300_e3_m3_centers_schema.sql
+-- supabase/migrations/20260701000302_e3_m3_centers_extra_fields.sql
+-- supabase/migrations/20260701000303_e3_m3_center_images_storage.sql
+-- supabase/migrations/20260702000100_e3_m3_centers_authenticated_read_policy.sql
+-- supabase/migrations/20260702000101_e3_m3_specialist_assigned_center_select_policy.sql
+```
+
+### 2. Auditoría (Módulo 4)
+
+```sql
+-- supabase/migrations/20260702000102_e3_m4_audit_logs_schema.sql
+```
+
+> Pendiente: esta migración no habilita RLS todavía (ver `docs/e3-supabase-security.md`, sección "audit_logs - estado real").
+
+### 3. Planes, suscripciones y métricas (Módulo 5)
 
 ```sql
 -- supabase/migrations/20260701000500_e3_m5_subscriptions_schema.sql
@@ -214,7 +236,29 @@ Implementado:
 - Chat con envío de imágenes via `expo-image-picker`, separadores de fecha y soporte de videollamada.
 - Notificación push al destinatario al recibir un mensaje nuevo (`new-message`).
 
-## Entrega 3 - Módulo 5 (Planes/Suscripciones y Metricas)
+## Módulos verticales — Entrega 3
+
+### Módulo 3 — Centros Estéticos y Tablero Admin
+
+Implementado:
+
+- Backend `centers` con CRUD completo y asociación de especialistas a un centro.
+- Migraciones E3 para `centers`, `center_admins` y políticas de lectura/imagen.
+- Pantallas admin: `/(tabs-admin)/centers` y `/(tabs-admin)/metrics`.
+- Servicio frontend `services/centers.ts`.
+
+### Módulo 4 — Auditoría y Seguridad Transversal
+
+Implementado:
+
+- Emisor `recordAuditLog` (best-effort) consumido por los módulos 1, 3 y 5.
+- Endpoint de lectura `GET /api/admin/audit-log`, filtrable por `entity`, `entityId`, `actorId` y rango de fechas, con paginación (`backend/src/modules/audit/`).
+- Pantalla admin `/(tabs-admin)/audit-log` con filtros y detalle expandible de cada evento (antes/después).
+- Servicio frontend `services/audit.ts` y tipos compartidos `types/audit.ts`.
+- Dependencia nueva: `@react-native-community/datetimepicker` (filtros de fecha del panel).
+- Pendiente: RLS de `audit_logs` (la migración actual no la habilita; el acceso hoy se controla solo vía `requireRole('center_admin')` en el backend — ver `docs/e3-supabase-security.md`), y auditoría de eventos de login/cambio de rol (a coordinar con Módulo 2).
+
+### Módulo 5 — Planes/Suscripciones y Métricas
 
 Implementado:
 

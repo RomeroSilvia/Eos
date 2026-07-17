@@ -139,3 +139,73 @@ Endpoints estables para consumo admin:
 ### Contrato de integracion con M4
 
 - Operaciones de planes y suscripciones emiten `recordAuditLog` en modo best-effort.
+
+## M4 - Auditoria y Seguridad Transversal
+
+### Contrato de emision (ya vigente, consumido por M1/M3/M5)
+
+```ts
+// backend/src/modules/audit/audit.service.ts
+function recordAuditLog(params: {
+  actorId: string; actorRole: string;
+  action: 'create' | 'update' | 'delete' | 'approve' | 'reject' | 'login' | 'role_change';
+  entity: 'routine' | 'specialist_profile' | 'center' | 'subscription' | 'product' | 'user_profile';
+  entityId: string;
+  before?: unknown; after?: unknown; metadata?: Record<string, unknown>;
+}): Promise<void>;
+```
+
+Best-effort: nunca lanza excepcion, no bloquea el flujo del modulo que lo llama.
+
+### Contrato de lectura (nuevo)
+
+```text
+GET /api/admin/audit-log?entity=&entityId=&actorId=&from=&to=&page=&limit=
+```
+
+Requiere usuario autenticado con rol `center_admin` (no existe rol `admin`/`platform_admin` en el sistema; se reutiliza el mismo gate que `/api/admin/*` y `/api/centers`).
+
+Query params (todos opcionales):
+
+- `entity`: uno de los valores de `AuditEntity`.
+- `entityId`: filtra por entidad exacta.
+- `actorId`: filtra por usuario que ejecuto la accion.
+- `from` / `to`: rango de fechas en formato `YYYY-MM-DD`, inclusive, sobre `created_at`. `from` no puede ser posterior a `to`.
+- `page`: entero positivo, default `1`.
+- `limit`: entero positivo, default `20`, maximo `100`.
+
+Respuesta:
+
+```ts
+{
+  items: Array<{
+    id: string;
+    actorId: string | null;
+    actorRole: string | null;
+    action: string;
+    entity: string;
+    entityId: string;
+    before: unknown;
+    after: unknown;
+    metadata: unknown;
+    createdAt: string;
+  }>;
+  total: number;
+  page: number;
+  limit: number;
+}
+```
+
+Query params invalidos (fecha con formato incorrecto, `from` > `to`, `page`/`limit` no numericos o no positivos) devuelven `400` con mensaje en espanol.
+
+### Frontend
+
+- Pantalla: `app/(tabs-admin)/audit-log.tsx`, accesible desde el panel admin (`app/(tabs-admin)/index.tsx`) y `constants/routes.ts#adminAuditLog`.
+- Servicio: `services/audit.ts` (`getAuditLogs`, `getAuditLogErrorMessage`).
+- Tipos compartidos: `types/audit.ts`.
+
+### Pendiente / fuera de alcance de esta iteracion
+
+- RLS de `audit_logs`: la migracion original (`20260702000102_e3_m4_audit_logs_schema.sql`) no habilita RLS. El backend siempre usa el cliente `service_role` (`backend/src/config/supabase.ts`), por lo que el control de acceso real hoy es el middleware `requireRole('center_admin')`, no una politica de base de datos. Falta la migracion de RLS que documenta la seccion 12 del plan de Entrega 3 (`docs/plan_entrega3.md`) — reportado como hallazgo pendiente, no resuelto en esta entrega para no tocar una migracion sin confirmacion explicita.
+- T4.6 (auditoria de eventos de `auth.service.ts`: login exitoso/fallido, cambio de rol) sigue pendiente y es responsabilidad coordinada con M2.
+- T4.7/T4.8/T4.9 (revision de RBAC, cifrado en transito, exposicion de errores) no se ejecutaron como parte de este cambio.

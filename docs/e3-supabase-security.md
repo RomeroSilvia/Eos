@@ -82,3 +82,22 @@ No se expone escritura de planes/suscripciones desde cliente anonimo.
 ## Nota de alcance E3 (M5)
 
 `subscriptions.status` es informativo durante E3 y no bloquea acceso a funciones de otros modulos.
+
+## Estado por tabla (M4)
+
+| Tabla | Modulo | RLS | Detalle |
+|---|---|---|---|
+| `audit_logs` | M4 | **No habilitado** | Ver seccion siguiente. |
+
+### `audit_logs` - estado real
+
+Migracion: `supabase/migrations/20260702000102_e3_m4_audit_logs_schema.sql`.
+
+- La tabla **no tiene `ALTER TABLE ... ENABLE ROW LEVEL SECURITY`** en la migracion original. Esto contradice la regla general de la seccion 12 del plan de Entrega 3 (`docs/plan_entrega3.md`), que exige RLS activo desde la misma migracion para toda tabla nueva.
+- El control de acceso real hoy no depende de RLS: `backend/src/config/supabase.ts` crea el cliente `supabase` con la `service_role key`, que **bypassea RLS por diseno**, y tanto la escritura (`recordAuditLog`) como la lectura (`GET /api/admin/audit-log`) pasan siempre por ese cliente desde el backend. Ningun endpoint expone `audit_logs` a un cliente con `anon key`.
+- El gate de acceso efectivo es el middleware `authenticate` + `requireRole('center_admin')` en `backend/src/modules/audit/audit.routes.ts`, igual que el resto de `/api/admin/*`.
+- **Pendiente:** agregar una migracion nueva (`supabase/migrations/<timestamp>_e3_m4_audit_logs_rls.sql`) que habilite RLS con politica deny-all por defecto y, como minimo, escritura solo por `service_role` y lectura solo por roles `specialist`/`center_admin` sobre su propio scope (segun lo que ya anticipaba la fila de `audit_logs` en la seccion 12 del plan). No se aplico en esta iteracion porque implica tocar una migracion de base de datos y corresponde confirmarlo explicitamente antes de crearla (ver `docs/e3-contracts.md`, seccion M4, "Pendiente / fuera de alcance").
+
+## Regla de uso backend (M4)
+
+`GET /api/admin/audit-log` usa `authenticate` + `requireRole('center_admin')`. No existe un endpoint que exponga `audit_logs` sin autenticacion ni con `anon key`.
