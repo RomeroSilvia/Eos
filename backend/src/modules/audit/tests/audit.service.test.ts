@@ -7,6 +7,7 @@ jest.mock('../audit.repository', () => ({
     findAuditLogs: jest.fn(),
     findProfileNamesByIds: jest.fn(),
     findProfileIdsByRole: jest.fn(),
+    findProfileIdsByNameSearch: jest.fn(),
     findRoutineNamesByIds: jest.fn(),
     findProductNamesByIds: jest.fn(),
     findCenterNamesByIds: jest.fn(),
@@ -42,6 +43,7 @@ describe('auditService.getAuditLogs', () => {
     mockedRepo.findAuditLogs.mockResolvedValue({ data: [makeAuditLog()], total: 1 });
     mockedRepo.findProfileNamesByIds.mockResolvedValue(new Map());
     mockedRepo.findProfileIdsByRole.mockResolvedValue([]);
+    mockedRepo.findProfileIdsByNameSearch.mockResolvedValue([]);
     mockedRepo.findRoutineNamesByIds.mockResolvedValue(new Map());
     mockedRepo.findProductNamesByIds.mockResolvedValue(new Map());
     mockedRepo.findCenterNamesByIds.mockResolvedValue(new Map([['center-1', 'Centro Norte']]));
@@ -316,6 +318,33 @@ describe('auditService.getAuditLogs', () => {
 
     expect(mockedRepo.findAuditLogs).not.toHaveBeenCalled();
     expect(result).toEqual({ items: [], total: 0, page: 1, limit: 10 });
+  });
+
+  it('actorName resuelve ids por nombre y los pasa como actorIdIn', async () => {
+    mockedRepo.findProfileIdsByNameSearch.mockResolvedValue(['user-1', 'user-2']);
+
+    await getAuditLogs({ actorName: 'Silvia' });
+
+    expect(mockedRepo.findProfileIdsByNameSearch).toHaveBeenCalledWith('Silvia');
+    expect(mockedRepo.findAuditLogs).toHaveBeenCalledWith(
+      expect.objectContaining({ actorIdIn: ['user-1', 'user-2'] })
+    );
+  });
+
+  it('actorName sin coincidencias devuelve página vacía sin consultar audit_logs', async () => {
+    mockedRepo.findProfileIdsByNameSearch.mockResolvedValue([]);
+
+    const result = await getAuditLogs({ actorName: 'Nombre inexistente' });
+
+    expect(mockedRepo.findAuditLogs).not.toHaveBeenCalled();
+    expect(result).toEqual({ items: [], total: 0, page: 1, limit: 10 });
+  });
+
+  it('actorName se recorta antes de buscar y se ignora si queda vacío', async () => {
+    await getAuditLogs({ actorName: '   ' });
+
+    expect(mockedRepo.findProfileIdsByNameSearch).not.toHaveBeenCalled();
+    expect(mockedRepo.findAuditLogs).toHaveBeenCalled();
   });
 });
 

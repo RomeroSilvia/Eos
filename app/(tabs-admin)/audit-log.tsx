@@ -55,8 +55,7 @@ export default function AuditLogScreen() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const [entityFilter, setEntityFilter] = useState<AuditEntity | 'all'>('all');
-  const [actorIdFilter, setActorIdFilter] = useState('');
-  const [entityIdFilter, setEntityIdFilter] = useState('');
+  const [actorNameFilter, setActorNameFilter] = useState('');
   const [fromDate, setFromDate] = useState<Date | null>(null);
   const [toDate, setToDate] = useState<Date | null>(null);
   const [openDateField, setOpenDateField] = useState<DateFieldName | null>(null);
@@ -70,8 +69,7 @@ export default function AuditLogScreen() {
     try {
       const result = await getAuditLogs({
         entity: entityFilter === 'all' ? undefined : entityFilter,
-        actorId: actorIdFilter.trim() || undefined,
-        entityId: entityIdFilter.trim() || undefined,
+        actorName: actorNameFilter.trim() || undefined,
         from: fromDate ? toIsoDate(fromDate) : undefined,
         to: toDate ? toIsoDate(toDate) : undefined,
         page: targetPage
@@ -87,7 +85,7 @@ export default function AuditLogScreen() {
     } finally {
       setIsLoading(false);
     }
-  }, [entityFilter, actorIdFilter, entityIdFilter, fromDate, toDate]);
+  }, [entityFilter, actorNameFilter, fromDate, toDate]);
 
   const goToPage = useCallback(
     (targetPage: number) => {
@@ -115,8 +113,7 @@ export default function AuditLogScreen() {
 
   function handleClearFilters() {
     setEntityFilter('all');
-    setActorIdFilter('');
-    setEntityIdFilter('');
+    setActorNameFilter('');
     setFromDate(null);
     setToDate(null);
     setDateRangeError(null);
@@ -186,24 +183,14 @@ export default function AuditLogScreen() {
                 })}
               </View>
 
-              <Text style={styles.fieldLabel}>ID de entidad</Text>
+              <Text style={styles.fieldLabel}>Nombre del actor</Text>
               <TextInput
-                accessibilityLabel="Filtrar por ID de entidad"
-                onChangeText={setEntityIdFilter}
-                placeholder="Ej: id de una rutina o centro"
+                accessibilityLabel="Filtrar por nombre del usuario, especialista o administrador que hizo la acción"
+                onChangeText={setActorNameFilter}
+                placeholder="Ej: nombre y apellido"
                 placeholderTextColor={colors.textMuted}
                 style={styles.textInput}
-                value={entityIdFilter}
-              />
-
-              <Text style={styles.fieldLabel}>ID del actor</Text>
-              <TextInput
-                accessibilityLabel="Filtrar por ID del usuario que hizo la acción"
-                onChangeText={setActorIdFilter}
-                placeholder="Ej: id del usuario"
-                placeholderTextColor={colors.textMuted}
-                style={styles.textInput}
-                value={actorIdFilter}
+                value={actorNameFilter}
               />
 
               <View style={styles.dateRow}>

@@ -5,8 +5,7 @@ export async function getAuditLogs(filters: AuditLogFilters = {}): Promise<Audit
   const params = new URLSearchParams();
 
   if (filters.entity) params.set('entity', filters.entity);
-  if (filters.entityId) params.set('entityId', filters.entityId);
-  if (filters.actorId) params.set('actorId', filters.actorId);
+  if (filters.actorName) params.set('actorName', filters.actorName);
   if (filters.from) params.set('from', filters.from);
   if (filters.to) params.set('to', filters.to);
   if (filters.page) params.set('page', String(filters.page));

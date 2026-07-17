@@ -7,6 +7,7 @@ export const getAuditLogs: RequestHandler = asyncHandler(async (req, res) => {
     entity: getStringQueryParam(req.query.entity),
     entityId: getStringQueryParam(req.query.entityId),
     actorId: getStringQueryParam(req.query.actorId),
+    actorName: getStringQueryParam(req.query.actorName),
     from: getStringQueryParam(req.query.from),
     to: getStringQueryParam(req.query.to),
     page: getStringQueryParam(req.query.page),

@@ -42,6 +42,10 @@ export const auditRepository = {
       query = query.eq('actor_id', filters.actorId);
     }
 
+    if (filters.actorIdIn) {
+      query = query.in('actor_id', filters.actorIdIn);
+    }
+
     if (filters.from) {
       query = query.gte('created_at', `${filters.from}T00:00:00.000Z`);
     }
@@ -71,6 +75,15 @@ export const auditRepository = {
   findProfileIdsByRole: async (role: string): Promise<string[]> => {
     const db = supabase as any;
     const { data, error } = await db.from(TABLE_NAMES.profiles).select('id').eq('role', role);
+
+    if (error) throw error;
+
+    return (data ?? []).map((row: { id: string }) => row.id);
+  },
+
+  findProfileIdsByNameSearch: async (query: string): Promise<string[]> => {
+    const db = supabase as any;
+    const { data, error } = await db.from(TABLE_NAMES.profiles).select('id').ilike('full_name', `%${query}%`);
 
     if (error) throw error;
 

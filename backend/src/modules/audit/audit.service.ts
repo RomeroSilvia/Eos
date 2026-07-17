@@ -58,6 +58,7 @@ export async function getAuditLogs(rawFilters: {
   entity?: string;
   entityId?: string;
   actorId?: string;
+  actorName?: string;
   from?: string;
   to?: string;
   page?: string;
@@ -73,6 +74,16 @@ export async function getAuditLogs(rawFilters: {
     }
 
     filters.entityIdIn = userProfileIds;
+  }
+
+  if (rawFilters.actorName?.trim()) {
+    const matchingActorIds = await auditRepository.findProfileIdsByNameSearch(rawFilters.actorName.trim());
+
+    if (matchingActorIds.length === 0) {
+      return { items: [], total: 0, page: filters.page, limit: filters.limit };
+    }
+
+    filters.actorIdIn = matchingActorIds;
   }
 
   const { data, total } = await auditRepository.findAuditLogs(filters);

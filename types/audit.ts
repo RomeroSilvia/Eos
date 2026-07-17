@@ -27,8 +27,7 @@ export type AuditLogEntry = {
 
 export type AuditLogFilters = {
   entity?: AuditEntity;
-  entityId?: string;
-  actorId?: string;
+  actorName?: string;
   from?: string;
   to?: string;
   page?: number;
