@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { useFocusEffect } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Card } from '@/components/Card';
@@ -44,10 +44,12 @@ type DateFieldName = 'from' | 'to';
 export default function AuditLogScreen() {
   const router = useRouter();
 
+  const listRef = useRef<FlatList>(null);
+
   const [entries, setEntries] = useState<AuditLogEntry[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
-  const [limit, setLimit] = useState(20);
+  const [limit, setLimit] = useState(10);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -86,10 +88,18 @@ export default function AuditLogScreen() {
     }
   }, [entityFilter, actorIdFilter, entityIdFilter, fromDate, toDate]);
 
+  const goToPage = useCallback(
+    (targetPage: number) => {
+      listRef.current?.scrollToOffset({ offset: 0, animated: true });
+      void loadData(targetPage);
+    },
+    [loadData]
+  );
+
   useFocusEffect(
     useCallback(() => {
-      void loadData(1);
-    }, [loadData])
+      goToPage(1);
+    }, [goToPage])
   );
 
   function handleApplyFilters() {
@@ -99,7 +109,7 @@ export default function AuditLogScreen() {
     }
 
     setDateRangeError(null);
-    void loadData(1);
+    goToPage(1);
   }
 
   function handleClearFilters() {
@@ -132,6 +142,7 @@ export default function AuditLogScreen() {
   return (
     <SafeAreaView style={styles.screen}>
       <FlatList
+        ref={listRef}
         contentContainerStyle={styles.content}
         data={entries}
         keyExtractor={(item) => item.id}
@@ -273,32 +284,39 @@ export default function AuditLogScreen() {
           </View>
         }
         ListFooterComponent={
-          !isLoading && !error && entries.length > 0 ? (
-            <View style={styles.pagination}>
-              <Pressable
-                accessibilityLabel="Página anterior"
-                accessibilityRole="button"
-                accessibilityState={{ disabled: !hasPreviousPage }}
-                disabled={!hasPreviousPage}
-                onPress={() => loadData(page - 1)}
-                style={[styles.paginationButton, !hasPreviousPage && styles.disabled]}
-              >
-                <Text style={styles.paginationButtonText}>Anterior</Text>
-              </Pressable>
-              <Text style={styles.paginationLabel}>
-                Página {page} de {totalPages}
-              </Text>
-              <Pressable
-                accessibilityLabel="Página siguiente"
-                accessibilityRole="button"
-                accessibilityState={{ disabled: !hasNextPage }}
-                disabled={!hasNextPage}
-                onPress={() => loadData(page + 1)}
-                style={[styles.paginationButton, !hasNextPage && styles.disabled]}
-              >
-                <Text style={styles.paginationButtonText}>Siguiente</Text>
-              </Pressable>
-            </View>
+          !error && entries.length > 0 ? (
+            isLoading ? (
+              <View style={styles.paginationLoading}>
+                <ActivityIndicator color={colors.primary} />
+                <Text style={styles.stateText}>Cargando página...</Text>
+              </View>
+            ) : (
+              <View style={styles.pagination}>
+                <Pressable
+                  accessibilityLabel="Página anterior"
+                  accessibilityRole="button"
+                  accessibilityState={{ disabled: !hasPreviousPage }}
+                  disabled={!hasPreviousPage}
+                  onPress={() => goToPage(page - 1)}
+                  style={[styles.paginationButton, !hasPreviousPage && styles.disabled]}
+                >
+                  <Text style={styles.paginationButtonText}>Anterior</Text>
+                </Pressable>
+                <Text style={styles.paginationLabel}>
+                  Página {page} de {totalPages}
+                </Text>
+                <Pressable
+                  accessibilityLabel="Página siguiente"
+                  accessibilityRole="button"
+                  accessibilityState={{ disabled: !hasNextPage }}
+                  disabled={!hasNextPage}
+                  onPress={() => goToPage(page + 1)}
+                  style={[styles.paginationButton, !hasNextPage && styles.disabled]}
+                >
+                  <Text style={styles.paginationButtonText}>Siguiente</Text>
+                </Pressable>
+              </View>
+            )
           ) : null
         }
         renderItem={({ item }) => (
@@ -341,13 +359,13 @@ function AuditLogCard({
           <Text style={styles.entryAction}>{getActionLabel(entry.action)}</Text>
           <Text style={styles.entryEntity}>{getEntityLabel(entry.entity)}</Text>
         </View>
-        <Text style={styles.entryDate}>{formatDateTimeLabel(entry.createdAt)}</Text>
       </View>
 
       <View style={styles.entryMetaGrid}>
         <EntryMetaItem label="Actor" value={entry.actorName} />
         <EntryMetaItem label="Perfil" value={entry.actorProfile ?? 'No informado'} />
         <EntryMetaItem label="Registro" value={entry.entityLabel} />
+        <EntryMetaItem label="Fecha" value={formatDateTimeLabel(entry.createdAt)} />
       </View>
 
       {hasDetails ? (
@@ -378,8 +396,6 @@ function DeleteSummaryBlock({ entry }: { entry: AuditLogEntry }) {
   return (
     <View style={styles.detailBlock}>
       <Text style={styles.detailValue}>Elemento eliminado: {entry.entityLabel}</Text>
-      <Text style={styles.detailValue}>Fecha: {formatDateTimeLabel(entry.createdAt)}</Text>
-      <Text style={styles.detailValue}>Realizado por: {entry.actorName}</Text>
     </View>
   );
 }
@@ -475,7 +491,9 @@ const HIDDEN_FIELD_KEYS = new Set([
   'plan_id',
   'planId',
   'owner_id',
-  'ownerId'
+  'ownerId',
+  'routine_id',
+  'routineId'
 ]);
 
 const FIELD_LABELS: Record<string, string> = {
@@ -825,11 +843,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     marginTop: 2
   },
-  entryDate: {
-    color: colors.textSecondary,
-    fontSize: 12,
-    fontWeight: '700'
-  },
   entryMetaGrid: {
     gap: 8
   },
@@ -896,6 +909,14 @@ const styles = StyleSheet.create({
     gap: 12,
     justifyContent: 'space-between',
     marginTop: 8
+  },
+  paginationLoading: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 10,
+    justifyContent: 'center',
+    marginTop: 8,
+    minHeight: 44
   },
   paginationButton: {
     alignItems: 'center',
