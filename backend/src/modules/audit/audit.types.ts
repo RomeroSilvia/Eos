@@ -25,3 +25,33 @@ export type RecordAuditLogParams = {
   after?: unknown;
   metadata?: Record<string, unknown>;
 };
+
+export type AuditLogRow = {
+  id: string;
+  actor_id: string | null;
+  actor_role: string | null;
+  action: string;
+  entity: string;
+  entity_id: string;
+  before: unknown;
+  after: unknown;
+  metadata: unknown;
+  created_at: string;
+};
+
+export type AuditLogFilters = {
+  entity?: AuditEntity;
+  entityId?: string;
+  actorId?: string;
+  from?: string;
+  to?: string;
+  page: number;
+  limit: number;
+};
+
+export type AuditLogPage = {
+  items: AuditLogRow[];
+  total: number;
+  page: number;
+  limit: number;
+};

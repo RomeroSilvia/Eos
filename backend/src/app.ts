@@ -2,6 +2,7 @@ import cors from 'cors';
 import express from 'express';
 import { env } from './config/env';
 import { adminRouter } from './modules/admin/admin.routes';
+import { auditRouter } from './modules/audit/audit.routes';
 import { authRouter } from './modules/auth/auth.routes';
 import { centersRouter } from './modules/centers/centers.routes';
 import { chatRouter } from './modules/chat/chat.routes';
@@ -50,6 +51,7 @@ app.use('/api/chat', chatRouter);
 app.use('/api/notifications', notificationsRouter);
 app.use('/api/admin/subscriptions', subscriptionsRouter);
 app.use('/api/subscriptions', subscriptionsRouter);
+app.use('/api/admin/audit-log', auditRouter);
 
 app.use(notFoundMiddleware);
 app.use(errorMiddleware);

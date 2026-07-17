@@ -14,7 +14,8 @@ export const TABLE_NAMES = {
   subscriptionPlans: 'subscription_plans',
   subscriptions: 'subscriptions',
   centers: 'centers',
-  centerAdmins: 'center_admins'
+  centerAdmins: 'center_admins',
+  auditLogs: 'audit_logs'
 } as const;
 
 export type TableName = (typeof TABLE_NAMES)[keyof typeof TABLE_NAMES];

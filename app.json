@@ -25,7 +25,8 @@
         {
           "defaultChannel": "eos-reminders"
         }
-      ]
+      ],
+      "@react-native-community/datetimepicker"
     ],
     "experiments": {
       "typedRoutes": true
