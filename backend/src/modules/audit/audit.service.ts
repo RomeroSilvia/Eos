@@ -1,11 +1,12 @@
 import { supabase } from '../../config/supabase';
 import { ApiError } from '../../utils/ApiError';
 import { auditRepository } from './audit.repository';
-import type { AuditLogFilters, AuditLogPage, RecordAuditLogParams } from './audit.types';
+import type { AuditLogEntry, AuditLogFilters, AuditLogPage, AuditLogRow, RecordAuditLogParams } from './audit.types';
 
 const MAX_PAGE_SIZE = 100;
 const DEFAULT_PAGE_SIZE = 20;
 const ISO_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+const ENTITY_NOT_FOUND_LABEL = 'Registro eliminado o no disponible';
 
 /**
  * M4 contract: best-effort audit logging.
@@ -63,14 +64,161 @@ export async function getAuditLogs(rawFilters: {
   limit?: string;
 }): Promise<AuditLogPage> {
   const filters = normalizeFilters(rawFilters);
+
+  if (filters.entity === 'user_profile') {
+    const userProfileIds = await auditRepository.findProfileIdsByRole('user');
+
+    if (userProfileIds.length === 0) {
+      return { items: [], total: 0, page: filters.page, limit: filters.limit };
+    }
+
+    filters.entityIdIn = userProfileIds;
+  }
+
   const { data, total } = await auditRepository.findAuditLogs(filters);
 
   return {
-    items: data,
+    items: await enrichAuditLogEntries(data),
     total,
     page: filters.page,
     limit: filters.limit
   };
+}
+
+async function enrichAuditLogEntries(rows: AuditLogRow[]): Promise<AuditLogEntry[]> {
+  const specialistActorIds = [
+    ...new Set(rows.filter((row) => row.actor_role === 'specialist' && row.actor_id).map((row) => row.actor_id as string))
+  ];
+  const namedActorIds = [
+    ...new Set(rows.filter((row) => row.actor_role !== 'center_admin' && row.actor_id).map((row) => row.actor_id as string))
+  ];
+
+  const [actorNames, actorSpecialties] = await Promise.all([
+    auditRepository.findProfileNamesByIds(namedActorIds),
+    auditRepository.findSpecialtyByUserIds(specialistActorIds)
+  ]);
+
+  const entityLabelsByEntity = await resolveEntityLabelsByType(groupEntityIdsByType(rows));
+
+  return rows.map((row) => {
+    const { actorName, actorProfile } = resolveActor(row, actorNames, actorSpecialties);
+    const entityLabel = entityLabelsByEntity.get(row.entity)?.get(row.entity_id) ?? ENTITY_NOT_FOUND_LABEL;
+
+    return {
+      id: row.id,
+      actorId: row.actor_id,
+      actorRole: row.actor_role,
+      actorName,
+      actorProfile,
+      action: row.action,
+      entity: row.entity,
+      entityId: row.entity_id,
+      entityLabel,
+      before: row.before,
+      after: row.after,
+      metadata: row.metadata,
+      createdAt: row.created_at
+    };
+  });
+}
+
+function resolveActor(
+  row: AuditLogRow,
+  actorNames: Map<string, string>,
+  actorSpecialties: Map<string, string>
+): { actorName: string; actorProfile: string | null } {
+  if (row.actor_role === 'center_admin') {
+    return { actorName: 'Administrador de Centro', actorProfile: 'Administrador de Centro' };
+  }
+
+  if (!row.actor_id) {
+    return { actorName: 'Sistema', actorProfile: null };
+  }
+
+  const actorName = actorNames.get(row.actor_id) ?? 'Usuario no encontrado';
+
+  if (row.actor_role === 'specialist') {
+    const specialty = actorSpecialties.get(row.actor_id);
+    return {
+      actorName,
+      actorProfile: specialty ? `Especialista - ${specialty}` : 'Especialista'
+    };
+  }
+
+  return { actorName, actorProfile: 'Usuario' };
+}
+
+function groupEntityIdsByType(rows: AuditLogRow[]): Map<string, string[]> {
+  const grouped = new Map<string, Set<string>>();
+
+  for (const row of rows) {
+    if (!grouped.has(row.entity)) {
+      grouped.set(row.entity, new Set());
+    }
+
+    grouped.get(row.entity)!.add(row.entity_id);
+  }
+
+  return new Map([...grouped.entries()].map(([entity, ids]) => [entity, [...ids]]));
+}
+
+async function resolveEntityLabelsByType(entityIdsByType: Map<string, string[]>): Promise<Map<string, Map<string, string>>> {
+  const result = new Map<string, Map<string, string>>();
+
+  for (const [entity, ids] of entityIdsByType) {
+    result.set(entity, await resolveEntityLabels(entity, ids));
+  }
+
+  return result;
+}
+
+async function resolveEntityLabels(entity: string, ids: string[]): Promise<Map<string, string>> {
+  switch (entity) {
+    case 'routine':
+      return auditRepository.findRoutineNamesByIds(ids);
+    case 'product':
+      return auditRepository.findProductNamesByIds(ids);
+    case 'center':
+      return auditRepository.findCenterNamesByIds(ids);
+    case 'user_profile':
+      return auditRepository.findProfileNamesByIds(ids);
+    case 'specialist_profile':
+      return resolveSpecialistProfileLabels(ids);
+    case 'subscription':
+      return resolveSubscriptionLabels(ids);
+    default:
+      return new Map();
+  }
+}
+
+async function resolveSpecialistProfileLabels(ids: string[]): Promise<Map<string, string>> {
+  const specialistRows = await auditRepository.findSpecialistProfileRows(ids);
+  const userIds = [...new Set(specialistRows.map((row) => row.user_id))];
+  const profileNames = await auditRepository.findProfileNamesByIds(userIds);
+
+  const labels = new Map<string, string>();
+
+  for (const row of specialistRows) {
+    const name = profileNames.get(row.user_id) ?? 'Especialista';
+    labels.set(row.id, `${name} (${row.specialty})`);
+  }
+
+  return labels;
+}
+
+async function resolveSubscriptionLabels(ids: string[]): Promise<Map<string, string>> {
+  const subscriptionRows = await auditRepository.findSubscriptionRows(ids);
+  const planIds = [...new Set(subscriptionRows.map((row) => row.plan_id).filter((planId): planId is string => Boolean(planId)))];
+  const planNames = await auditRepository.findSubscriptionPlanNamesByIds(planIds);
+
+  const labels = new Map<string, string>();
+
+  for (const row of subscriptionRows) {
+    const planName = row.plan_id ? planNames.get(row.plan_id) : undefined;
+    labels.set(row.id, planName ? `Suscripción ${planName}` : 'Suscripción');
+  }
+
+  return labels;
 }
 
 function normalizeFilters(rawFilters: {

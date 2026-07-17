@@ -42,6 +42,7 @@ export type AuditLogRow = {
 export type AuditLogFilters = {
   entity?: AuditEntity;
   entityId?: string;
+  entityIdIn?: string[];
   actorId?: string;
   from?: string;
   to?: string;
@@ -49,8 +50,24 @@ export type AuditLogFilters = {
   limit: number;
 };
 
+export type AuditLogEntry = {
+  id: string;
+  actorId: string | null;
+  actorRole: string | null;
+  actorName: string;
+  actorProfile: string | null;
+  action: string;
+  entity: string;
+  entityId: string;
+  entityLabel: string;
+  before: unknown;
+  after: unknown;
+  metadata: unknown;
+  createdAt: string;
+};
+
 export type AuditLogPage = {
-  items: AuditLogRow[];
+  items: AuditLogEntry[];
   total: number;
   page: number;
   limit: number;

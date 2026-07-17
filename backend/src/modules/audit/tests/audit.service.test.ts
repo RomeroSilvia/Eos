@@ -4,7 +4,16 @@ import { getAuditLogs, isIsoDate } from '../audit.service';
 
 jest.mock('../audit.repository', () => ({
   auditRepository: {
-    findAuditLogs: jest.fn()
+    findAuditLogs: jest.fn(),
+    findProfileNamesByIds: jest.fn(),
+    findProfileIdsByRole: jest.fn(),
+    findRoutineNamesByIds: jest.fn(),
+    findProductNamesByIds: jest.fn(),
+    findCenterNamesByIds: jest.fn(),
+    findSpecialistProfileRows: jest.fn(),
+    findSpecialtyByUserIds: jest.fn(),
+    findSubscriptionRows: jest.fn(),
+    findSubscriptionPlanNamesByIds: jest.fn()
   }
 }));
 
@@ -30,6 +39,15 @@ describe('auditService.getAuditLogs', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockedRepo.findAuditLogs.mockResolvedValue({ data: [makeAuditLog()], total: 1 });
+    mockedRepo.findProfileNamesByIds.mockResolvedValue(new Map());
+    mockedRepo.findProfileIdsByRole.mockResolvedValue([]);
+    mockedRepo.findRoutineNamesByIds.mockResolvedValue(new Map());
+    mockedRepo.findProductNamesByIds.mockResolvedValue(new Map());
+    mockedRepo.findCenterNamesByIds.mockResolvedValue(new Map([['center-1', 'Centro Norte']]));
+    mockedRepo.findSpecialistProfileRows.mockResolvedValue([]);
+    mockedRepo.findSpecialtyByUserIds.mockResolvedValue(new Map());
+    mockedRepo.findSubscriptionRows.mockResolvedValue([]);
+    mockedRepo.findSubscriptionPlanNamesByIds.mockResolvedValue(new Map());
   });
 
   it('devuelve una página con los defaults de paginación cuando no se pasan filtros', async () => {
@@ -45,7 +63,23 @@ describe('auditService.getAuditLogs', () => {
       limit: 20
     });
     expect(result).toEqual({
-      items: [makeAuditLog()],
+      items: [
+        {
+          id: 'log-1',
+          actorId: 'admin-1',
+          actorRole: 'center_admin',
+          actorName: 'Administrador de Centro',
+          actorProfile: 'Administrador de Centro',
+          action: 'update',
+          entity: 'center',
+          entityId: 'center-1',
+          entityLabel: 'Centro Norte',
+          before: { name: 'Antes' },
+          after: { name: 'Después' },
+          metadata: null,
+          createdAt: '2026-07-01T12:00:00.000Z'
+        }
+      ],
       total: 1,
       page: 1,
       limit: 20
@@ -82,6 +116,61 @@ describe('auditService.getAuditLogs', () => {
   it('rechaza un "page" no numérico o no positivo', async () => {
     await expect(getAuditLogs({ page: '0' })).rejects.toThrow(ApiError);
     await expect(getAuditLogs({ page: 'abc' })).rejects.toThrow(ApiError);
+  });
+
+  it('resuelve actor "Usuario" para actorRole=user con su nombre de perfil', async () => {
+    mockedRepo.findAuditLogs.mockResolvedValue({
+      data: [makeAuditLog({ actor_id: 'user-1', actor_role: 'user' })],
+      total: 1
+    });
+    mockedRepo.findProfileNamesByIds.mockResolvedValue(new Map([['user-1', 'Marta Gómez']]));
+
+    const result = await getAuditLogs({});
+
+    expect(result.items[0].actorName).toBe('Marta Gómez');
+    expect(result.items[0].actorProfile).toBe('Usuario');
+  });
+
+  it('resuelve actor "Especialista - {especialidad}" para actorRole=specialist', async () => {
+    mockedRepo.findAuditLogs.mockResolvedValue({
+      data: [makeAuditLog({ actor_id: 'specialist-1', actor_role: 'specialist' })],
+      total: 1
+    });
+    mockedRepo.findProfileNamesByIds.mockResolvedValue(new Map([['specialist-1', 'Dra. Pérez']]));
+    mockedRepo.findSpecialtyByUserIds.mockResolvedValue(new Map([['specialist-1', 'dermatologo']]));
+
+    const result = await getAuditLogs({});
+
+    expect(result.items[0].actorName).toBe('Dra. Pérez');
+    expect(result.items[0].actorProfile).toBe('Especialista - dermatologo');
+  });
+
+  it('marca entidad no encontrada cuando el lookup no devuelve nombre', async () => {
+    mockedRepo.findCenterNamesByIds.mockResolvedValue(new Map());
+
+    const result = await getAuditLogs({});
+
+    expect(result.items[0].entityLabel).toBe('Registro eliminado o no disponible');
+  });
+
+  it('filtro entity=user_profile resuelve ids con role=user y los pasa como entityIdIn', async () => {
+    mockedRepo.findProfileIdsByRole.mockResolvedValue(['user-1', 'user-2']);
+
+    await getAuditLogs({ entity: 'user_profile' });
+
+    expect(mockedRepo.findProfileIdsByRole).toHaveBeenCalledWith('user');
+    expect(mockedRepo.findAuditLogs).toHaveBeenCalledWith(
+      expect.objectContaining({ entity: 'user_profile', entityIdIn: ['user-1', 'user-2'] })
+    );
+  });
+
+  it('filtro entity=user_profile sin usuarios devuelve página vacía sin consultar audit_logs', async () => {
+    mockedRepo.findProfileIdsByRole.mockResolvedValue([]);
+
+    const result = await getAuditLogs({ entity: 'user_profile' });
+
+    expect(mockedRepo.findAuditLogs).not.toHaveBeenCalled();
+    expect(result).toEqual({ items: [], total: 0, page: 1, limit: 20 });
   });
 });
 
