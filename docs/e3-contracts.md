@@ -29,6 +29,17 @@ Como el contrato M4 no define `routine_step` como entidad propia, M1 registra:
 
 La auditoria no bloquea el flujo principal si falla.
 
+## M2 - Identidad y Perfil (emisores agregados por M4 ante ausencia de dueño)
+
+No hay un modulo `auth`/`profile` dueño de E3 activo, asi que M4 instrumento directamente estos flujos para que T4.6 (auditoria de usuarios/especialistas) tuviera datos reales — antes de esto, `entity: 'user_profile'` y `entity: 'specialist_profile'` nunca se emitian y el panel quedaba vacio para esos filtros.
+
+- `backend/src/modules/auth/auth.service.ts` (`authService.register`) → `entity: 'user_profile'`, `action: 'create'`, `actorId` es el propio usuario recien creado.
+- `backend/src/modules/profile/profile.service.ts` (`updateMyProfile`) → `entity: 'user_profile'`, `action: 'update'`, con `before`/`after` (ya obtenia el `before` para su propia logica).
+- `backend/src/modules/specialists/specialists.registration.service.ts` (`specialistsRegistrationService.register`) → `entity: 'specialist_profile'`, `action: 'create'`, `entityId` es el id de la fila `specialist_profiles` (no el `userId`).
+- `backend/src/modules/admin/admin.service.ts` (`updateSpecialistStatus`) → `entity: 'specialist_profile'`, `action: 'approve'` \| `'reject'`, con `before` obtenido via `adminRepository.findSpecialistById` (no existia antes de este cambio) y `after` la fila actualizada.
+
+**Todavia sin cubrir** (no se tocó en esta vuelta): login exitoso/fallido y cambio explícito de rol (`action: 'login'` / `'role_change'` definidos en el contrato pero nunca emitidos). Ver T4.6 en `docs/plan_entrega3.md`.
+
 ## M3 - Centros Esteticos y Tablero Admin
 
 M3 publica el contrato de centros usado por pantallas admin y por modulos posteriores de reportes.
@@ -160,7 +171,7 @@ Best-effort: nunca lanza excepcion, no bloquea el flujo del modulo que lo llama.
 ### Contrato de lectura (nuevo)
 
 ```text
-GET /api/admin/audit-log?entity=&entityId=&actorId=&from=&to=&page=&limit=
+GET /api/admin/audit-log?entity=&entityId=&actorId=&actorName=&from=&to=&page=&limit=
 ```
 
 Requiere usuario autenticado con rol `center_admin` (no existe rol `admin`/`platform_admin` en el sistema; se reutiliza el mismo gate que `/api/admin/*` y `/api/centers`).
@@ -168,10 +179,10 @@ Requiere usuario autenticado con rol `center_admin` (no existe rol `admin`/`plat
 Query params (todos opcionales):
 
 - `entity`: uno de los valores de `AuditEntity`.
-- `entityId`: filtra por entidad exacta.
-- `actorId`: filtra por usuario que ejecuto la accion.
+- `entityId` / `actorId`: match exacto por uuid contra `entity_id`/`actor_id`. Se mantienen a nivel de API por compatibilidad, pero la pantalla (`app/(tabs-admin)/audit-log.tsx`) ya no los usa — escribir ahí un texto que no sea un uuid válido rompía la query en Postgres (`invalid input syntax for type uuid`).
+- `actorName`: busca por `profiles.full_name` con `ilike` (parcial, case-insensitive) y resuelve internamente a una lista de `actor_id` — es lo que usa la pantalla en el campo "Nombre del actor". Sin coincidencias devuelve una página vacía sin consultar `audit_logs`.
 - `from` / `to`: rango de fechas en formato `YYYY-MM-DD`, inclusive, sobre `created_at`. `from` no puede ser posterior a `to`.
-- `page`: entero positivo, sin tope (default `1`).
+- `page`: entero positivo, sin tope (default `1`) — **ojo**: hubo un bug donde `page` se recortaba siempre a `1` (`normalizePositiveInt(rawFilters.page, 1, 1)`, el `1` final era el `max`); si se vuelve a tocar `normalizeFilters`, no reintroducir un `max` bajo ahí.
 - `limit`: entero positivo, default `10`, maximo `100`.
 
 Respuesta:
@@ -225,8 +236,25 @@ El backend no devuelve los snapshots crudos tal cual quedaron guardados en `audi
   - cualquier otra accion con `before`/`after`: dos recuadros, "Antes" y "Despues", solo con los campos que cambiaron.
   - `routineStepDetail` (categoria, nombre de paso, si tiene productos) se muestra en un recuadro aparte, unicamente cuando `action === 'create'` (se agrega un paso).
 
-### Pendiente / fuera de alcance de esta iteracion
+### Verificación de seguridad (checklist §7 del plan de Entrega 3)
 
-- RLS de `audit_logs`: la migracion original (`20260702000102_e3_m4_audit_logs_schema.sql`) no habilita RLS. El backend siempre usa el cliente `service_role` (`backend/src/config/supabase.ts`), por lo que el control de acceso real hoy es el middleware `requireRole('center_admin')`, no una politica de base de datos. Falta la migracion de RLS que documenta la seccion 12 del plan de Entrega 3 (`docs/plan_entrega3.md`) — reportado como hallazgo pendiente, no resuelto en esta entrega para no tocar una migracion sin confirmacion explicita.
-- T4.6 (auditoria de eventos de `auth.service.ts`: login exitoso/fallido, cambio de rol) sigue pendiente y es responsabilidad coordinada con M2.
-- T4.7/T4.8/T4.9 (revision de RBAC, cifrado en transito, exposicion de errores) no se ejecutaron como parte de este cambio.
+Última revisión sobre el estado real del código (no solo del endpoint de auditoría, sino de los 4 puntos de emisión agregados en la sección M2 de arriba):
+
+| Item del checklist | Estado | Detalle |
+|---|---|---|
+| Ruta nueva pasa por `auth.middleware.ts` | ✅ | `auditRouter.use(authenticate)` en `audit.routes.ts`. |
+| Ruta con rol específico usa `requireRole.middleware.ts` | ✅ | `requireRole('center_admin')` en el router de auditoría y en `admin.routes.ts`; `profile.routes.ts` no usa `requireRole` porque el chequeo de rol (bloquear a `specialist`) vive en el `service`, no solo en frontend — cumple igual el criterio de fondo. |
+| Ningún error expone stack trace/SQL | ✅ | `error.middleware.ts` solo devuelve `message` (y `details` si es un `ApiError` explícito); el log con detalle completo va a consola y solo en `development`. |
+| Archivos con URLs firmadas de expiración corta | N/A | El módulo de auditoría no maneja archivos. |
+| Endpoint que escribe datos sensibles llama a `recordAuditLog` | ✅ (parcial) | Registro/edición de perfil y alta/aprobación/rechazo de especialista ya emiten. **Login y cambio de rol explícito todavía no** (ver T4.6 abajo). |
+| Inputs validados en el `service` | ✅ | `normalizeFilters`, `isIsoDate`, `normalizePositiveInt` en `audit.service.ts`; `actorName` se resuelve vía `.ilike()` parametrizado (Supabase client), no concatenación de SQL crudo. |
+| No se commitean secrets / env vars documentadas | ✅ | Ningún cambio de esta iteración agrega variables de entorno. |
+| RLS revisada en tablas nuevas | ❌ **Pendiente real** | `audit_logs` sigue sin `ENABLE ROW LEVEL SECURITY` (confirmado en `supabase/migrations/20260702000102_e3_m4_audit_logs_schema.sql`). El backend usa `service_role` siempre, así que el control de acceso efectivo es `requireRole('center_admin')`, no una política de base de datos — no resuelto porque implica escribir una migración nueva y eso requiere confirmación explícita antes de aplicarse. |
+| Tokens no logueados en consola/analytics | ✅ | Ninguno de los 4 nuevos call-sites de `recordAuditLog` loguea tokens; `logSpecialistRegisterDebug`/`logSpecialistRegisterError` (ya existían) tampoco lo hacían. |
+
+### Pendiente / fuera de alcance
+
+- **RLS de `audit_logs`** (ver tabla arriba) — hallazgo de seguridad real, no resuelto, requiere migración nueva con confirmación explícita.
+- **T4.6 incompleto**: login exitoso/fallido y cambio explícito de rol (`action: 'login'` / `'role_change'`) todavía no emiten `recordAuditLog`. Se cubrió creación/edición de `user_profile` y `specialist_profile`, que era el hallazgo reportado ("no aparecen usuarios creados ni editados"), pero no el resto de T4.6.
+- **T4.8 (cifrado en tránsito / headers de seguridad)**: no hay `helmet` ni middleware equivalente configurado en `backend/src/app.ts` — solo `cors` y `express.json`. No se agregó en esta iteración por estar fuera del alcance pedido; queda como hallazgo para una futura vuelta de M4.
+- **T4.7 (revisión de RBAC de M1/M2/M3/M5 completa)**: se verificaron puntualmente las rutas tocadas en esta sesión (`admin`, `profile`, `specialists` registro, `auth` registro — todas correctas), pero no se ejecutó una auditoría formal y documentada de **todas** las rutas nuevas de E3 como pide T4.7 textualmente.

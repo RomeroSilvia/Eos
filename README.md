@@ -251,13 +251,13 @@ Implementado:
 
 Implementado:
 
-- Emisor `recordAuditLog` (best-effort) consumido por los módulos 1, 3 y 5.
-- Endpoint de lectura `GET /api/admin/audit-log`, filtrable por `entity`, `entityId`, `actorId` y rango de fechas, con paginación de 10 registros por página (`backend/src/modules/audit/`).
+- Emisor `recordAuditLog` (best-effort) consumido por rutinas, centros, suscripciones, y ahora también registro/edición de usuarios y especialistas (`auth.service.ts`, `profile.service.ts`, `specialists.registration.service.ts`, `admin.service.ts`).
+- Endpoint de lectura `GET /api/admin/audit-log`, filtrable por `entity`, búsqueda por nombre del actor (`actorName`, reemplaza a los filtros de ID que no funcionaban con texto libre) y rango de fechas, con paginación de 10 registros por página (`backend/src/modules/audit/`).
 - Respuesta enriquecida: nombre real del actor y de la entidad afectada (no UUIDs), datos sensibles como `owner_id` reemplazados por nombre.
 - Pantalla admin `/(tabs-admin)/audit-log` con filtros, meta grid (Actor/Perfil/Registro/Fecha) y detalle expandible distinto según la acción: eliminación (resumen), creación (campos del formulario) o edición (antes/después).
 - Servicio frontend `services/audit.ts` y tipos compartidos `types/audit.ts`.
 - Dependencia nueva: `@react-native-community/datetimepicker` (filtros de fecha del panel).
-- Pendiente: RLS de `audit_logs` (la migración actual no la habilita; el acceso hoy se controla solo vía `requireRole('center_admin')` en el backend — ver `docs/e3-supabase-security.md`), y auditoría de eventos de login/cambio de rol (a coordinar con Módulo 2).
+- Pendiente (ver tabla de verificación de seguridad en `docs/e3-contracts.md`): RLS de `audit_logs` (la migración actual no la habilita; el acceso hoy se controla solo vía `requireRole('center_admin')` en el backend), auditoría de login/cambio de rol explícito, y headers de seguridad tipo `helmet` (no configurados todavía en `backend/src/app.ts`).
 
 ### Módulo 5 — Planes/Suscripciones y Métricas
 

@@ -12,15 +12,16 @@ Use this skill only for Módulo 4 — Auditoría & Seguridad Transversal (E3-RF-
 Implemented so far:
 
 1. Emisor `recordAuditLog` (best-effort, ya existía antes de esta skill).
-2. Lectura filtrable `GET /api/admin/audit-log`.
+2. Lectura filtrable `GET /api/admin/audit-log`, con búsqueda por nombre de actor (`actorName`, `ilike` sobre `profiles.full_name`).
 3. Panel de lectura `app/(tabs-admin)/audit-log.tsx`.
 4. Tests unitarios del service/controller de `audit`.
+5. Emisores de `user_profile`/`specialist_profile` agregados en `auth.service.ts` (registro), `profile.service.ts` (edición), `specialists.registration.service.ts` (alta de especialista) y `admin.service.ts` (aprobar/rechazar especialista) — ver sección "M2 - Identidad y Perfil" en `docs/e3-contracts.md` para el detalle de cada call-site.
 
 Not implemented yet (ver "Pendiente" abajo):
 
-- T4.6 auditoría de eventos de `auth.service.ts` (login exitoso/fallido, cambio de rol) — coordinar con M2.
-- T4.7 revisión de RBAC estricto en las rutas nuevas de M1/M2/M3/M5.
-- T4.8 revisión de cifrado en tránsito / headers de seguridad.
+- T4.6 auditoría de **login** exitoso/fallido y **cambio de rol** explícito (creación/edición de perfil ya está cubierta, ver punto 5 arriba).
+- T4.7 revisión de RBAC estricto en las rutas nuevas de M1/M2/M3/M5 (se verificó puntualmente `admin`/`profile`/`specialists`/`auth`, no una auditoría formal de las 5 áreas).
+- T4.8 revisión de cifrado en tránsito / headers de seguridad — confirmado que no hay `helmet` ni equivalente en `backend/src/app.ts`.
 - T4.9 revisión de exposición de errores en módulos nuevos.
 - RLS de `audit_logs` (ver `docs/e3-supabase-security.md`, sección "audit_logs - estado real").
 
@@ -45,7 +46,7 @@ Módulo: `backend/src/modules/audit/`
 
 ```text
 audit.types.ts        — AuditAction, AuditEntity, RecordAuditLogParams, AuditLogRow, AuditLogEntry (+ actorName/actorProfile/entityLabel/routineStepDetail), AuditLogFilters, AuditLogPage
-audit.repository.ts    — auditRepository.findAuditLogs(filters) + lookups batched (findProfileNamesByIds, findCenterNamesByIds, findRoutineNamesByIds, findProductNamesByIds, findSpecialistProfileRows, findSpecialtyByUserIds, findSubscriptionRows, findSubscriptionPlanNamesByIds, findStepsWithProducts, findProfileIdsByRole)
+audit.repository.ts    — auditRepository.findAuditLogs(filters) + lookups batched (findProfileNamesByIds, findCenterNamesByIds, findRoutineNamesByIds, findProductNamesByIds, findSpecialistProfileRows, findSpecialtyByUserIds, findSubscriptionRows, findSubscriptionPlanNamesByIds, findStepsWithProducts, findProfileIdsByRole, findProfileIdsByNameSearch)
 audit.service.ts       — recordAuditLog (emisor, no tocar su contrato) + getAuditLogs (lector, normaliza filtros y pagina) + enrichAuditLogEntries (resuelve actor/entidad/paso de rutina/owner de suscripción) + isIsoDate
 audit.controller.ts    — GET / -> getAuditLogs, parsea query params como strings
 audit.routes.ts        — authenticate + requireRole('center_admin') + GET /
@@ -62,11 +63,12 @@ Montado en `backend/src/app.ts` como `app.use('/api/admin/audit-log', auditRoute
 - **Paso de rutina** (M1): si `metadata.changeType === 'routine_step'`, arma `routineStepDetail` (categoría, nombre, `hasProducts` resuelto contra `routine_step_products` — es un proxy del estado *actual* del paso, no un historial exacto de "se agregó en este cambio", porque `attachProductToStep`/`detachProductFromStep` no emiten `recordAuditLog`).
 - **Suscripciones**: `owner_id`/`ownerId` se reemplaza por `owner` (nombre resuelto vía `profiles` o `centers` según `owner_type`) antes de devolver `before`/`after` — no se expone el id crudo del titular.
 - **Filtro `entity=user_profile`**: antes de consultar `audit_logs`, resuelve los ids de `profiles` con `role='user'` (`findProfileIdsByRole`) y los pasa como `entityIdIn`, para no traer eventos de perfiles de especialista/admin bajo ese filtro.
+- **Filtro `actorName`**: resuelve `profiles.full_name ilike '%query%'` (`findProfileIdsByNameSearch`) y pasa los ids como `actorIdIn`. Reemplaza a los filtros `entityId`/`actorId` (match exacto por uuid) en la pantalla — esos dos quedaron rotos para uso real porque el usuario intentaba escribir un nombre ahí y Postgres tiraba `invalid input syntax for type uuid`.
 
 ### Contrato de lectura
 
 ```text
-GET /api/admin/audit-log?entity=&entityId=&actorId=&from=&to=&page=&limit=
+GET /api/admin/audit-log?entity=&entityId=&actorId=&actorName=&from=&to=&page=&limit=
 ```
 
 Ver `docs/e3-contracts.md`, sección "M4 - Auditoria y Seguridad Transversal", para el contrato completo (query params, shape de respuesta, reglas de validación). No hay rol `admin`/`platform_admin` en el sistema — el endpoint usa `requireRole('center_admin')` igual que `/api/admin/*` y `/api/centers`.
@@ -83,7 +85,7 @@ Ver `docs/e3-contracts.md`, sección "M4 - Auditoria y Seguridad Transversal", p
 ```text
 types/audit.ts          — AuditAction, AuditEntity, AuditLogEntry (espejo del tipo backend), AuditLogFilters, AuditLogPage
 services/audit.ts        — getAuditLogs(filters), getAuditLogErrorMessage(error)
-app/(tabs-admin)/audit-log.tsx — pantalla de lectura con filtros (entity, entityId, actorId, rango de fechas) y paginación anterior/siguiente
+app/(tabs-admin)/audit-log.tsx — pantalla de lectura con filtros (entity, nombre del actor, rango de fechas) y paginación anterior/siguiente
 ```
 
 Dependencia agregada: `@react-native-community/datetimepicker` (instalada vía `npx expo install`, no `npm install`, para mantener compatibilidad con Expo SDK 54).
@@ -113,7 +115,7 @@ Reusa `components/Card.tsx`, `constants/colors.ts`, sin introducir estilos nuevo
 
 Tests en español, estilo `centers.service.test.ts` / `centers.controller` (mock del repository/service con `jest.mock`, `jest.mocked`, factories `makeAuditLog(overrides = {})`).
 
-Casos cubiertos:
+Casos cubiertos en `backend/src/modules/audit/tests/`:
 
 - Filtros vacíos usan defaults de paginación (`page=1`, `limit=10`).
 - Filtros de `entity`/`entityId`/`actorId` se pasan al repository.
@@ -126,14 +128,26 @@ Casos cubiertos:
 - Fallback de `entityLabel` desde `before`/`after` cuando el registro fue eliminado.
 - `routineStepDetail` con `hasProducts` true/false y `null` cuando el metadata no es de un paso de rutina.
 - Filtro `entity=user_profile` resuelve `entityIdIn` con ids de `role='user'` (y devuelve página vacía sin consultar `audit_logs` si no hay ninguno).
+- Filtro `actorName` resuelve `actorIdIn` por nombre (con y sin coincidencias) y se ignora si queda vacío tras `trim()`.
 - Suscripciones: `owner_id` se reemplaza por `owner` (nombre), tanto para `owner_type='user'` como `'center'`.
 - Controller mapea query params `string | string[] | undefined` a `string | undefined` antes de llamar al service.
 
+Tests de los emisores agregados (fuera del módulo `audit`, cada uno mockea `recordAuditLog` con el mismo patrón que `routines.service.test.ts`):
+
+- `backend/src/modules/admin/tests/admin.service.test.ts` — aprobar/rechazar especialista emite con `before` resuelto y `action` correcta; no emite si no hay `adminUserId`.
+- `backend/src/modules/specialists/tests/specialists.registration.service.test.ts` — alta de especialista emite con `entityId = profile.id`.
+- `backend/src/modules/profile/tests/profile.service.test.ts` (nuevo, primer test de este módulo) — edición de perfil emite con `before`/`after`; no emite en los casos de error (403/404/400).
+- `backend/src/modules/auth/tests/auth.service.test.ts` (nuevo, primer test de servicio de este módulo — antes solo había `auth.controller.test.ts`) — registro emite `action: 'create'` con el `actorRole` correcto; no emite si falla la creación del usuario.
+
 ## Pendiente (no resuelto por esta skill todavía)
 
+Ver la tabla de verificación completa contra el checklist §7 de `docs/plan_entrega3.md` en `docs/e3-contracts.md` (sección "Verificación de seguridad", dentro de "M4 - Auditoria y Seguridad Transversal"). Resumen:
+
 1. **RLS de `audit_logs`**: falta una migración nueva que habilite RLS (deny-all por defecto). No se creó en esta iteración porque toca una migración de base de datos — comunicar antes de escribirla. Detalle en `docs/e3-supabase-security.md`.
-2. **T4.6**: instrumentar `recordAuditLog` en `auth.service.ts` para login/cambio de rol. Coordinar con el dueño de M2, M4 solo provee el contrato.
-3. **T4.7-T4.9**: checklist de seguridad transversal (§7 de `docs/plan_entrega3.md`) sobre las rutas nuevas de M1/M2/M3/M5.
+2. **T4.6 incompleto**: creación/edición de `user_profile`/`specialist_profile` ya emiten (ver Scope arriba); falta login exitoso/fallido y cambio explícito de rol.
+3. **T4.7**: solo se verificó puntualmente RBAC de las rutas tocadas en esta sesión, no una auditoría formal de M1/M2/M3/M5 completa.
+4. **T4.8**: confirmado que falta `helmet` (o equivalente) en `backend/src/app.ts` — no se agregó, queda como hallazgo.
+5. **T4.9**: exposición de errores revisada de forma genérica vía `error.middleware.ts` (comportamiento compartido por toda la API, no específico de auditoría) — sin hallazgos.
 
 ## Verification
 

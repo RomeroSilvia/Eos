@@ -103,3 +103,7 @@ Migracion: `supabase/migrations/20260702000102_e3_m4_audit_logs_schema.sql`.
 `GET /api/admin/audit-log` usa `authenticate` + `requireRole('center_admin')`. No existe un endpoint que exponga `audit_logs` sin autenticacion ni con `anon key`.
 
 El enriquecimiento de la respuesta (nombre de actor, nombre de la entidad afectada, nombre del titular de una suscripcion) hace lookups adicionales contra `profiles`, `centers`, `routines`, `products`, `specialist_profiles`, `subscriptions` y `subscription_plans` — todos con el mismo cliente `service_role`, mismo gate de `requireRole('center_admin')`. No se agrega ninguna tabla nueva ni cambia el estado de RLS descripto arriba.
+
+El filtro `actorName` agrega un `ilike` sobre `profiles.full_name` (`findProfileIdsByNameSearch`), tambien via `service_role` — no expone la tabla `profiles` a un cliente con `anon key`, solo agrega una forma mas de armar el filtro que ya se resolvia server-side.
+
+Los 4 nuevos emisores de `recordAuditLog` (registro de usuario/especialista, edicion de perfil, aprobacion/rechazo de especialista — ver `docs/e3-contracts.md`, seccion "M2 - Identidad y Perfil") escriben en `profiles`/`specialist_profiles`, tablas que ya existian y ya se escribian desde esos mismos flujos antes de este cambio; lo unico nuevo es el `insert` adicional (best-effort) en `audit_logs`. No cambia el estado de RLS de `profiles`/`specialist_profiles`.
