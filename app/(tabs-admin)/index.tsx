@@ -241,6 +241,22 @@ export default function AdminHomeScreen() {
           <Ionicons color={colors.textSecondary} name="chevron-forward" size={22} />
         </Pressable>
 
+        <Pressable
+          accessibilityLabel="Abrir registro de auditoria"
+          accessibilityRole="button"
+          onPress={() => router.push(routes.adminAuditLog as never)}
+          style={styles.navCard}
+        >
+          <View style={styles.navIcon}>
+            <Ionicons color={colors.primaryDark} name="document-text-outline" size={22} />
+          </View>
+          <View style={styles.navCopy}>
+            <Text style={styles.navTitle}>Auditoria</Text>
+            <Text style={styles.navDescription}>Ver quien hizo cada cambio y cuando</Text>
+          </View>
+          <Ionicons color={colors.textSecondary} name="chevron-forward" size={22} />
+        </Pressable>
+
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Validacion de especialistas</Text>
           <Text style={styles.sectionSubtitle}>Revisa documentos, aprueba solicitudes y asigna centros</Text>
