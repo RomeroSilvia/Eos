@@ -54,7 +54,14 @@ jest.mock('../../notifications/notifications.service', () => ({
   }
 }));
 
+jest.mock('../../audit/audit.service', () => ({
+  recordAuditLog: jest.fn(async () => undefined)
+}));
+
 const mockedRepository = jest.mocked(specialistsDirectoryRepository);
+const { recordAuditLog } = jest.requireMock('../../audit/audit.service') as {
+  recordAuditLog: jest.Mock;
+};
 
 const { routinesService } = jest.requireMock('../../routines/routines.service') as {
   routinesService: {
@@ -523,14 +530,18 @@ describe('specialistsDirectoryService', () => {
         timeOfDay: 'morning'
       });
 
-      expect(routinesService.createRoutine).toHaveBeenCalledWith({
-        user_id: 'client-1',
-        assigned_by: 'specialist-1',
-        name: 'Rutina indicada',
-        description: 'Hidratacion',
-        time_of_day: 'morning',
-        is_active: true
-      });
+      expect(routinesService.createRoutine).toHaveBeenCalledWith(
+        {
+          user_id: 'client-1',
+          assigned_by: 'specialist-1',
+          name: 'Rutina indicada',
+          description: 'Hidratacion',
+          time_of_day: 'morning',
+          is_active: true
+        },
+        'specialist-1',
+        'specialist'
+      );
       expect(result).toMatchObject({
         id: 'routine-1',
         user_id: 'client-1',

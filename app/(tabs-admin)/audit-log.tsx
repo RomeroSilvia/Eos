@@ -18,7 +18,9 @@ const ENTITY_OPTIONS: { value: AuditEntity | 'all'; label: string }[] = [
   { value: 'center', label: 'Centros' },
   { value: 'subscription', label: 'Suscripciones' },
   { value: 'product', label: 'Productos' },
-  { value: 'user_profile', label: 'Usuario' }
+  { value: 'user_profile', label: 'Usuario' },
+  { value: 'skin_profile', label: 'Test de piel' },
+  { value: 'specialist_relation', label: 'Vínculo especialista' }
 ];
 
 const ACTION_LABELS: Record<string, string> = {
@@ -37,7 +39,9 @@ const ENTITY_LABELS: Record<string, string> = {
   center: 'Centro',
   subscription: 'Suscripción',
   product: 'Producto',
-  user_profile: 'Perfil de usuario'
+  user_profile: 'Perfil de usuario',
+  skin_profile: 'Test de piel',
+  specialist_relation: 'Vínculo con especialista'
 };
 
 type DateFieldName = 'from' | 'to';

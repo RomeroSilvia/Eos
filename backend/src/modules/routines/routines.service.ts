@@ -30,22 +30,63 @@ export const routinesService = {
     return routinesRepository.findById(routineId, routine.user_id);
   },
 
-  createRoutine: (data: RoutineInsert) => {
-    return routinesRepository.create(data);
+  createRoutine: async (data: RoutineInsert, actorId: string, actorRole: Role) => {
+    const created = await routinesRepository.create(data);
+
+    if (created) {
+      void recordAuditLog({
+        actorId,
+        actorRole,
+        action: 'create',
+        entity: 'routine',
+        entityId: created.id,
+        after: created,
+        metadata: data.assigned_by ? { assignedBy: data.assigned_by } : undefined
+      });
+    }
+
+    return created;
   },
 
   updateRoutine: async (routineId: string, userId: string, role: Role, data: RoutineUpdate) => {
-    await assertRoutineEditable(routineId, userId, role);
+    const before = await assertRoutineEditable(routineId, userId, role);
 
-    return routinesRepository.update(routineId, {
+    const updated = await routinesRepository.update(routineId, {
       ...data,
       updated_at: new Date().toISOString()
     });
+
+    if (updated) {
+      void recordAuditLog({
+        actorId: userId,
+        actorRole: role,
+        action: 'update',
+        entity: 'routine',
+        entityId: routineId,
+        before,
+        after: updated
+      });
+    }
+
+    return updated;
   },
 
   deleteRoutine: async (routineId: string, userId: string, role: Role) => {
-    await assertRoutineEditable(routineId, userId, role);
-    return routinesRepository.remove(routineId);
+    const before = await assertRoutineEditable(routineId, userId, role);
+    const removed = await routinesRepository.remove(routineId);
+
+    if (removed) {
+      void recordAuditLog({
+        actorId: userId,
+        actorRole: role,
+        action: 'delete',
+        entity: 'routine',
+        entityId: routineId,
+        before
+      });
+    }
+
+    return removed;
   },
 
   getStepsByRoutine: async (routineId: string, userId: string, role: Role) => {
