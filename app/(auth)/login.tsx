@@ -1,7 +1,7 @@
 import { AntDesign, Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Alert, Image, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, Image, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { getLoginErrorMessage, getPostLoginRoute, login as loginUser } from '@/services/auth';
 
@@ -136,10 +136,12 @@ export default function LoginScreen() {
         </Text>
 
         <Pressable
+          accessibilityState={{ disabled: isSubmitting, busy: isSubmitting }}
           disabled={isSubmitting}
           onPress={handleSubmit}
           style={[styles.primaryButton, isSubmitting && styles.primaryButtonDisabled]}
         >
+          {isSubmitting ? <ActivityIndicator color="#FFFFFF" size="small" style={styles.primaryButtonSpinner} /> : null}
           <Text style={styles.primaryButtonText}>{isSubmitting ? 'Continuando...' : 'Continuar'}</Text>
         </Pressable>
       </View>
@@ -313,6 +315,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#C98F90',
     borderRadius: 8,
+    flexDirection: 'row',
     height: 50,
     justifyContent: 'center',
     marginTop: 16,
@@ -320,6 +323,9 @@ const styles = StyleSheet.create({
   },
   primaryButtonDisabled: {
     opacity: 0.7
+  },
+  primaryButtonSpinner: {
+    marginRight: 10
   },
   primaryButtonText: {
     color: '#FFFFFF',

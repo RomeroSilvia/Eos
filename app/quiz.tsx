@@ -3,6 +3,7 @@ import * as SecureStore from 'expo-secure-store';
 import { useState } from 'react';
 import { Alert, Image, Platform, Pressable, StyleSheet, Text, View, type DimensionValue } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { LoadingState } from '@/components/LoadingState';
 import { apiConfig } from '@/services/api/client';
 
 type QuizOption = {
@@ -157,7 +158,9 @@ export default function QuizScreen() {
   if (currentStep === 5) {
     return (
       <SafeAreaView style={styles.screen}>
-        <Text style={styles.resultText}>{getCalculatingText()}</Text>
+        <View style={styles.calculatingContainer}>
+          <LoadingState message={getCalculatingText()} />
+        </View>
       </SafeAreaView>
     );
   }
@@ -268,5 +271,10 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginTop: 40,
     textAlign: 'center'
+  },
+  calculatingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    padding: 20
   }
 });

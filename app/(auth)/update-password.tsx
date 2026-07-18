@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Alert, Image, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, Image, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { apiConfig, getFriendlyAuthErrorMessage } from '@/services/api/client';
 
@@ -11,11 +11,14 @@ export default function UpdatePasswordScreen() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const canSubmit = password.length > 0 && confirmPassword.length > 0;
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const canSubmit = password.length > 0 && confirmPassword.length > 0 && !isSubmitting;
 
   async function handleSavePassword() {
     if (!canSubmit) {
-      Alert.alert('Datos incompletos', 'Completa ambos campos de contrasena para continuar.');
+      if (!isSubmitting) {
+        Alert.alert('Datos incompletos', 'Completa ambos campos de contrasena para continuar.');
+      }
       return;
     }
 
@@ -28,6 +31,8 @@ export default function UpdatePasswordScreen() {
       Alert.alert('Error', 'La contraseña no cumple los requisitos.');
       return;
     }
+
+    setIsSubmitting(true);
 
     try {
       const accessToken = getRecoveryAccessToken();
@@ -60,6 +65,8 @@ export default function UpdatePasswordScreen() {
     } catch (error) {
       logAuthErrorInDevelopment(error, 'update-password');
       Alert.alert('Error de Conexión', 'Ocurrió un error. Intentá nuevamente.');
+    } finally {
+      setIsSubmitting(false);
     }
   }
 
@@ -115,11 +122,13 @@ export default function UpdatePasswordScreen() {
       </View>
 
       <Pressable
+        accessibilityState={{ disabled: !canSubmit, busy: isSubmitting }}
         disabled={!canSubmit}
         onPress={handleSavePassword}
         style={[styles.button, !canSubmit && styles.buttonDisabled]}
       >
-        <Text style={styles.buttonText}>Guardar Contraseña</Text>
+        {isSubmitting ? <ActivityIndicator color="#FFFFFF" size="small" style={styles.buttonSpinner} /> : null}
+        <Text style={styles.buttonText}>{isSubmitting ? 'Guardando...' : 'Guardar Contraseña'}</Text>
       </Pressable>
     </SafeAreaView>
   );
@@ -233,6 +242,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#C98F90',
     borderRadius: 12,
+    flexDirection: 'row',
     height: 54,
     justifyContent: 'center',
     marginBottom: 40,
@@ -240,6 +250,9 @@ const styles = StyleSheet.create({
   },
   buttonDisabled: {
     opacity: 0.55
+  },
+  buttonSpinner: {
+    marginRight: 10
   },
   buttonText: {
     color: '#FFFFFF',

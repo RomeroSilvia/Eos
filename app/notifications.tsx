@@ -3,6 +3,7 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { LoadingState } from '@/components/LoadingState';
 import { NotificationListItem } from '@/components/NotificationListItem';
 import { colors } from '@/constants/colors';
 import { getNotifications, markNotificationRead } from '@/services/notifications';
@@ -36,6 +37,7 @@ export default function NotificationsScreen() {
   useFocusEffect(
     useCallback(() => {
       setIsLoading(true);
+      setNotifications([]);
       getNotifications()
         .then(setNotifications)
         .catch(() => setNotifications([]))
@@ -65,7 +67,7 @@ export default function NotificationsScreen() {
     return (
       <SafeAreaView style={styles.screen}>
         <View style={styles.center}>
-          <Text style={styles.emptyText}>Cargando notificaciones...</Text>
+          <LoadingState message="Cargando notificaciones..." variant="inline" />
         </View>
       </SafeAreaView>
     );

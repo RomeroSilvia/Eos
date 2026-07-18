@@ -4,6 +4,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import type { Dispatch, SetStateAction } from 'react';
 import { useEffect, useState } from 'react';
 import {
+  ActivityIndicator,
   Alert,
   Image,
   KeyboardAvoidingView,
@@ -407,10 +408,14 @@ export default function RegisterScreen() {
           {errors.form ? <Text style={styles.formErrorText}>{errors.form}</Text> : null}
 
           <Pressable
+            accessibilityState={{ disabled: isSubmitting || compressingDocument !== null, busy: isSubmitting || compressingDocument !== null }}
             disabled={isSubmitting || compressingDocument !== null}
             onPress={handleContinue}
             style={[styles.submitButton, (isSubmitting || compressingDocument !== null) && styles.submitButtonDisabled]}
           >
+            {isSubmitting || compressingDocument !== null ? (
+              <ActivityIndicator color="#FFFFFF" size="small" style={styles.submitButtonSpinner} />
+            ) : null}
             <Text style={styles.submitButtonText}>
               {compressingDocument ? 'Preparando imagen...' : getSubmitLabel(isSubmitting, role, isSpecialistRequestOnly)}
             </Text>
@@ -977,6 +982,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#C98F90',
     borderRadius: 12,
+    flexDirection: 'row',
     height: 54,
     justifyContent: 'center',
     marginBottom: 40,
@@ -985,6 +991,9 @@ const styles = StyleSheet.create({
   },
   submitButtonDisabled: {
     opacity: 0.7
+  },
+  submitButtonSpinner: {
+    marginRight: 10
   },
   submitButtonText: {
     color: '#FFFFFF',

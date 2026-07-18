@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppHeader } from '@/components/navigation/AppHeader';
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
+import { LoadingState } from '@/components/LoadingState';
 import { colors } from '@/constants/colors';
 import { useProfile } from '@/hooks/useProfile';
 import { changePassword } from '@/services/auth';
@@ -171,6 +172,17 @@ export default function SettingsScreen() {
     );
   }
 
+  if (isLoading) {
+    return (
+      <SafeAreaView style={styles.screen}>
+        <AppHeader breadcrumb="Perfil" title="Configuracion" />
+        <View style={styles.loadingContainer}>
+          <LoadingState message="Cargando tu perfil..." />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.screen}>
       <AppHeader breadcrumb="Perfil" title="Configuracion" />
@@ -206,7 +218,7 @@ export default function SettingsScreen() {
                 style={styles.input}
                 value={fullName}
               />
-              <Button disabled={isSavingProfile || isLoading} onPress={handleSaveProfile} style={styles.button}>
+              <Button disabled={isSavingProfile || isLoading} loading={isSavingProfile} onPress={handleSaveProfile} style={styles.button}>
                 {isSavingProfile ? 'Guardando...' : 'Guardar perfil'}
               </Button>
             </>
@@ -242,7 +254,7 @@ export default function SettingsScreen() {
             style={styles.input}
             value={confirmPassword}
           />
-          <Button disabled={isSavingPassword} onPress={handleChangePassword} style={styles.button}>
+          <Button disabled={isSavingPassword} loading={isSavingPassword} onPress={handleChangePassword} style={styles.button}>
             {isSavingPassword ? 'Actualizando...' : 'Cambiar contrasena'}
           </Button>
         </Card>
@@ -281,7 +293,7 @@ export default function SettingsScreen() {
             </View>
 
             {isLoadingSubscription ? (
-              <Text style={styles.sectionText}>Cargando...</Text>
+              <LoadingState message="Cargando suscripción..." variant="inline" />
             ) : subscription ? (
               <View style={styles.subscriptionInfoBox}>
                 <View style={styles.subscriptionTopRow}>
@@ -315,6 +327,7 @@ export default function SettingsScreen() {
 
                 <Button
                   disabled={isCancelingSubscription}
+                  loading={isCancelingSubscription}
                   onPress={handleCancelSubscription}
                   style={styles.cancelSubscriptionButton}
                   variant="ghost"
@@ -358,6 +371,11 @@ const styles = StyleSheet.create({
     gap: 14,
     padding: 20,
     paddingBottom: 40
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    padding: 20
   },
   card: {
     gap: 12
