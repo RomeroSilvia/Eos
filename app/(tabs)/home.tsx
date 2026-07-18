@@ -2,12 +2,13 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { useCallback, useState } from 'react';
-import { ActivityIndicator, Image, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Image, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BellButton } from '@/components/BellButton';
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
 import { HomeMetricCard } from '@/components/HomeMetricCard';
+import { LoadingState } from '@/components/LoadingState';
 
 import { RemindersSection } from '@/components/RemindersSection';
 import { colors } from '@/constants/colors';
@@ -46,9 +47,7 @@ export default function HomeScreen() {
     return (
       <SafeAreaView edges={['top', 'left', 'right']} style={styles.screen}>
         <View style={styles.emptyState}>
-          <Ionicons color={colors.primary} name="hourglass-outline" size={34} />
-          <Text style={styles.emptyTitle}>Cargando tu información</Text>
-          <Text style={styles.emptyText}>En breve estarás actualizado</Text>
+          <LoadingState message="Cargando tu información" />
         </View>
       </SafeAreaView>
     );
@@ -140,10 +139,7 @@ export default function HomeScreen() {
               </Text>
 
               {isLoadingSpecialist ? (
-                <View style={styles.specialistLoadingRow}>
-                  <ActivityIndicator color={colors.primary} />
-                  <Text style={styles.specialistDescription}>Buscando tu especialista...</Text>
-                </View>
+                <LoadingState message="Buscando tu especialista..." variant="inline" />
               ) : specialistError ? (
                 <>
                   <Text style={styles.specialistTitle}>No pudimos cargar tu especialista</Text>
