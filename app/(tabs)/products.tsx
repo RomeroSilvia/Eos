@@ -7,6 +7,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { BellButton } from '@/components/BellButton';
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
+import { LoadingState } from '@/components/LoadingState';
 import { colors } from '@/constants/colors';
 import { useProducts } from '@/hooks/useProducts';
 
@@ -23,7 +24,7 @@ export default function ProductsScreen() {
     return (
       <SafeAreaView edges={['top', 'left', 'right']} style={styles.screen}>
         <View style={styles.center}>
-          <Text style={styles.emptyText}>Cargando productos...</Text>
+          <LoadingState message="Cargando productos..." />
         </View>
       </SafeAreaView>
     );

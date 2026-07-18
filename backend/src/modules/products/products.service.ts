@@ -1,6 +1,7 @@
 import type { ProductInsert, ProductUpdate } from '../../database/schema.types';
 import { ApiError } from '../../utils/ApiError';
 import { productsRepository } from './products.repository';
+import { recordAuditLog } from '../audit/audit.service';
 
 type ProductUsageDetail = {
   routineId: string;
@@ -65,7 +66,20 @@ export const productsService = {
       });
     }
 
-    return productsRepository.remove(productId, userId);
+    const removed = await productsRepository.remove(productId, userId);
+
+    if (removed) {
+      void recordAuditLog({
+        actorId: userId,
+        actorRole: 'user',
+        action: 'delete',
+        entity: 'product',
+        entityId: productId,
+        before: product
+      });
+    }
+
+    return removed;
   },
 
   forceRemove: async (productId: string, userId: string) => {
@@ -76,7 +90,21 @@ export const productsService = {
     }
 
     await productsRepository.detachFromAllSteps(productId);
-    return productsRepository.remove(productId, userId);
+    const removed = await productsRepository.remove(productId, userId);
+
+    if (removed) {
+      void recordAuditLog({
+        actorId: userId,
+        actorRole: 'user',
+        action: 'delete',
+        entity: 'product',
+        entityId: productId,
+        before: product,
+        metadata: { changeType: 'force_remove_detached_from_steps' }
+      });
+    }
+
+    return removed;
   },
 
   replaceInRoutines: async (productId: string, replacementProductId: string, userId: string) => {
@@ -95,6 +123,20 @@ export const productsService = {
     }
 
     await productsRepository.replaceProductInSteps(productId, replacementProductId);
-    return productsRepository.remove(productId, userId);
+    const removed = await productsRepository.remove(productId, userId);
+
+    if (removed) {
+      void recordAuditLog({
+        actorId: userId,
+        actorRole: 'user',
+        action: 'delete',
+        entity: 'product',
+        entityId: productId,
+        before: product,
+        metadata: { changeType: 'replaced_in_routines', replacementProductId }
+      });
+    }
+
+    return removed;
   }
 };

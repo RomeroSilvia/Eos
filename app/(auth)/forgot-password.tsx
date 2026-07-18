@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Alert, Image, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, Image, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { apiConfig, getFriendlyAuthErrorMessage } from '@/services/api/client';
 
@@ -68,10 +68,12 @@ export default function ForgotPasswordScreen() {
       />
 
       <Pressable
+        accessibilityState={{ disabled: !canSubmit, busy: isSubmitting }}
         disabled={!canSubmit}
         onPress={handleResetPassword}
         style={[styles.button, !canSubmit && styles.buttonDisabled]}
       >
+        {isSubmitting ? <ActivityIndicator color="#FFFFFF" size="small" style={styles.buttonSpinner} /> : null}
         <Text style={styles.buttonText}>{isSubmitting ? 'Enviando...' : 'Restablecer'}</Text>
       </Pressable>
     </SafeAreaView>
@@ -140,6 +142,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#C98F90',
     borderRadius: 12,
+    flexDirection: 'row',
     height: 54,
     justifyContent: 'center',
     marginBottom: 40,
@@ -147,6 +150,9 @@ const styles = StyleSheet.create({
   },
   buttonDisabled: {
     opacity: 0.55
+  },
+  buttonSpinner: {
+    marginRight: 10
   },
   buttonText: {
     color: '#FFFFFF',

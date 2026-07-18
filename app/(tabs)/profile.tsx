@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { BellButton } from '@/components/BellButton';
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
+import { LoadingState } from '@/components/LoadingState';
 import { RemindersSection } from '@/components/RemindersSection';
 import { colors } from '@/constants/colors';
 import { useProfile } from '@/hooks/useProfile';
@@ -21,6 +22,7 @@ export default function ProfileScreen() {
   const router = useRouter();
   const { profile } = useProfile();
   const [mySpecialist, setMySpecialist] = useState<MySpecialist | null>(null);
+  const [isLoadingSpecialist, setIsLoadingSpecialist] = useState(true);
   const [subscriptionName, setSubscriptionName] = useState<string | null>(null);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [unlinking, setUnlinking] = useState(false);
@@ -28,11 +30,15 @@ export default function ProfileScreen() {
   const [isSpecialistMenuOpen, setIsSpecialistMenuOpen] = useState(false);
 
   const loadMySpecialist = useCallback(async () => {
+    setIsLoadingSpecialist(true);
+
     try {
       const specialist = await getMySpecialist();
       setMySpecialist(specialist);
     } catch {
       setMySpecialist(null);
+    } finally {
+      setIsLoadingSpecialist(false);
     }
   }, []);
 
@@ -157,7 +163,9 @@ export default function ProfileScreen() {
             Gestiona tu especialista y entra al chat desde un solo lugar.
           </Text>
 
-          {mySpecialist ? (
+          {isLoadingSpecialist ? (
+            <LoadingState message="Cargando especialista..." variant="inline" />
+          ) : mySpecialist ? (
             <View style={styles.mySpecialistCard}>
               <View style={styles.specialistCardHeader}>
                 <View style={styles.specialistRow}>

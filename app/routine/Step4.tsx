@@ -1,6 +1,7 @@
 import { Alert, Platform, View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors } from '@/constants/colors';
+import { LoadingState } from '@/components/LoadingState';
 import { Stepper } from '@/components/Stepper';
 import { RoutineSectionCard } from '@/components/RoutineSectionCard';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -152,6 +153,8 @@ export default function Step4() {
           Organiza los pasos de tu rutina por categorías.{"\n"}
           Puedes añadir más de un producto o paso dentro de cada sección.
         </Text>
+
+        {state.isLoading ? <LoadingState message="Actualizando pasos..." variant="inline" /> : null}
 
         <ScrollView contentContainerStyle={styles.list}>
           <RoutineSectionCard

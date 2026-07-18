@@ -4,7 +4,6 @@ import * as ImageManipulator from 'expo-image-manipulator';
 import * as ImagePicker from 'expo-image-picker';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  ActivityIndicator,
   Alert,
   Image,
   Linking,
@@ -19,6 +18,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
+import { LoadingState } from '@/components/LoadingState';
 import { colors } from '@/constants/colors';
 import {
   assignSpecialistCenter,
@@ -426,12 +426,7 @@ export default function AdminCentersScreen() {
           </View>
         </Card>
 
-        {isLoading ? (
-          <View style={styles.stateBox}>
-            <ActivityIndicator color={colors.primary} />
-            <Text style={styles.stateText}>Cargando centros...</Text>
-          </View>
-        ) : null}
+        {isLoading ? <LoadingState message="Cargando centros..." /> : null}
 
         {!isLoading && error ? (
           <View style={styles.stateBox}>
@@ -667,12 +662,7 @@ export default function AdminCentersScreen() {
               </Pressable>
             </View>
 
-            {specialistsLoading ? (
-              <View style={styles.stateBox}>
-                <ActivityIndicator color={colors.primary} />
-                <Text style={styles.stateText}>Cargando especialistas...</Text>
-              </View>
-            ) : null}
+            {specialistsLoading ? <LoadingState message="Cargando especialistas..." /> : null}
 
             {!specialistsLoading && assignmentFeedback ? (
               <View style={styles.feedbackBox}>
@@ -736,12 +726,7 @@ export default function AdminCentersScreen() {
               </Pressable>
             </View>
 
-            {centerSpecialistsLoading ? (
-              <View style={styles.stateBox}>
-                <ActivityIndicator color={colors.primary} />
-                <Text style={styles.stateText}>Cargando especialistas...</Text>
-              </View>
-            ) : null}
+            {centerSpecialistsLoading ? <LoadingState message="Cargando especialistas..." /> : null}
 
             {!centerSpecialistsLoading && centerSpecialistsError ? (
               <View style={styles.stateBox}>

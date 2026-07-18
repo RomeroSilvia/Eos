@@ -82,6 +82,7 @@ export function useRoutine() {
 
   const refreshSelectedRoutine = useCallback(async () => {
     try {
+      setIsLoading(true);
       setError(null);
       const allRoutines = await getRoutines();
       const sortedRoutines = allRoutines.sort(
@@ -104,6 +105,8 @@ export function useRoutine() {
     } catch (err) {
       console.error(err);
       setError('No pudimos actualizar la rutina.');
+    } finally {
+      setIsLoading(false);
     }
   }, [routine?.id]);
 

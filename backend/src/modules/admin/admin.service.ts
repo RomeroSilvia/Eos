@@ -2,6 +2,7 @@
 import { supabase } from '../../config/supabase';
 import { env } from '../../config/env';
 import { ensureAdminCanAccessActiveCenter } from '../centers/centers.service';
+import { recordAuditLog } from '../audit/audit.service';
 import {
   adminRepository,
   type AdminProfileRow,
@@ -101,6 +102,8 @@ export const adminService = {
       await validateTargetCenter(adminUserId, centerId);
     }
 
+    const before = await adminRepository.findSpecialistById(specialistProfileId);
+
     const updated = await adminRepository.updateSpecialistStatus(specialistProfileId, {
       license_status: licenseStatus,
       rejection_reason: licenseStatus === 'verified' ? null : rejectionReason,
@@ -109,6 +112,18 @@ export const adminService = {
 
     if (!updated) {
       throw new ApiError(409, 'La solicitud ya fue procesada.');
+    }
+
+    if (adminUserId) {
+      void recordAuditLog({
+        actorId: adminUserId,
+        actorRole: 'center_admin',
+        action: licenseStatus === 'verified' ? 'approve' : 'reject',
+        entity: 'specialist_profile',
+        entityId: updated.id,
+        before,
+        after: updated
+      });
     }
 
     const [profiles, centers] = await Promise.all([

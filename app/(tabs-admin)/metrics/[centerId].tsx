@@ -2,7 +2,6 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  ActivityIndicator,
   Image,
   Pressable,
   ScrollView,
@@ -12,6 +11,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Card } from '@/components/Card';
+import { LoadingState } from '@/components/LoadingState';
 import { colors } from '@/constants/colors';
 import {
   getCenterDashboard,
@@ -88,12 +88,7 @@ export default function CenterMetricsDetailScreen() {
           </View>
         </View>
 
-        {isLoading ? (
-          <View style={styles.stateBox}>
-            <ActivityIndicator color={colors.primary} />
-            <Text style={styles.stateText}>Cargando métricas...</Text>
-          </View>
-        ) : null}
+        {isLoading ? <LoadingState message="Cargando métricas..." /> : null}
 
         {!isLoading && error ? (
           <View style={styles.stateBox}>

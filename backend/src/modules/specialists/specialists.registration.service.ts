@@ -2,6 +2,7 @@ import { supabase } from '../../config/supabase';
 import { createSupabaseUserClient } from '../../config/supabase';
 import { env } from '../../config/env';
 import { ApiError } from '../../utils/ApiError';
+import { recordAuditLog } from '../audit/audit.service';
 import {
   specialistsRegistrationRepository,
   type SpecialistSpecialty,
@@ -90,6 +91,15 @@ export const specialistsRegistrationService = {
       if (!profile) {
         throw new ApiError(500, 'No se pudo crear la solicitud de especialista.');
       }
+
+      void recordAuditLog({
+        actorId: userId,
+        actorRole: 'specialist',
+        action: 'create',
+        entity: 'specialist_profile',
+        entityId: profile.id,
+        after: profile
+      });
 
       return profile;
     } catch (error) {

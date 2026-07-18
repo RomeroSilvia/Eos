@@ -2,6 +2,7 @@ import { ApiError } from '../../utils/ApiError';
 import { specialistsDirectoryRepository } from './specialists.directory.repository';
 import { routinesService } from '../routines/routines.service';
 import { notificationsService } from '../notifications/notifications.service';
+import { recordAuditLog } from '../audit/audit.service';
 import { ALLOWED_SPECIALTIES, type AllowedSpecialty } from './specialists.constants';
 
 type SearchFilters = {
@@ -75,6 +76,16 @@ export const specialistsDirectoryService = {
       status: 'active'
     });
 
+    void recordAuditLog({
+      actorId: clientId,
+      actorRole: 'user',
+      action: 'create',
+      entity: 'specialist_relation',
+      entityId: relation.id,
+      before: activeRelation ?? undefined,
+      after: relation
+    });
+
     return {
       relationId: relation.id,
       specialist: {
@@ -87,7 +98,19 @@ export const specialistsDirectoryService = {
   },
 
   unlinkSpecialist: async (clientId: string) => {
+    const activeRelation = await specialistsDirectoryRepository.findActiveRelationByClientId(clientId);
     await specialistsDirectoryRepository.deactivateActiveRelation(clientId);
+
+    if (activeRelation) {
+      void recordAuditLog({
+        actorId: clientId,
+        actorRole: 'user',
+        action: 'delete',
+        entity: 'specialist_relation',
+        entityId: activeRelation.id,
+        before: activeRelation
+      });
+    }
   },
 
   getMySpecialist: async (clientId: string) => {
@@ -298,14 +321,18 @@ export const specialistsDirectoryService = {
     const timeOfDay = normalizeRoutineTimeOfDay(input.timeOfDay);
 
     try {
-      const routine = await routinesService.createRoutine({
-        user_id: input.clientId,
-        assigned_by: specialistId,
-        name,
-        description: input.description ?? null,
-        time_of_day: timeOfDay,
-        is_active: input.isActive ?? true
-      });
+      const routine = await routinesService.createRoutine(
+        {
+          user_id: input.clientId,
+          assigned_by: specialistId,
+          name,
+          description: input.description ?? null,
+          time_of_day: timeOfDay,
+          is_active: input.isActive ?? true
+        },
+        specialistId,
+        'specialist'
+      );
 
       const title = 'Nueva rutina asignada';
       const body = `Tu especialista te asignó la rutina "${name}".`;

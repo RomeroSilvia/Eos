@@ -82,3 +82,30 @@ No se expone escritura de planes/suscripciones desde cliente anonimo.
 ## Nota de alcance E3 (M5)
 
 `subscriptions.status` es informativo durante E3 y no bloquea acceso a funciones de otros modulos.
+
+## Estado por tabla (M4)
+
+| Tabla | Modulo | RLS | Detalle |
+|---|---|---|---|
+| `audit_logs` | M4 | **No habilitado** | Ver seccion siguiente. |
+
+### `audit_logs` - estado real
+
+Migracion: `supabase/migrations/20260702000102_e3_m4_audit_logs_schema.sql`.
+
+- La tabla **no tiene `ALTER TABLE ... ENABLE ROW LEVEL SECURITY`** en la migracion original. Esto contradice la regla general de la seccion 12 del plan de Entrega 3 (`docs/plan_entrega3.md`), que exige RLS activo desde la misma migracion para toda tabla nueva.
+- El control de acceso real hoy no depende de RLS: `backend/src/config/supabase.ts` crea el cliente `supabase` con la `service_role key`, que **bypassea RLS por diseno**, y tanto la escritura (`recordAuditLog`) como la lectura (`GET /api/admin/audit-log`) pasan siempre por ese cliente desde el backend. Ningun endpoint expone `audit_logs` a un cliente con `anon key`.
+- El gate de acceso efectivo es el middleware `authenticate` + `requireRole('center_admin')` en `backend/src/modules/audit/audit.routes.ts`, igual que el resto de `/api/admin/*`.
+- **Pendiente:** agregar una migracion nueva (`supabase/migrations/<timestamp>_e3_m4_audit_logs_rls.sql`) que habilite RLS con politica deny-all por defecto y, como minimo, escritura solo por `service_role` y lectura solo por roles `specialist`/`center_admin` sobre su propio scope (segun lo que ya anticipaba la fila de `audit_logs` en la seccion 12 del plan). No se aplico en esta iteracion porque implica tocar una migracion de base de datos y corresponde confirmarlo explicitamente antes de crearla (ver `docs/e3-contracts.md`, seccion M4, "Pendiente / fuera de alcance").
+
+## Regla de uso backend (M4)
+
+`GET /api/admin/audit-log` usa `authenticate` + `requireRole('center_admin')`. No existe un endpoint que exponga `audit_logs` sin autenticacion ni con `anon key`.
+
+El enriquecimiento de la respuesta (nombre de actor, nombre de la entidad afectada, nombre del titular de una suscripcion) hace lookups adicionales contra `profiles`, `centers`, `routines`, `products`, `specialist_profiles`, `subscriptions` y `subscription_plans` — todos con el mismo cliente `service_role`, mismo gate de `requireRole('center_admin')`. No se agrega ninguna tabla nueva ni cambia el estado de RLS descripto arriba.
+
+El filtro `actorName` agrega un `ilike` sobre `profiles.full_name` (`findProfileIdsByNameSearch`), tambien via `service_role` — no expone la tabla `profiles` a un cliente con `anon key`, solo agrega una forma mas de armar el filtro que ya se resolvia server-side.
+
+Los emisores de `recordAuditLog` agregados en distintas vueltas (registro de usuario/especialista, edicion de perfil, aprobacion/rechazo de especialista, test de piel, creacion/edicion/baja de rutina, asignacion de rutina, vinculo/desvinculo con especialista, creacion/edicion/baja de centro, baja de producto — ver `docs/e3-contracts.md`, secciones "M1", "M2" y "M4") escriben en tablas que ya existian y ya se escribian desde esos mismos flujos antes de cada cambio (`profiles`, `specialist_profiles`, `skin_profiles`, `routines`, `routine_steps`, `centers`, `products`, y la tabla de relaciones cliente-especialista); lo unico nuevo en cada caso es el `insert`/`update` adicional (best-effort) en `audit_logs`. Ninguno agrega tablas nuevas ni cambia el estado de RLS de las tablas existentes descripto en este documento.
+
+Las entidades `skin_profile` y `specialist_relation` (agregadas al tipo `AuditEntity`) son solo etiquetas dentro de `audit_logs.entity` — no representan tablas nuevas ni requieren migracion.

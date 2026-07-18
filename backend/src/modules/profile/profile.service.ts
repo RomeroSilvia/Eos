@@ -1,4 +1,5 @@
 import { ApiError } from '../../utils/ApiError';
+import { recordAuditLog } from '../audit/audit.service';
 import { profileRepository } from './profile.repository';
 
 type UpdateProfileInput = {
@@ -28,10 +29,22 @@ export async function updateMyProfile(input: UpdateProfileInput) {
       throw new ApiError(404, 'Perfil no encontrado.');
     }
 
-    return profileRepository.updateById(input.userId, {
+    const updatedProfile = await profileRepository.updateById(input.userId, {
       full_name: fullName,
       updated_at: new Date().toISOString()
     });
+
+    void recordAuditLog({
+      actorId: input.userId,
+      actorRole: 'user',
+      action: 'update',
+      entity: 'user_profile',
+      entityId: input.userId,
+      before: currentProfile,
+      after: updatedProfile
+    });
+
+    return updatedProfile;
   } catch (error) {
     if (error instanceof ApiError) {
       throw error;

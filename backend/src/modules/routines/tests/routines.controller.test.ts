@@ -57,16 +57,22 @@ describe('routines.controller createRoutine', () => {
 
     await createRoutine(req as Request, res, jest.fn());
 
-    expect(mockedService.createRoutine).toHaveBeenCalledWith({
-      user_id: 'user-1',
-      name: 'Rutina personal',
-      description: 'Descripcion',
-      time_of_day: 'morning',
-      is_active: true
-    });
-    expect(mockedService.createRoutine).not.toHaveBeenCalledWith(expect.objectContaining({
-      assigned_by: expect.anything()
-    }));
+    expect(mockedService.createRoutine).toHaveBeenCalledWith(
+      {
+        user_id: 'user-1',
+        name: 'Rutina personal',
+        description: 'Descripcion',
+        time_of_day: 'morning',
+        is_active: true
+      },
+      'user-1',
+      'user'
+    );
+    expect(mockedService.createRoutine).not.toHaveBeenCalledWith(
+      expect.objectContaining({ assigned_by: expect.anything() }),
+      expect.anything(),
+      expect.anything()
+    );
     expect(res.status).toHaveBeenCalledWith(201);
   });
 
@@ -88,13 +94,17 @@ describe('routines.controller createRoutine', () => {
 
     await createRoutine(req as Request, res, jest.fn());
 
-    expect(mockedService.createRoutine).toHaveBeenCalledWith({
-      user_id: 'specialist-1',
-      name: 'Rutina del especialista',
-      description: null,
-      time_of_day: 'night',
-      is_active: true
-    });
+    expect(mockedService.createRoutine).toHaveBeenCalledWith(
+      {
+        user_id: 'specialist-1',
+        name: 'Rutina del especialista',
+        description: null,
+        time_of_day: 'night',
+        is_active: true
+      },
+      'specialist-1',
+      'specialist'
+    );
     expect(res.status).toHaveBeenCalledWith(201);
   });
 });

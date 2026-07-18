@@ -1,6 +1,7 @@
 import { routinesRepository } from '../routines.repository';
 import { routinesService } from '../routines.service';
 import { recordAuditLog } from '../../audit/audit.service';
+import { auditRepository } from '../../audit/audit.repository';
 import type { ProductRow, RoutineRow, RoutineStepProductRow } from '../../../database/schema.types';
 
 jest.mock('../routines.repository', () => ({
@@ -29,8 +30,16 @@ jest.mock('../../audit/audit.service', () => ({
   recordAuditLog: jest.fn(async () => undefined)
 }));
 
+jest.mock('../../audit/audit.repository', () => ({
+  auditRepository: {
+    findRecentRoutineBatch: jest.fn(async () => null),
+    updateRoutineBatch: jest.fn(async () => undefined)
+  }
+}));
+
 const mockedRepo = jest.mocked(routinesRepository);
 const mockedRecordAuditLog = jest.mocked(recordAuditLog);
+const mockedAuditRepository = jest.mocked(auditRepository);
 
 function makeRoutine(overrides: Partial<RoutineRow> = {}): RoutineRow {
   return {
@@ -188,8 +197,8 @@ describe('routinesService - ownership de rutinas y pasos', () => {
       entity: 'routine',
       entityId: 'routine-1',
       metadata: expect.objectContaining({
-        changeType: 'routine_step',
-        stepId: 'step-1'
+        changeType: 'routine_batch',
+        steps: [expect.objectContaining({ stepId: 'step-1' })]
       })
     }));
     expect(result?.routine_id).toBe('routine-1');
@@ -289,8 +298,8 @@ describe('routinesService - ownership de rutinas y pasos', () => {
       entity: 'routine',
       entityId: 'routine-assign-1',
       metadata: expect.objectContaining({
-        changeType: 'routine_step',
-        stepId: 'step-1'
+        changeType: 'routine_batch',
+        steps: [expect.objectContaining({ stepId: 'step-1' })]
       })
     }));
     expect(result?.routine_id).toBe('routine-assign-1');
@@ -323,13 +332,203 @@ describe('routinesService - ownership de rutinas y pasos', () => {
       action: 'delete',
       entity: 'routine',
       entityId: 'routine-1',
-      before: expect.objectContaining({
-        id: 'step-1'
-      }),
       metadata: expect.objectContaining({
-        changeType: 'routine_step',
-        stepName: 'Limpieza'
+        changeType: 'routine_batch',
+        steps: [expect.objectContaining({ stepName: 'Limpieza', before: expect.objectContaining({ id: 'step-1' }) })]
       })
+    }));
+  });
+
+  it('consolida dos altas de pasos de la misma rutina en un solo registro de auditoria', async () => {
+    mockedRepo.findRawById.mockResolvedValue(makeRoutine({
+      id: 'routine-1',
+      user_id: 'user-1',
+      assigned_by: null
+    }));
+    mockedRepo.findStepsByRoutineId.mockResolvedValue([]);
+    mockedRepo.createStep
+      .mockResolvedValueOnce({
+        id: 'step-1',
+        routine_id: 'routine-1',
+        name: 'Limpieza',
+        description: null,
+        category: 'limpieza',
+        step_order: 1,
+        is_required: false,
+        created_at: '2026-01-01T00:00:00.000Z',
+        updated_at: '2026-01-01T00:00:00.000Z'
+      })
+      .mockResolvedValueOnce({
+        id: 'step-2',
+        routine_id: 'routine-1',
+        name: 'Hidratacion',
+        description: null,
+        category: 'hidratacion',
+        step_order: 1,
+        is_required: false,
+        created_at: '2026-01-01T00:00:00.000Z',
+        updated_at: '2026-01-01T00:00:00.000Z'
+      });
+
+    const existingBatchRow = {
+      id: 'audit-1',
+      actor_id: 'user-1',
+      actor_role: 'user',
+      action: 'create',
+      entity: 'routine',
+      entity_id: 'routine-1',
+      before: null,
+      after: null,
+      metadata: { changeType: 'routine_batch', steps: [{ stepId: 'step-1', stepName: 'Limpieza', category: 'limpieza' }] },
+      created_at: '2026-01-01T00:00:00.000Z'
+    };
+
+    mockedAuditRepository.findRecentRoutineBatch
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(existingBatchRow as any);
+
+    await routinesService.createStep('routine-1', 'user-1', 'user', {
+      name: 'Limpieza',
+      description: null,
+      category: 'limpieza',
+      is_required: false
+    });
+
+    await routinesService.createStep('routine-1', 'user-1', 'user', {
+      name: 'Hidratacion',
+      description: null,
+      category: 'hidratacion',
+      is_required: false
+    });
+
+    expect(mockedRecordAuditLog).toHaveBeenCalledTimes(1);
+    expect(mockedAuditRepository.updateRoutineBatch).toHaveBeenCalledWith(
+      'audit-1',
+      expect.objectContaining({
+        changeType: 'routine_batch',
+        steps: [
+          expect.objectContaining({ stepId: 'step-1' }),
+          expect.objectContaining({ stepId: 'step-2' })
+        ]
+      }),
+      expect.any(String)
+    );
+  });
+
+  it('consolida creacion de rutina + actualizacion de horario + N pasos en un solo registro de auditoria', async () => {
+    const createdRoutine = makeRoutine({ id: 'routine-new', user_id: 'user-1', time_of_day: null });
+    const updatedRoutine = { ...createdRoutine, time_of_day: 'night' as const };
+
+    mockedRepo.create.mockResolvedValue(createdRoutine);
+    mockedRepo.findRawById.mockResolvedValue(createdRoutine);
+    mockedRepo.update.mockResolvedValue(updatedRoutine);
+    mockedRepo.findStepsByRoutineId.mockResolvedValue([]);
+
+    const stepNames = ['Limpieza', 'Tonico', 'Serum', 'Hidratacion', 'Protector solar'];
+    mockedRepo.createStep.mockImplementation(async (data) => ({
+      id: `step-${data.name}`,
+      routine_id: 'routine-new',
+      name: data.name,
+      description: null,
+      category: data.category ?? null,
+      step_order: 1,
+      is_required: false,
+      created_at: '2026-01-01T00:00:00.000Z',
+      updated_at: '2026-01-01T00:00:00.000Z'
+    }));
+
+    let storedRow: any = null;
+    mockedAuditRepository.findRecentRoutineBatch.mockImplementation(async () => storedRow);
+    mockedAuditRepository.updateRoutineBatch.mockImplementation(async (id, metadata, createdAt) => {
+      storedRow = { ...storedRow, id, metadata, created_at: createdAt };
+    });
+    mockedRecordAuditLog.mockImplementation(async (params: any) => {
+      storedRow = {
+        id: 'audit-consolidated',
+        actor_id: params.actorId,
+        actor_role: params.actorRole,
+        action: params.action,
+        entity: params.entity,
+        entity_id: params.entityId,
+        before: null,
+        after: null,
+        metadata: params.metadata,
+        created_at: '2026-01-01T00:00:00.000Z'
+      };
+    });
+
+    await routinesService.createRoutine({ user_id: 'user-1', name: 'Rutina anti-edad' } as any, 'user-1', 'user');
+    await routinesService.updateRoutine('routine-new', 'user-1', 'user', { time_of_day: 'night' as any });
+
+    for (const name of stepNames) {
+      await routinesService.createStep('routine-new', 'user-1', 'user', {
+        name,
+        description: null,
+        category: 'general',
+        is_required: false
+      });
+    }
+
+    expect(mockedRecordAuditLog).toHaveBeenCalledTimes(1);
+    expect(storedRow.action).toBe('create');
+    expect(storedRow.metadata.changeType).toBe('routine_batch');
+    expect(storedRow.metadata.routine.after).toEqual(updatedRoutine);
+    expect(storedRow.metadata.steps).toHaveLength(stepNames.length);
+    expect(storedRow.metadata.steps.map((step: any) => step.stepName)).toEqual(stepNames);
+  });
+
+  it('audita createRoutine con before/after correctos', async () => {
+    const created = makeRoutine({ id: 'routine-new' });
+    mockedRepo.create.mockResolvedValue(created);
+
+    await routinesService.createRoutine({ user_id: 'user-1', name: 'Rutina nueva' } as any, 'user-1', 'user');
+
+    expect(mockedRecordAuditLog).toHaveBeenCalledWith(expect.objectContaining({
+      actorId: 'user-1',
+      actorRole: 'user',
+      action: 'create',
+      entity: 'routine',
+      entityId: 'routine-new',
+      metadata: expect.objectContaining({
+        changeType: 'routine_batch',
+        routine: { after: created }
+      })
+    }));
+  });
+
+  it('audita updateRoutine con before/after correctos', async () => {
+    const before = makeRoutine({ id: 'routine-1', name: 'Vieja' });
+    const after = { ...before, name: 'Nueva' };
+    mockedRepo.findRawById.mockResolvedValue(before);
+    mockedRepo.update.mockResolvedValue(after);
+
+    await routinesService.updateRoutine('routine-1', 'user-1', 'user', { name: 'Nueva' });
+
+    expect(mockedRecordAuditLog).toHaveBeenCalledWith(expect.objectContaining({
+      actorId: 'user-1',
+      action: 'update',
+      entity: 'routine',
+      entityId: 'routine-1',
+      metadata: expect.objectContaining({
+        changeType: 'routine_batch',
+        routine: { before, after }
+      })
+    }));
+  });
+
+  it('audita deleteRoutine con before correcto', async () => {
+    const before = makeRoutine({ id: 'routine-1' });
+    mockedRepo.findRawById.mockResolvedValue(before);
+    mockedRepo.remove.mockResolvedValue(true);
+
+    await routinesService.deleteRoutine('routine-1', 'user-1', 'user');
+
+    expect(mockedRecordAuditLog).toHaveBeenCalledWith(expect.objectContaining({
+      actorId: 'user-1',
+      action: 'delete',
+      entity: 'routine',
+      entityId: 'routine-1',
+      before
     }));
   });
 });

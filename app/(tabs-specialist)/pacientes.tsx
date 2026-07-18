@@ -3,7 +3,6 @@ import { useFocusEffect } from '@react-navigation/native';
 import { useRouter, type Href } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
 import {
-  ActivityIndicator,
   FlatList,
   Image,
   Pressable,
@@ -15,6 +14,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
+import { LoadingState } from '@/components/LoadingState';
 import { colors } from '@/constants/colors';
 import { routes } from '@/constants/routes';
 import { getMyPatients, type PatientRelationStatus, type SpecialistPatient } from '@/services/specialist';
@@ -109,7 +109,7 @@ export default function SpecialistPatientsScreen() {
         </Card>
 
         {loading ? (
-          <StateMessage icon="hourglass-outline" message="Cargando pacientes..." showSpinner />
+          <LoadingState message="Cargando pacientes..." />
         ) : hasError ? (
           <StateMessage icon="alert-circle-outline" message="Ocurrio un error al cargar los pacientes." />
         ) : showEmptyState ? (
@@ -197,16 +197,14 @@ function StatusBadge({ status }: { status: PatientRelationStatus }) {
 
 function StateMessage({
   icon,
-  message,
-  showSpinner = false
+  message
 }: {
   icon: keyof typeof Ionicons.glyphMap;
   message: string;
-  showSpinner?: boolean;
 }) {
   return (
     <View style={styles.centeredState}>
-      {showSpinner ? <ActivityIndicator color={colors.primary} /> : <Ionicons color={colors.primaryDark} name={icon} size={32} />}
+      <Ionicons color={colors.primaryDark} name={icon} size={32} />
       <Text style={styles.infoText}>{message}</Text>
     </View>
   );

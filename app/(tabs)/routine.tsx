@@ -5,6 +5,7 @@ import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { useCallback } from 'react';
 import { BellButton } from '@/components/BellButton';
+import { LoadingState } from '@/components/LoadingState';
 import { RoutineStepCard } from '@/components/RoutineStepCard';
 import { colors } from '@/constants/colors';
 import { useRoutine } from '@/hooks/useRoutine';
@@ -105,7 +106,7 @@ export default function RoutineScreen() {
     return (
       <SafeAreaView edges={['top', 'left', 'right']} style={styles.screen}>
         <View style={styles.center}>
-          <Text style={styles.emptyText}>Cargando rutina...</Text>
+          <LoadingState message="Cargando rutina..." variant="inline" />
         </View>
       </SafeAreaView>
     );

@@ -6,6 +6,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { colors } from '@/constants/colors';
 import { AppHeader } from '@/components/navigation/AppHeader';
+import { LoadingState } from '@/components/LoadingState';
 import { RoutineSectionCard } from '@/components/RoutineSectionCard';
 import { deleteStep as deleteStepApi, getRoutineById, getStepsByRoutine, updateRoutine } from '@/services/routines';
 import type { RoutineStep, RoutineTimeOfDay } from '@/types/routine';
@@ -72,9 +73,12 @@ export default function RoutineEdit() {
   const [steps, setSteps] = useState<RoutineStep[]>([]);
   const [isAssignedRoutine, setIsAssignedRoutine] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   const loadRoutine = useCallback(async () => {
     if (!routineId) return;
+
+    setIsLoading(true);
 
     try {
       const [routine, routineSteps] = await Promise.all([
@@ -89,6 +93,8 @@ export default function RoutineEdit() {
       setSteps(routineSteps);
     } catch (error) {
       console.error(error);
+    } finally {
+      setIsLoading(false);
     }
   }, [routineId]);
 
@@ -184,6 +190,17 @@ export default function RoutineEdit() {
       ]
     );
   }, [deleteStep, steps]);
+
+  if (isLoading) {
+    return (
+      <SafeAreaView style={styles.screen}>
+        <AppHeader breadcrumb="Rutinas" title="Editar rutina" />
+        <View style={styles.loadingContainer}>
+          <LoadingState message="Cargando rutina..." />
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.screen}>
@@ -295,6 +312,11 @@ const styles = StyleSheet.create({
     padding: 20,
     gap: 14,
     paddingBottom: 48
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    padding: 20
   },
 
   title: {

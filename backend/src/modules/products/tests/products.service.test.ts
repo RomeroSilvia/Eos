@@ -18,7 +18,14 @@ jest.mock('../products.repository', () => ({
   }
 }));
 
+jest.mock('../../audit/audit.service', () => ({
+  recordAuditLog: jest.fn(async () => undefined)
+}));
+
 const mockedRepository = jest.mocked(productsRepository);
+const { recordAuditLog } = jest.requireMock('../../audit/audit.service') as {
+  recordAuditLog: jest.Mock;
+};
 
 beforeEach(() => {
   jest.resetAllMocks();
@@ -33,6 +40,12 @@ describe('productsService.remove - proteccion CRITICO-02', () => {
     const result = await productsService.remove('prod-1', 'user-1');
 
     expect(result).toBe(true);
+    expect(recordAuditLog).toHaveBeenCalledWith(expect.objectContaining({
+      actorId: 'user-1',
+      action: 'delete',
+      entity: 'product',
+      entityId: 'prod-1'
+    }));
   });
 
   it('lanza 409 con rutinas afectadas si esta en uso', async () => {
@@ -78,6 +91,13 @@ describe('productsService.forceRemove', () => {
 
     expect(result).toBe(true);
     expect(mockedRepository.detachFromAllSteps).toHaveBeenCalledWith('prod-1');
+    expect(recordAuditLog).toHaveBeenCalledWith(expect.objectContaining({
+      actorId: 'user-1',
+      action: 'delete',
+      entity: 'product',
+      entityId: 'prod-1',
+      metadata: { changeType: 'force_remove_detached_from_steps' }
+    }));
   });
 
   it('no toca rutinas si el producto no pertenece al usuario', async () => {
@@ -102,6 +122,13 @@ describe('productsService.replaceInRoutines', () => {
 
     expect(result).toBe(true);
     expect(mockedRepository.replaceProductInSteps).toHaveBeenCalledWith('prod-1', 'prod-2');
+    expect(recordAuditLog).toHaveBeenCalledWith(expect.objectContaining({
+      actorId: 'user-1',
+      action: 'delete',
+      entity: 'product',
+      entityId: 'prod-1',
+      metadata: { changeType: 'replaced_in_routines', replacementProductId: 'prod-2' }
+    }));
   });
 
   it('no reemplaza si el producto original no pertenece al usuario', async () => {

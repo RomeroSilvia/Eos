@@ -1,10 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter, type Href } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
+import { LoadingState } from '@/components/LoadingState';
 import { colors } from '@/constants/colors';
 import { useProfile } from '@/hooks/useProfile';
 import { logout } from '@/services/auth';
@@ -78,7 +79,7 @@ export default function SpecialistProfileScreen() {
 
 
         {isLoading ? (
-          <StateCard icon="hourglass-outline" message="Cargando perfil profesional..." showSpinner />
+          <LoadingState message="Cargando perfil profesional..." />
         ) : hasError ? (
           <StateCard icon="alert-circle-outline" message="No pudimos cargar tu perfil profesional. Intentá nuevamente.">
             <Button onPress={loadSpecialistProfile} style={styles.fullButton} variant="ghost">
@@ -190,17 +191,15 @@ export default function SpecialistProfileScreen() {
 function StateCard({
   children,
   icon,
-  message,
-  showSpinner = false
+  message
 }: {
   children?: React.ReactNode;
   icon: keyof typeof Ionicons.glyphMap;
   message: string;
-  showSpinner?: boolean;
 }) {
   return (
     <Card style={styles.stateCard}>
-      {showSpinner ? <ActivityIndicator color={colors.primary} /> : <Ionicons color={colors.primaryDark} name={icon} size={30} />}
+      <Ionicons color={colors.primaryDark} name={icon} size={30} />
       <Text style={styles.stateText}>{message}</Text>
       {children}
     </Card>

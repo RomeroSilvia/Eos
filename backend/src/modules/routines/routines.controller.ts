@@ -55,13 +55,17 @@ export const createRoutine: RequestHandler<{}, unknown, CreateRoutineBody> = asy
     throw new ApiError(400, 'invalid time_of_day');
   }
 
-  const routine = await routinesService.createRoutine({
-    user_id: req.user.id,
-    name: name.trim(),
-    description: description ?? null,
-    time_of_day: time_of_day ?? null,
-    is_active: is_active ?? true
-  });
+  const routine = await routinesService.createRoutine(
+    {
+      user_id: req.user.id,
+      name: name.trim(),
+      description: description ?? null,
+      time_of_day: time_of_day ?? null,
+      is_active: is_active ?? true
+    },
+    req.user.id,
+    roleOf(req)
+  );
 
   res.status(201).json(routine);
 });

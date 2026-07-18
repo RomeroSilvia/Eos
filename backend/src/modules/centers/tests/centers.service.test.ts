@@ -22,7 +22,14 @@ jest.mock('../centers.repository', () => ({
   }
 }));
 
+jest.mock('../../audit/audit.service', () => ({
+  recordAuditLog: jest.fn(async () => undefined)
+}));
+
 const mockedRepo = jest.mocked(centersRepository);
+const { recordAuditLog } = jest.requireMock('../../audit/audit.service') as {
+  recordAuditLog: jest.Mock;
+};
 
 function makeCenter(overrides = {}) {
   return {
@@ -82,6 +89,13 @@ describe('centersService', () => {
     });
     expect(mockedRepo.createAdminAssignment).toHaveBeenCalledWith('admin-1', 'center-1');
     expect(mockedRepo.findAdminAssignment).not.toHaveBeenCalled();
+    expect(recordAuditLog).toHaveBeenCalledWith(expect.objectContaining({
+      actorId: 'admin-1',
+      actorRole: 'center_admin',
+      action: 'create',
+      entity: 'center',
+      entityId: 'center-1'
+    }));
     expect(result).toEqual({
       id: 'center-1',
       name: 'Centro Norte',
@@ -272,6 +286,13 @@ describe('centersService', () => {
       province: 'Buenos Aires',
       image_url: 'https://cdn.local/sur.jpg'
     }));
+    expect(recordAuditLog).toHaveBeenCalledWith(expect.objectContaining({
+      actorId: 'admin-1',
+      actorRole: 'center_admin',
+      action: 'update',
+      entity: 'center',
+      entityId: 'center-1'
+    }));
     expect(result.name).toBe('Centro Sur');
     expect(result.city).toBe('La Plata');
     expect(result.imageUrl).toBe('https://cdn.local/sur.jpg');
@@ -303,6 +324,13 @@ describe('centersService', () => {
     await centersService.deleteCenter('admin-1', 'center-1');
 
     expect(mockedRepo.softDelete).toHaveBeenCalledWith('center-1');
+    expect(recordAuditLog).toHaveBeenCalledWith(expect.objectContaining({
+      actorId: 'admin-1',
+      actorRole: 'center_admin',
+      action: 'delete',
+      entity: 'center',
+      entityId: 'center-1'
+    }));
   });
 
   it('rechaza acceso a centro ajeno', async () => {

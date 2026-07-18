@@ -2,8 +2,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { useRouter, type Href } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { LoadingState } from '@/components/LoadingState';
 import { colors } from '@/constants/colors';
 import { formatSkinType } from '@/utils/skinType';
 import {
@@ -81,7 +82,7 @@ export default function SpecialistHomeScreen() {
         </View>
 
         {isLoading ? (
-          <StateCard icon="hourglass-outline" message="Cargando tu información..." showSpinner />
+          <LoadingState message="Cargando tu información..." />
         ) : hasError ? (
           <StateCard icon="alert-circle-outline" message="No pudimos cargar tu información. Intentá nuevamente." />
         ) : (
@@ -180,16 +181,14 @@ function MetricCard({ label, value }: { label: string; value: string }) {
 
 function StateCard({
   icon,
-  message,
-  showSpinner = false
+  message
 }: {
   icon: keyof typeof Ionicons.glyphMap;
   message: string;
-  showSpinner?: boolean;
 }) {
   return (
     <View style={styles.stateCard}>
-      {showSpinner ? <ActivityIndicator color={colors.primary} /> : <Ionicons color={colors.primaryDark} name={icon} size={30} />}
+      <Ionicons color={colors.primaryDark} name={icon} size={30} />
       <Text style={styles.emptyText}>{message}</Text>
     </View>
   );
