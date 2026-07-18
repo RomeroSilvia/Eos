@@ -1,6 +1,7 @@
 import { ApiError } from '../../utils/ApiError';
 import { env } from '../../config/env';
 import { centersRepository } from './centers.repository';
+import { recordAuditLog } from '../audit/audit.service';
 import type {
   CenterDashboardSummary,
   CenterRow,
@@ -60,6 +61,16 @@ export const centersService = {
 
     try {
       await centersRepository.createAdminAssignment(adminUserId, center.id);
+
+      void recordAuditLog({
+        actorId: adminUserId,
+        actorRole: 'center_admin',
+        action: 'create',
+        entity: 'center',
+        entityId: center.id,
+        after: center
+      });
+
       return toCenterSummary(center);
     } catch (error) {
       logCentersError('create-center-admin-assignment', error);
@@ -90,6 +101,16 @@ export const centersService = {
       throw new ApiError(404, 'No encontramos este centro o fue dado de baja.');
     }
 
+    void recordAuditLog({
+      actorId: adminUserId,
+      actorRole: 'center_admin',
+      action: 'update',
+      entity: 'center',
+      entityId: center.id,
+      before: center,
+      after: updated
+    });
+
     return toCenterSummary(updated);
   },
 
@@ -101,6 +122,15 @@ export const centersService = {
     if (!deleted) {
       throw new ApiError(404, 'Centro no encontrado o inactivo.');
     }
+
+    void recordAuditLog({
+      actorId: adminUserId,
+      actorRole: 'center_admin',
+      action: 'delete',
+      entity: 'center',
+      entityId: center.id,
+      before: center
+    });
   },
 
   getDashboard: async (adminUserId: string, centerId: string): Promise<CenterDashboardSummary> => {
