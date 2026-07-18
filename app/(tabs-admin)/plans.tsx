@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Card } from '@/components/Card';
+import { LoadingState } from '@/components/LoadingState';
 import { colors } from '@/constants/colors';
 import {
   assignSubscription,
@@ -642,7 +643,7 @@ export default function AdminPlansScreen() {
     <SafeAreaView style={styles.screen}>
       <FlatList
         contentContainerStyle={[styles.content, isCompact && styles.contentCompact]}
-        data={userSubscriptions}
+        data={isLoading ? [] : userSubscriptions}
         keyExtractor={(item) => item.id}
         ListHeaderComponent={
           <>
@@ -986,10 +987,7 @@ export default function AdminPlansScreen() {
         }
         ListEmptyComponent={
           isLoading ? (
-            <View style={styles.stateBox}>
-              <ActivityIndicator color={colors.primary} />
-              <Text style={styles.stateText}>Cargando datos...</Text>
-            </View>
+            <LoadingState message="Cargando datos..." />
           ) : error ? (
             <View style={styles.stateBox}>
               <Text style={styles.errorText}>{error}</Text>
