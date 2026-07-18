@@ -98,7 +98,19 @@ export const specialistsDirectoryService = {
   },
 
   unlinkSpecialist: async (clientId: string) => {
+    const activeRelation = await specialistsDirectoryRepository.findActiveRelationByClientId(clientId);
     await specialistsDirectoryRepository.deactivateActiveRelation(clientId);
+
+    if (activeRelation) {
+      void recordAuditLog({
+        actorId: clientId,
+        actorRole: 'user',
+        action: 'delete',
+        entity: 'specialist_relation',
+        entityId: activeRelation.id,
+        before: activeRelation
+      });
+    }
   },
 
   getMySpecialist: async (clientId: string) => {

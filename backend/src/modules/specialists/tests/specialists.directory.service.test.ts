@@ -165,6 +165,13 @@ describe('specialistsDirectoryService', () => {
         specialist_id: 'specialist-1',
         status: 'active'
       });
+      expect(recordAuditLog).toHaveBeenCalledWith(expect.objectContaining({
+        actorId: 'user-1',
+        actorRole: 'user',
+        action: 'create',
+        entity: 'specialist_relation',
+        entityId: 'relation-1'
+      }));
       expect(result).toMatchObject({
         relationId: 'relation-1',
         specialist: {
@@ -193,10 +200,33 @@ describe('specialistsDirectoryService', () => {
   });
 
   describe('unlinkSpecialist', () => {
-    it('desactiva la relacion activa del cliente', async () => {
+    it('desactiva la relacion activa del cliente y audita la baja', async () => {
+      mockedRepository.findActiveRelationByClientId.mockResolvedValue({
+        id: 'relation-55',
+        client_id: 'user-55',
+        specialist_id: 'specialist-1',
+        status: 'active'
+      } as any);
+
       await specialistsDirectoryService.unlinkSpecialist('user-55');
 
       expect(mockedRepository.deactivateActiveRelation).toHaveBeenCalledWith('user-55');
+      expect(recordAuditLog).toHaveBeenCalledWith(expect.objectContaining({
+        actorId: 'user-55',
+        actorRole: 'user',
+        action: 'delete',
+        entity: 'specialist_relation',
+        entityId: 'relation-55'
+      }));
+    });
+
+    it('no audita cuando no habia relacion activa', async () => {
+      mockedRepository.findActiveRelationByClientId.mockResolvedValue(null);
+
+      await specialistsDirectoryService.unlinkSpecialist('user-56');
+
+      expect(mockedRepository.deactivateActiveRelation).toHaveBeenCalledWith('user-56');
+      expect(recordAuditLog).not.toHaveBeenCalled();
     });
   });
 
