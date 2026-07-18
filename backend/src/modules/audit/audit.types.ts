@@ -13,7 +13,9 @@ export type AuditEntity =
   | 'center'
   | 'subscription'
   | 'product'
-  | 'user_profile';
+  | 'user_profile'
+  | 'skin_profile'
+  | 'specialist_relation';
 
 export type RecordAuditLogParams = {
   actorId: string;

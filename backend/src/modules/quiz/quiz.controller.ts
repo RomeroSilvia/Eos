@@ -1,6 +1,7 @@
 import type { RequestHandler } from 'express';
 import { supabase } from '../../config/supabase';
 import { ApiError } from '../../utils/ApiError';
+import { recordAuditLog } from '../audit/audit.service';
 
 type SaveQuizBody = {
   ageRange?: string;
@@ -32,6 +33,14 @@ export const saveQuiz: RequestHandler = async (req, res, next) => {
       routineSteps: routineSteps.trim()
     };
 
+    const { data: previousProfile } = await supabase
+      .from('skin_profiles')
+      .select('id, user_id, age_range, skin_type, imperfections, main_goal, routine_steps, created_at')
+      .eq('user_id', req.user.id)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
     const { data, error } = await supabase
       .from('skin_profiles')
       .insert({
@@ -49,6 +58,17 @@ export const saveQuiz: RequestHandler = async (req, res, next) => {
       const statusCode = error.code === '23505' ? 409 : 500;
       throw new ApiError(statusCode, error.message);
     }
+
+    void recordAuditLog({
+      actorId: req.user.id,
+      actorRole: req.user.role ?? 'user',
+      action: 'create',
+      entity: 'skin_profile',
+      entityId: data.id,
+      before: previousProfile ?? undefined,
+      after: data,
+      metadata: previousProfile ? { changeType: 'skin_quiz_retake' } : undefined
+    });
 
     const normalizedSkinType = normalizeSkinTypeToEnglish(normalizedBody.skinType);
 
