@@ -1,6 +1,7 @@
 import { routinesRepository } from '../routines.repository';
 import { routinesService } from '../routines.service';
 import { recordAuditLog } from '../../audit/audit.service';
+import { auditRepository } from '../../audit/audit.repository';
 import type { ProductRow, RoutineRow, RoutineStepProductRow } from '../../../database/schema.types';
 
 jest.mock('../routines.repository', () => ({
@@ -29,8 +30,16 @@ jest.mock('../../audit/audit.service', () => ({
   recordAuditLog: jest.fn(async () => undefined)
 }));
 
+jest.mock('../../audit/audit.repository', () => ({
+  auditRepository: {
+    findRecentRoutineStepBatch: jest.fn(async () => null),
+    updateRoutineStepBatch: jest.fn(async () => undefined)
+  }
+}));
+
 const mockedRepo = jest.mocked(routinesRepository);
 const mockedRecordAuditLog = jest.mocked(recordAuditLog);
+const mockedAuditRepository = jest.mocked(auditRepository);
 
 function makeRoutine(overrides: Partial<RoutineRow> = {}): RoutineRow {
   return {
@@ -188,8 +197,8 @@ describe('routinesService - ownership de rutinas y pasos', () => {
       entity: 'routine',
       entityId: 'routine-1',
       metadata: expect.objectContaining({
-        changeType: 'routine_step',
-        stepId: 'step-1'
+        changeType: 'routine_step_batch',
+        steps: [expect.objectContaining({ stepId: 'step-1' })]
       })
     }));
     expect(result?.routine_id).toBe('routine-1');
@@ -289,8 +298,8 @@ describe('routinesService - ownership de rutinas y pasos', () => {
       entity: 'routine',
       entityId: 'routine-assign-1',
       metadata: expect.objectContaining({
-        changeType: 'routine_step',
-        stepId: 'step-1'
+        changeType: 'routine_step_batch',
+        steps: [expect.objectContaining({ stepId: 'step-1' })]
       })
     }));
     expect(result?.routine_id).toBe('routine-assign-1');

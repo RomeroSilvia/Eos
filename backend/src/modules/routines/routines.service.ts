@@ -1,6 +1,7 @@
 import { routinesRepository } from './routines.repository';
 import { ApiError } from '../../utils/ApiError';
 import { recordAuditLog } from '../audit/audit.service';
+import { auditRepository } from '../audit/audit.repository';
 import type {
   RoutineInsert,
   RoutineRow,
@@ -11,6 +12,8 @@ import type {
 } from '../../database/schema.types';
 
 type Role = 'user' | 'specialist' | 'center_admin';
+
+const ROUTINE_STEP_BATCH_WINDOW_MS = 10 * 60 * 1000;
 
 export const routinesService = {
   getHealth: () => ({
@@ -61,7 +64,7 @@ export const routinesService = {
     });
 
     if (created) {
-      recordRoutineStepAudit({
+      void recordRoutineStepAudit({
         actorId: userId,
         actorRole: role,
         action: 'create',
@@ -89,7 +92,7 @@ export const routinesService = {
     });
 
     if (updated) {
-      recordRoutineStepAudit({
+      void recordRoutineStepAudit({
         actorId: userId,
         actorRole: role,
         action: 'update',
@@ -108,7 +111,7 @@ export const routinesService = {
     const removed = await routinesRepository.removeStep(stepId);
 
     if (removed) {
-      recordRoutineStepAudit({
+      void recordRoutineStepAudit({
         actorId: userId,
         actorRole: role,
         action: 'delete',
@@ -143,31 +146,58 @@ export const routinesService = {
   }
 };
 
-function recordRoutineStepAudit(params: {
+async function recordRoutineStepAudit(params: {
   actorId: string;
   actorRole: Role;
   action: 'create' | 'update' | 'delete';
   routineId: string;
   before?: RoutineStepRow | null;
   after?: RoutineStepRow | null;
-}): void {
-  const step = params.after ?? params.before ?? null;
-
-  void recordAuditLog({
-    actorId: params.actorId,
-    actorRole: params.actorRole,
-    action: params.action,
-    entity: 'routine',
-    entityId: params.routineId,
-    before: params.before ?? undefined,
-    after: params.after ?? undefined,
-    metadata: {
-      changeType: 'routine_step',
+}): Promise<void> {
+  try {
+    const step = params.after ?? params.before ?? null;
+    const stepEntry = {
       stepId: step?.id ?? null,
       stepName: step?.name ?? null,
-      category: step?.category ?? null
+      category: step?.category ?? null,
+      before: params.before ?? undefined,
+      after: params.after ?? undefined
+    };
+
+    const sinceIso = new Date(Date.now() - ROUTINE_STEP_BATCH_WINDOW_MS).toISOString();
+    const existingBatch = await auditRepository.findRecentRoutineStepBatch({
+      routineId: params.routineId,
+      actorId: params.actorId,
+      action: params.action,
+      sinceIso
+    });
+
+    if (existingBatch) {
+      const existingMetadata = (existingBatch.metadata ?? {}) as { steps?: unknown[] };
+      const existingSteps = Array.isArray(existingMetadata.steps) ? existingMetadata.steps : [];
+
+      await auditRepository.updateRoutineStepBatch(
+        existingBatch.id,
+        { changeType: 'routine_step_batch', steps: [...existingSteps, stepEntry] },
+        new Date().toISOString()
+      );
+
+      return;
     }
-  });
+
+    void recordAuditLog({
+      actorId: params.actorId,
+      actorRole: params.actorRole,
+      action: params.action,
+      entity: 'routine',
+      entityId: params.routineId,
+      metadata: { changeType: 'routine_step_batch', steps: [stepEntry] }
+    });
+  } catch (error) {
+    if (process.env.NODE_ENV !== 'production') {
+      console.warn('[audit] Error inesperado al consolidar auditoría de pasos de rutina', error);
+    }
+  }
 }
 
 async function getNextStepOrder(routineId: string, category: string | null) {

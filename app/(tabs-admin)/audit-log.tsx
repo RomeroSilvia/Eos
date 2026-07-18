@@ -3,9 +3,10 @@ import DateTimePicker, { type DateTimePickerEvent } from '@react-native-communit
 import { useFocusEffect } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
-import { ActivityIndicator, FlatList, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { FlatList, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Card } from '@/components/Card';
+import { LoadingState } from '@/components/LoadingState';
 import { colors } from '@/constants/colors';
 import { getAuditLogErrorMessage, getAuditLogs } from '@/services/audit';
 import type { AuditEntity, AuditLogEntry } from '@/types/audit';
@@ -246,12 +247,7 @@ export default function AuditLogScreen() {
               </View>
             </Card>
 
-            {isLoading ? (
-              <View style={styles.stateBox}>
-                <ActivityIndicator color={colors.primary} />
-                <Text style={styles.stateText}>Cargando registro de auditoría...</Text>
-              </View>
-            ) : null}
+            {isLoading ? <LoadingState message="Cargando registro de auditoría..." /> : null}
 
             {!isLoading && error ? (
               <View style={styles.stateBox}>
@@ -324,11 +320,13 @@ function AuditLogCard({
 }) {
   const isDelete = entry.action === 'delete';
   const isCreate = entry.action === 'create';
+  const isRoutineStepBatch =
+    isPlainObject(entry.metadata) && entry.metadata.changeType === 'routine_step_batch';
 
-  const diffRows = buildDiffRows(entry.before, entry.after);
-  const createRows = buildValueRows(entry.after);
+  const diffRows = isRoutineStepBatch ? [] : buildDiffRows(entry.before, entry.after);
+  const createRows = isRoutineStepBatch ? [] : buildValueRows(entry.after);
 
-  const showStepBox = entry.routineStepDetail !== null && isCreate;
+  const showStepBox = entry.routineStepDetails !== null && entry.routineStepDetails.length > 0;
 
   const actionDetailPresent = isCreate ? createRows.length > 0 : diffRows.length > 0;
   const hasDetails = isDelete || actionDetailPresent || showStepBox;
@@ -364,9 +362,9 @@ function AuditLogCard({
       {expanded ? (
         <View style={styles.detailBox}>
           {isDelete ? <DeleteSummaryBlock entry={entry} /> : null}
-          {!isDelete && isCreate ? <CreateBlock rows={createRows} /> : null}
-          {!isDelete && !isCreate && diffRows.length > 0 ? <UpdateDiffBlocks rows={diffRows} /> : null}
-          {showStepBox && entry.routineStepDetail ? <RoutineStepBlock detail={entry.routineStepDetail} /> : null}
+          {!isDelete && isCreate && !isRoutineStepBatch ? <CreateBlock rows={createRows} /> : null}
+          {!isDelete && !isCreate && !isRoutineStepBatch && diffRows.length > 0 ? <UpdateDiffBlocks rows={diffRows} /> : null}
+          {showStepBox && entry.routineStepDetails ? <RoutineStepBlock details={entry.routineStepDetails} /> : null}
         </View>
       ) : null}
     </Card>
@@ -440,13 +438,17 @@ function FieldValue({ label, value, depth = 0 }: { label: string; value: unknown
   );
 }
 
-function RoutineStepBlock({ detail }: { detail: NonNullable<AuditLogEntry['routineStepDetail']> }) {
+function RoutineStepBlock({ details }: { details: NonNullable<AuditLogEntry['routineStepDetails']> }) {
   return (
     <View style={styles.detailBlock}>
-      <Text style={styles.detailLabel}>Paso de rutina</Text>
-      <Text style={styles.detailValue}>Categoría: {detail.category ?? 'Sin categoría'}</Text>
-      <Text style={styles.detailValue}>Paso: {detail.stepName ?? 'Sin nombre'}</Text>
-      <Text style={styles.detailValue}>Productos agregados: {detail.hasProducts ? 'Sí' : 'No'}</Text>
+      <Text style={styles.detailLabel}>Pasos de rutina ({details.length})</Text>
+      {details.map((detail, index) => (
+        <View key={index} style={index > 0 ? styles.routineStepItem : undefined}>
+          <Text style={styles.detailValue}>Categoría: {detail.category ?? 'Sin categoría'}</Text>
+          <Text style={styles.detailValue}>Paso: {detail.stepName ?? 'Sin nombre'}</Text>
+          <Text style={styles.detailValue}>Productos agregados: {detail.hasProducts ? 'Sí' : 'No'}</Text>
+        </View>
+      ))}
     </View>
   );
 }
@@ -883,6 +885,12 @@ const styles = StyleSheet.create({
     fontFamily: Platform.select({ ios: 'Menlo', android: 'monospace', default: 'monospace' }),
     fontSize: 12,
     lineHeight: 18
+  },
+  routineStepItem: {
+    borderTopColor: colors.border,
+    borderTopWidth: 1,
+    marginTop: 8,
+    paddingTop: 8
   },
   pagination: {
     alignItems: 'center',

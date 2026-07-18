@@ -67,7 +67,7 @@ export type AuditLogEntry = {
   entity: string;
   entityId: string;
   entityLabel: string;
-  routineStepDetail: RoutineStepDetail | null;
+  routineStepDetails: RoutineStepDetail[] | null;
   before: unknown;
   after: unknown;
   metadata: unknown;

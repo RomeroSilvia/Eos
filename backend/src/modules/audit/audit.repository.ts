@@ -182,5 +182,37 @@ export const auditRepository = {
     if (error) throw error;
 
     return new Set((data ?? []).map((row: { step_id: string }) => row.step_id));
+  },
+
+  findRecentRoutineStepBatch: async (params: {
+    routineId: string;
+    actorId: string;
+    action: string;
+    sinceIso: string;
+  }): Promise<AuditLogRow | null> => {
+    const db = supabase as any;
+    const { data, error } = await db
+      .from(TABLE_NAMES.auditLogs)
+      .select(AUDIT_LOG_SELECT)
+      .eq('entity', 'routine')
+      .eq('entity_id', params.routineId)
+      .eq('actor_id', params.actorId)
+      .eq('action', params.action)
+      .eq('metadata->>changeType', 'routine_step_batch')
+      .gte('created_at', params.sinceIso)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (error) throw error;
+
+    return data ?? null;
+  },
+
+  updateRoutineStepBatch: async (id: string, metadata: unknown, createdAt: string): Promise<void> => {
+    const db = supabase as any;
+    const { error } = await db.from(TABLE_NAMES.auditLogs).update({ metadata, created_at: createdAt }).eq('id', id);
+
+    if (error) throw error;
   }
 };

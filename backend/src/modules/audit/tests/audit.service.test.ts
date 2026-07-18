@@ -78,7 +78,7 @@ describe('auditService.getAuditLogs', () => {
           entity: 'center',
           entityId: 'center-1',
           entityLabel: 'Centro Norte',
-          routineStepDetail: null,
+          routineStepDetails: null,
           before: { name: 'Antes' },
           after: { name: 'Después' },
           metadata: null,
@@ -180,13 +180,19 @@ describe('auditService.getAuditLogs', () => {
     expect(result.items[0].entityLabel).toBe('Centro Sur');
   });
 
-  it('arma routineStepDetail cuando el metadata es de un paso de rutina, marcando hasProducts', async () => {
+  it('arma routineStepDetails cuando el metadata es un lote de pasos de rutina, marcando hasProducts', async () => {
     mockedRepo.findAuditLogs.mockResolvedValue({
       data: [
         makeAuditLog({
           entity: 'routine',
           entity_id: 'routine-1',
-          metadata: { changeType: 'routine_step', stepId: 'step-1', stepName: 'Limpieza facial', category: 'am' }
+          metadata: {
+            changeType: 'routine_step_batch',
+            steps: [
+              { stepId: 'step-1', stepName: 'Limpieza facial', category: 'am' },
+              { stepId: 'step-2', stepName: 'Hidratación', category: 'am' }
+            ]
+          }
         })
       ],
       total: 1
@@ -196,15 +202,14 @@ describe('auditService.getAuditLogs', () => {
 
     const result = await getAuditLogs({});
 
-    expect(mockedRepo.findStepsWithProducts).toHaveBeenCalledWith(['step-1']);
-    expect(result.items[0].routineStepDetail).toEqual({
-      category: 'am',
-      stepName: 'Limpieza facial',
-      hasProducts: true
-    });
+    expect(mockedRepo.findStepsWithProducts).toHaveBeenCalledWith(['step-1', 'step-2']);
+    expect(result.items[0].routineStepDetails).toEqual([
+      { category: 'am', stepName: 'Limpieza facial', hasProducts: true },
+      { category: 'am', stepName: 'Hidratación', hasProducts: false }
+    ]);
   });
 
-  it('routineStepDetail.hasProducts es false cuando el paso no tiene productos vinculados', async () => {
+  it('interpreta filas legacy con metadata changeType=routine_step como un lote de un solo paso', async () => {
     mockedRepo.findAuditLogs.mockResolvedValue({
       data: [
         makeAuditLog({
@@ -220,18 +225,16 @@ describe('auditService.getAuditLogs', () => {
 
     const result = await getAuditLogs({});
 
-    expect(result.items[0].routineStepDetail).toEqual({
-      category: 'pm',
-      stepName: 'Hidratación',
-      hasProducts: false
-    });
+    expect(result.items[0].routineStepDetails).toEqual([
+      { category: 'pm', stepName: 'Hidratación', hasProducts: false }
+    ]);
   });
 
-  it('routineStepDetail es null cuando metadata no tiene forma de paso de rutina', async () => {
+  it('routineStepDetails es null cuando metadata no tiene forma de paso de rutina', async () => {
     const result = await getAuditLogs({});
 
     expect(mockedRepo.findStepsWithProducts).toHaveBeenCalledWith([]);
-    expect(result.items[0].routineStepDetail).toBeNull();
+    expect(result.items[0].routineStepDetails).toBeNull();
   });
 
   it('reemplaza owner_id por el nombre resuelto cuando owner_type es user', async () => {

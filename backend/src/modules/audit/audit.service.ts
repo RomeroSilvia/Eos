@@ -106,7 +106,7 @@ async function enrichAuditLogEntries(rows: AuditLogRow[]): Promise<AuditLogEntry
   const routineStepIds = [
     ...new Set(
       rows
-        .map((row) => getRoutineStepMetadata(row.metadata)?.stepId)
+        .flatMap((row) => getRoutineStepMetadata(row.metadata)?.steps.map((step) => step.stepId) ?? [])
         .filter((stepId): stepId is string => Boolean(stepId))
     )
   ];
@@ -139,7 +139,7 @@ async function enrichAuditLogEntries(rows: AuditLogRow[]): Promise<AuditLogEntry
       entity: row.entity,
       entityId: row.entity_id,
       entityLabel,
-      routineStepDetail: buildRoutineStepDetail(row.metadata, stepsWithProducts),
+      routineStepDetails: buildRoutineStepDetails(row.metadata, stepsWithProducts),
       before: isSubscription ? sanitizeSubscriptionPayload(row.before, subscriptionOwnerNames) : row.before,
       after: isSubscription ? sanitizeSubscriptionPayload(row.after, subscriptionOwnerNames) : row.after,
       metadata: row.metadata,
@@ -192,31 +192,50 @@ function sanitizeSubscriptionPayload(payload: unknown, ownerNames: Map<string, s
   return { ...rest, owner: ownerNames.get(rawOwnerId) ?? 'No disponible' };
 }
 
-type RoutineStepMetadata = { changeType: 'routine_step'; stepId: string | null; stepName: string | null; category: string | null };
+type RoutineStepEntry = { stepId: string | null; stepName: string | null; category: string | null };
+type RoutineStepBatchMetadata = { changeType: 'routine_step_batch'; steps: RoutineStepEntry[] };
 
-function getRoutineStepMetadata(metadata: unknown): RoutineStepMetadata | null {
-  if (!isPlainObject(metadata) || metadata.changeType !== 'routine_step') {
+function getRoutineStepMetadata(metadata: unknown): RoutineStepBatchMetadata | null {
+  if (!isPlainObject(metadata)) {
     return null;
   }
 
-  return metadata as unknown as RoutineStepMetadata;
+  if (metadata.changeType === 'routine_step_batch' && Array.isArray(metadata.steps)) {
+    return metadata as unknown as RoutineStepBatchMetadata;
+  }
+
+  // Retrocompatibilidad: filas legacy pre-consolidación, un paso por fila.
+  if (metadata.changeType === 'routine_step') {
+    return {
+      changeType: 'routine_step_batch',
+      steps: [
+        {
+          stepId: (metadata.stepId as string | null) ?? null,
+          stepName: (metadata.stepName as string | null) ?? null,
+          category: (metadata.category as string | null) ?? null
+        }
+      ]
+    };
+  }
+
+  return null;
 }
 
-function buildRoutineStepDetail(
+function buildRoutineStepDetails(
   metadata: unknown,
   stepsWithProducts: Set<string>
-): AuditLogEntry['routineStepDetail'] {
+): AuditLogEntry['routineStepDetails'] {
   const stepMetadata = getRoutineStepMetadata(metadata);
 
   if (!stepMetadata) {
     return null;
   }
 
-  return {
-    category: stepMetadata.category,
-    stepName: stepMetadata.stepName,
-    hasProducts: Boolean(stepMetadata.stepId) && stepsWithProducts.has(stepMetadata.stepId as string)
-  };
+  return stepMetadata.steps.map((step) => ({
+    category: step.category,
+    stepName: step.stepName,
+    hasProducts: Boolean(step.stepId) && stepsWithProducts.has(step.stepId as string)
+  }));
 }
 
 function deriveFallbackEntityLabel(entity: string, before: unknown, after: unknown): string | undefined {
