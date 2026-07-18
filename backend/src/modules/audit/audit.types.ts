@@ -70,6 +70,7 @@ export type AuditLogEntry = {
   entityId: string;
   entityLabel: string;
   routineStepDetails: RoutineStepDetail[] | null;
+  routineChange: { before: unknown; after: unknown } | null;
   before: unknown;
   after: unknown;
   metadata: unknown;

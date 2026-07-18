@@ -32,8 +32,8 @@ jest.mock('../../audit/audit.service', () => ({
 
 jest.mock('../../audit/audit.repository', () => ({
   auditRepository: {
-    findRecentRoutineStepBatch: jest.fn(async () => null),
-    updateRoutineStepBatch: jest.fn(async () => undefined)
+    findRecentRoutineBatch: jest.fn(async () => null),
+    updateRoutineBatch: jest.fn(async () => undefined)
   }
 }));
 
@@ -197,7 +197,7 @@ describe('routinesService - ownership de rutinas y pasos', () => {
       entity: 'routine',
       entityId: 'routine-1',
       metadata: expect.objectContaining({
-        changeType: 'routine_step_batch',
+        changeType: 'routine_batch',
         steps: [expect.objectContaining({ stepId: 'step-1' })]
       })
     }));
@@ -298,7 +298,7 @@ describe('routinesService - ownership de rutinas y pasos', () => {
       entity: 'routine',
       entityId: 'routine-assign-1',
       metadata: expect.objectContaining({
-        changeType: 'routine_step_batch',
+        changeType: 'routine_batch',
         steps: [expect.objectContaining({ stepId: 'step-1' })]
       })
     }));
@@ -333,7 +333,7 @@ describe('routinesService - ownership de rutinas y pasos', () => {
       entity: 'routine',
       entityId: 'routine-1',
       metadata: expect.objectContaining({
-        changeType: 'routine_step_batch',
+        changeType: 'routine_batch',
         steps: [expect.objectContaining({ stepName: 'Limpieza', before: expect.objectContaining({ id: 'step-1' }) })]
       })
     }));
@@ -379,11 +379,11 @@ describe('routinesService - ownership de rutinas y pasos', () => {
       entity_id: 'routine-1',
       before: null,
       after: null,
-      metadata: { changeType: 'routine_step_batch', steps: [{ stepId: 'step-1', stepName: 'Limpieza', category: 'limpieza' }] },
+      metadata: { changeType: 'routine_batch', steps: [{ stepId: 'step-1', stepName: 'Limpieza', category: 'limpieza' }] },
       created_at: '2026-01-01T00:00:00.000Z'
     };
 
-    mockedAuditRepository.findRecentRoutineStepBatch
+    mockedAuditRepository.findRecentRoutineBatch
       .mockResolvedValueOnce(null)
       .mockResolvedValueOnce(existingBatchRow as any);
 
@@ -402,10 +402,10 @@ describe('routinesService - ownership de rutinas y pasos', () => {
     });
 
     expect(mockedRecordAuditLog).toHaveBeenCalledTimes(1);
-    expect(mockedAuditRepository.updateRoutineStepBatch).toHaveBeenCalledWith(
+    expect(mockedAuditRepository.updateRoutineBatch).toHaveBeenCalledWith(
       'audit-1',
       expect.objectContaining({
-        changeType: 'routine_step_batch',
+        changeType: 'routine_batch',
         steps: [
           expect.objectContaining({ stepId: 'step-1' }),
           expect.objectContaining({ stepId: 'step-2' })
@@ -413,6 +413,68 @@ describe('routinesService - ownership de rutinas y pasos', () => {
       }),
       expect.any(String)
     );
+  });
+
+  it('consolida creacion de rutina + actualizacion de horario + N pasos en un solo registro de auditoria', async () => {
+    const createdRoutine = makeRoutine({ id: 'routine-new', user_id: 'user-1', time_of_day: null });
+    const updatedRoutine = { ...createdRoutine, time_of_day: 'night' as const };
+
+    mockedRepo.create.mockResolvedValue(createdRoutine);
+    mockedRepo.findRawById.mockResolvedValue(createdRoutine);
+    mockedRepo.update.mockResolvedValue(updatedRoutine);
+    mockedRepo.findStepsByRoutineId.mockResolvedValue([]);
+
+    const stepNames = ['Limpieza', 'Tonico', 'Serum', 'Hidratacion', 'Protector solar'];
+    mockedRepo.createStep.mockImplementation(async (data) => ({
+      id: `step-${data.name}`,
+      routine_id: 'routine-new',
+      name: data.name,
+      description: null,
+      category: data.category ?? null,
+      step_order: 1,
+      is_required: false,
+      created_at: '2026-01-01T00:00:00.000Z',
+      updated_at: '2026-01-01T00:00:00.000Z'
+    }));
+
+    let storedRow: any = null;
+    mockedAuditRepository.findRecentRoutineBatch.mockImplementation(async () => storedRow);
+    mockedAuditRepository.updateRoutineBatch.mockImplementation(async (id, metadata, createdAt) => {
+      storedRow = { ...storedRow, id, metadata, created_at: createdAt };
+    });
+    mockedRecordAuditLog.mockImplementation(async (params: any) => {
+      storedRow = {
+        id: 'audit-consolidated',
+        actor_id: params.actorId,
+        actor_role: params.actorRole,
+        action: params.action,
+        entity: params.entity,
+        entity_id: params.entityId,
+        before: null,
+        after: null,
+        metadata: params.metadata,
+        created_at: '2026-01-01T00:00:00.000Z'
+      };
+    });
+
+    await routinesService.createRoutine({ user_id: 'user-1', name: 'Rutina anti-edad' } as any, 'user-1', 'user');
+    await routinesService.updateRoutine('routine-new', 'user-1', 'user', { time_of_day: 'night' as any });
+
+    for (const name of stepNames) {
+      await routinesService.createStep('routine-new', 'user-1', 'user', {
+        name,
+        description: null,
+        category: 'general',
+        is_required: false
+      });
+    }
+
+    expect(mockedRecordAuditLog).toHaveBeenCalledTimes(1);
+    expect(storedRow.action).toBe('create');
+    expect(storedRow.metadata.changeType).toBe('routine_batch');
+    expect(storedRow.metadata.routine.after).toEqual(updatedRoutine);
+    expect(storedRow.metadata.steps).toHaveLength(stepNames.length);
+    expect(storedRow.metadata.steps.map((step: any) => step.stepName)).toEqual(stepNames);
   });
 
   it('audita createRoutine con before/after correctos', async () => {
@@ -427,7 +489,10 @@ describe('routinesService - ownership de rutinas y pasos', () => {
       action: 'create',
       entity: 'routine',
       entityId: 'routine-new',
-      after: created
+      metadata: expect.objectContaining({
+        changeType: 'routine_batch',
+        routine: { after: created }
+      })
     }));
   });
 
@@ -444,8 +509,10 @@ describe('routinesService - ownership de rutinas y pasos', () => {
       action: 'update',
       entity: 'routine',
       entityId: 'routine-1',
-      before,
-      after
+      metadata: expect.objectContaining({
+        changeType: 'routine_batch',
+        routine: { before, after }
+      })
     }));
   });
 

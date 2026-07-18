@@ -324,11 +324,17 @@ function AuditLogCard({
 }) {
   const isDelete = entry.action === 'delete';
   const isCreate = entry.action === 'create';
-  const isRoutineStepBatch =
-    isPlainObject(entry.metadata) && entry.metadata.changeType === 'routine_step_batch';
+  const isBatchRow =
+    isPlainObject(entry.metadata) &&
+    (entry.metadata.changeType === 'routine_batch' || entry.metadata.changeType === 'routine_step_batch');
+  const hasRoutineChange = entry.routineChange !== null;
+  const isLegacyBatchWithoutChange = isBatchRow && !hasRoutineChange;
 
-  const diffRows = isRoutineStepBatch ? [] : buildDiffRows(entry.before, entry.after);
-  const createRows = isRoutineStepBatch ? [] : buildValueRows(entry.after);
+  const changeBefore = hasRoutineChange ? entry.routineChange!.before : entry.before;
+  const changeAfter = hasRoutineChange ? entry.routineChange!.after : entry.after;
+
+  const diffRows = isLegacyBatchWithoutChange ? [] : buildDiffRows(changeBefore, changeAfter);
+  const createRows = isLegacyBatchWithoutChange ? [] : buildValueRows(changeAfter);
 
   const showStepBox = entry.routineStepDetails !== null && entry.routineStepDetails.length > 0;
 
@@ -366,8 +372,8 @@ function AuditLogCard({
       {expanded ? (
         <View style={styles.detailBox}>
           {isDelete ? <DeleteSummaryBlock entry={entry} /> : null}
-          {!isDelete && isCreate && !isRoutineStepBatch ? <CreateBlock rows={createRows} /> : null}
-          {!isDelete && !isCreate && !isRoutineStepBatch && diffRows.length > 0 ? <UpdateDiffBlocks rows={diffRows} /> : null}
+          {!isDelete && isCreate && !isLegacyBatchWithoutChange ? <CreateBlock rows={createRows} /> : null}
+          {!isDelete && !isCreate && !isLegacyBatchWithoutChange && diffRows.length > 0 ? <UpdateDiffBlocks rows={diffRows} /> : null}
           {showStepBox && entry.routineStepDetails ? <RoutineStepBlock details={entry.routineStepDetails} /> : null}
         </View>
       ) : null}

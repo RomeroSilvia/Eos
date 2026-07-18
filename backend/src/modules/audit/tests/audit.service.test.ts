@@ -79,6 +79,7 @@ describe('auditService.getAuditLogs', () => {
           entityId: 'center-1',
           entityLabel: 'Centro Norte',
           routineStepDetails: null,
+          routineChange: null,
           before: { name: 'Antes' },
           after: { name: 'Después' },
           metadata: null,
@@ -235,6 +236,61 @@ describe('auditService.getAuditLogs', () => {
 
     expect(mockedRepo.findStepsWithProducts).toHaveBeenCalledWith([]);
     expect(result.items[0].routineStepDetails).toBeNull();
+  });
+
+  it('arma routineChange y routineStepDetails juntos cuando el metadata es routine_batch consolidado', async () => {
+    mockedRepo.findAuditLogs.mockResolvedValue({
+      data: [
+        makeAuditLog({
+          entity: 'routine',
+          entity_id: 'routine-1',
+          action: 'create',
+          before: null,
+          after: null,
+          metadata: {
+            changeType: 'routine_batch',
+            routine: { after: { id: 'routine-1', name: 'Rutina anti-edad', time_of_day: 'night' } },
+            steps: [
+              { stepId: 'step-1', stepName: 'Limpieza', category: 'limpieza' },
+              { stepId: 'step-2', stepName: 'Tratamiento', category: 'tratamientos' }
+            ]
+          }
+        })
+      ],
+      total: 1
+    });
+    mockedRepo.findRoutineNamesByIds.mockResolvedValue(new Map([['routine-1', 'Rutina anti-edad']]));
+    mockedRepo.findStepsWithProducts.mockResolvedValue(new Set());
+
+    const result = await getAuditLogs({});
+
+    expect(result.items[0].routineChange).toEqual({
+      before: null,
+      after: { id: 'routine-1', name: 'Rutina anti-edad', time_of_day: 'night' }
+    });
+    expect(result.items[0].routineStepDetails).toEqual([
+      { category: 'limpieza', stepName: 'Limpieza', hasProducts: false },
+      { category: 'tratamientos', stepName: 'Tratamiento', hasProducts: false }
+    ]);
+  });
+
+  it('routineChange es null cuando el metadata batch no trae datos de la rutina', async () => {
+    mockedRepo.findAuditLogs.mockResolvedValue({
+      data: [
+        makeAuditLog({
+          entity: 'routine',
+          entity_id: 'routine-1',
+          metadata: { changeType: 'routine_step_batch', steps: [{ stepId: 'step-1', stepName: 'Limpieza', category: 'am' }] }
+        })
+      ],
+      total: 1
+    });
+    mockedRepo.findRoutineNamesByIds.mockResolvedValue(new Map([['routine-1', 'Rutina de Marta']]));
+    mockedRepo.findStepsWithProducts.mockResolvedValue(new Set());
+
+    const result = await getAuditLogs({});
+
+    expect(result.items[0].routineChange).toBeNull();
   });
 
   it('reemplaza owner_id por el nombre resuelto cuando owner_type es user', async () => {

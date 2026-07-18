@@ -106,7 +106,7 @@ async function enrichAuditLogEntries(rows: AuditLogRow[]): Promise<AuditLogEntry
   const routineStepIds = [
     ...new Set(
       rows
-        .flatMap((row) => getRoutineStepMetadata(row.metadata)?.steps.map((step) => step.stepId) ?? [])
+        .flatMap((row) => getRoutineBatchMetadata(row.metadata)?.steps.map((step) => step.stepId) ?? [])
         .filter((stepId): stepId is string => Boolean(stepId))
     )
   ];
@@ -140,6 +140,7 @@ async function enrichAuditLogEntries(rows: AuditLogRow[]): Promise<AuditLogEntry
       entityId: row.entity_id,
       entityLabel,
       routineStepDetails: buildRoutineStepDetails(row.metadata, stepsWithProducts),
+      routineChange: buildRoutineChange(row.metadata),
       before: isSubscription ? sanitizeSubscriptionPayload(row.before, subscriptionOwnerNames) : row.before,
       after: isSubscription ? sanitizeSubscriptionPayload(row.after, subscriptionOwnerNames) : row.after,
       metadata: row.metadata,
@@ -193,21 +194,33 @@ function sanitizeSubscriptionPayload(payload: unknown, ownerNames: Map<string, s
 }
 
 type RoutineStepEntry = { stepId: string | null; stepName: string | null; category: string | null };
-type RoutineStepBatchMetadata = { changeType: 'routine_step_batch'; steps: RoutineStepEntry[] };
+type RoutineBatchMetadata = {
+  steps: RoutineStepEntry[];
+  routine?: { before?: unknown; after: unknown };
+};
 
-function getRoutineStepMetadata(metadata: unknown): RoutineStepBatchMetadata | null {
+function getRoutineBatchMetadata(metadata: unknown): RoutineBatchMetadata | null {
   if (!isPlainObject(metadata)) {
     return null;
   }
 
+  if (metadata.changeType === 'routine_batch') {
+    const steps = Array.isArray(metadata.steps) ? (metadata.steps as RoutineStepEntry[]) : [];
+    const routine = isPlainObject(metadata.routine) && 'after' in metadata.routine
+      ? { before: metadata.routine.before, after: metadata.routine.after }
+      : undefined;
+
+    return { steps, routine };
+  }
+
+  // Retrocompatibilidad: filas del fix anterior, solo pasos consolidados sin datos de la rutina.
   if (metadata.changeType === 'routine_step_batch' && Array.isArray(metadata.steps)) {
-    return metadata as unknown as RoutineStepBatchMetadata;
+    return { steps: metadata.steps as RoutineStepEntry[] };
   }
 
   // Retrocompatibilidad: filas legacy pre-consolidación, un paso por fila.
   if (metadata.changeType === 'routine_step') {
     return {
-      changeType: 'routine_step_batch',
       steps: [
         {
           stepId: (metadata.stepId as string | null) ?? null,
@@ -225,17 +238,27 @@ function buildRoutineStepDetails(
   metadata: unknown,
   stepsWithProducts: Set<string>
 ): AuditLogEntry['routineStepDetails'] {
-  const stepMetadata = getRoutineStepMetadata(metadata);
+  const batchMetadata = getRoutineBatchMetadata(metadata);
 
-  if (!stepMetadata) {
+  if (!batchMetadata || batchMetadata.steps.length === 0) {
     return null;
   }
 
-  return stepMetadata.steps.map((step) => ({
+  return batchMetadata.steps.map((step) => ({
     category: step.category,
     stepName: step.stepName,
     hasProducts: Boolean(step.stepId) && stepsWithProducts.has(step.stepId as string)
   }));
+}
+
+function buildRoutineChange(metadata: unknown): AuditLogEntry['routineChange'] {
+  const batchMetadata = getRoutineBatchMetadata(metadata);
+
+  if (!batchMetadata?.routine) {
+    return null;
+  }
+
+  return { before: batchMetadata.routine.before ?? null, after: batchMetadata.routine.after };
 }
 
 function deriveFallbackEntityLabel(entity: string, before: unknown, after: unknown): string | undefined {
