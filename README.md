@@ -251,13 +251,14 @@ Implementado:
 
 Implementado:
 
-- Emisor `recordAuditLog` (best-effort) consumido por rutinas, centros, suscripciones, y ahora también registro/edición de usuarios y especialistas (`auth.service.ts`, `profile.service.ts`, `specialists.registration.service.ts`, `admin.service.ts`).
+- Emisor `recordAuditLog` (best-effort) consumido por rutinas, centros, suscripciones, productos, test de piel, vínculo con especialista, y registro/edición de usuarios y especialistas (`auth.service.ts`, `profile.service.ts`, `specialists.registration.service.ts`, `admin.service.ts`, `quiz.controller.ts`, `centers.service.ts`, `products.service.ts`, `specialists.directory.service.ts`).
+- **Consolidación de auditoría de rutinas**: crear una rutina completa (nombre + horario + N pasos, vía el wizard) ya no genera una fila por cada llamada al backend — `recordRoutineAudit` en `routines.service.ts` fusiona todo en un solo registro mientras ocurra dentro de una ventana de 3 minutos, sin límite de cantidad de pasos.
 - Endpoint de lectura `GET /api/admin/audit-log`, filtrable por `entity`, búsqueda por nombre del actor (`actorName`, reemplaza a los filtros de ID que no funcionaban con texto libre) y rango de fechas, con paginación de 10 registros por página (`backend/src/modules/audit/`).
 - Respuesta enriquecida: nombre real del actor y de la entidad afectada (no UUIDs), datos sensibles como `owner_id` reemplazados por nombre.
-- Pantalla admin `/(tabs-admin)/audit-log` con filtros, meta grid (Actor/Perfil/Registro/Fecha) y detalle expandible distinto según la acción: eliminación (resumen), creación (campos del formulario) o edición (antes/después).
+- Pantalla admin `/(tabs-admin)/audit-log` con filtros, meta grid (Actor/Perfil/Registro/Fecha) y detalle expandible distinto según la acción: eliminación (resumen), creación (campos del formulario), edición (antes/después) y pasos de rutina consolidados (uno o varios, en la misma tarjeta que el resto del cambio).
 - Servicio frontend `services/audit.ts` y tipos compartidos `types/audit.ts`.
 - Dependencia nueva: `@react-native-community/datetimepicker` (filtros de fecha del panel).
-- Pendiente (ver tabla de verificación de seguridad en `docs/e3-contracts.md`): RLS de `audit_logs` (la migración actual no la habilita; el acceso hoy se controla solo vía `requireRole('center_admin')` en el backend), auditoría de login/cambio de rol explícito, y headers de seguridad tipo `helmet` (no configurados todavía en `backend/src/app.ts`).
+- Pendiente (ver tabla de verificación de seguridad en `docs/e3-contracts.md`): RLS de `audit_logs` (la migración actual no la habilita; el acceso hoy se controla solo vía `requireRole('center_admin')` en el backend), auditoría de login/cambio de rol explícito, headers de seguridad tipo `helmet` (no configurados todavía en `backend/src/app.ts`), y auditoría de suscripciones de centro / baja de cuentas (no existe el flujo de negocio todavía).
 
 ### Módulo 5 — Planes/Suscripciones y Métricas
 
