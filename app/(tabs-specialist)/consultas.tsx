@@ -3,9 +3,10 @@ import { useFocusEffect } from '@react-navigation/native';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import { useRouter, type Href } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Card } from '@/components/Card';
+import { LoadingState } from '@/components/LoadingState';
 import { colors } from '@/constants/colors';
 import { routes } from '@/constants/routes';
 import { prepareSupabaseRealtimeClient } from '@/services/supabase';
@@ -98,7 +99,7 @@ export default function SpecialistConsultationsScreen() {
         </View>
 
         {loading ? (
-          <StateMessage icon="hourglass-outline" message="Cargando consultas..." showSpinner />
+          <LoadingState message="Cargando consultas..." />
         ) : hasError ? (
           <StateMessage icon="alert-circle-outline" message="No pudimos cargar tus consultas. Intenta nuevamente." />
         ) : consultations.length === 0 ? (
@@ -178,16 +179,14 @@ function UnreadBadge({ count }: { count: number }) {
 
 function StateMessage({
   icon,
-  message,
-  showSpinner = false
+  message
 }: {
   icon: keyof typeof Ionicons.glyphMap;
   message: string;
-  showSpinner?: boolean;
 }) {
   return (
     <View style={styles.centeredState}>
-      {showSpinner ? <ActivityIndicator color={colors.primary} /> : <Ionicons color={colors.primaryDark} name={icon} size={32} />}
+      <Ionicons color={colors.primaryDark} name={icon} size={32} />
       <Text style={styles.infoText}>{message}</Text>
     </View>
   );

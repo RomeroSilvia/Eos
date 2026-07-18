@@ -2,7 +2,6 @@
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import {
-  ActivityIndicator,
   Image,
   Pressable,
   ScrollView,
@@ -12,6 +11,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Card } from '@/components/Card';
+import { LoadingState } from '@/components/LoadingState';
 import { colors } from '@/constants/colors';
 import {
   getCenters,
@@ -71,12 +71,7 @@ export default function AdminMetricsScreen() {
           </View>
         </View>
 
-        {isLoading ? (
-          <View style={styles.stateBox}>
-            <ActivityIndicator color={colors.primary} />
-            <Text style={styles.stateText}>Cargando centros...</Text>
-          </View>
-        ) : null}
+        {isLoading ? <LoadingState message="Cargando centros..." /> : null}
 
         {!isLoading && error ? (
           <View style={styles.stateBox}>

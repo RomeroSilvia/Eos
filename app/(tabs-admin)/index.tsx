@@ -2,7 +2,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import {
-  ActivityIndicator,
   Alert,
   Image,
   Modal,
@@ -15,6 +14,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Card } from '@/components/Card';
+import { LoadingState } from '@/components/LoadingState';
 import { colors } from '@/constants/colors';
 import { routes } from '@/constants/routes';
 import {
@@ -262,12 +262,7 @@ export default function AdminHomeScreen() {
           <Text style={styles.sectionSubtitle}>Revisa documentos, aprueba solicitudes y asigna centros</Text>
         </View>
 
-        {isLoading ? (
-          <View style={styles.stateBox}>
-            <ActivityIndicator color={colors.primary} />
-            <Text style={styles.stateText}>Cargando solicitudes...</Text>
-          </View>
-        ) : null}
+        {isLoading ? <LoadingState message="Cargando solicitudes..." /> : null}
 
         {!isLoading && error ? (
           <View style={styles.stateBox}>
@@ -434,12 +429,7 @@ export default function AdminHomeScreen() {
               </Text>
             ) : null}
 
-            {documentsLoading ? (
-              <View style={styles.documentsStateBox}>
-                <ActivityIndicator color={colors.primary} />
-                <Text style={styles.stateText}>Cargando documentos...</Text>
-              </View>
-            ) : null}
+            {documentsLoading ? <LoadingState message="Cargando documentos..." /> : null}
 
             {!documentsLoading && documentsError ? (
               <View style={styles.documentsStateBox}>

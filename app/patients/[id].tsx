@@ -1,9 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Card } from '@/components/Card';
+import { LoadingState } from '@/components/LoadingState';
 import { AppHeader } from '@/components/navigation/AppHeader';
 import { colors } from '@/constants/colors';
 import {
@@ -51,7 +52,7 @@ export default function PatientDetailScreen() {
       <AppHeader breadcrumb="Pacientes" fallbackRoute="/(tabs-specialist)" title="Detalle del paciente" />
 
       {loading ? (
-        <StateMessage icon="hourglass-outline" message="Cargando paciente..." showSpinner />
+        <LoadingState message="Cargando paciente..." />
       ) : hasError || !patient ? (
         <StateMessage icon="alert-circle-outline" message="No pudimos cargar este paciente." />
       ) : (
@@ -248,16 +249,14 @@ function EmptyBlock({ message }: { message: string }) {
 
 function StateMessage({
   icon,
-  message,
-  showSpinner = false
+  message
 }: {
   icon: keyof typeof Ionicons.glyphMap;
   message: string;
-  showSpinner?: boolean;
 }) {
   return (
     <View style={styles.centeredState}>
-      {showSpinner ? <ActivityIndicator color={colors.primary} /> : <Ionicons color={colors.primaryDark} name={icon} size={32} />}
+      <Ionicons color={colors.primaryDark} name={icon} size={32} />
       <Text style={styles.emptyText}>{message}</Text>
     </View>
   );

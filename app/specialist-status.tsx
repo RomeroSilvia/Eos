@@ -1,8 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useCallback, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Card } from '@/components/Card';
+import { LoadingState } from '@/components/LoadingState';
 import { AppHeader } from '@/components/navigation/AppHeader';
 import { colors } from '@/constants/colors';
 import { getSpecialistStatus, type SpecialistStatus } from '@/services/specialist';
@@ -76,10 +77,7 @@ export default function SpecialistStatusScreen() {
       <View style={styles.content}>
         <Card style={styles.statusCard}>
           {isLoading ? (
-            <View style={styles.loading}>
-              <ActivityIndicator color={colors.primary} />
-              <Text style={styles.description}>Consultando solicitud...</Text>
-            </View>
+            <LoadingState message="Consultando solicitud..." variant="inline" />
           ) : (
             <>
               <View style={[styles.iconCircle, { backgroundColor: content.background }]}>

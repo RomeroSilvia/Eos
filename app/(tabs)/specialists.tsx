@@ -2,10 +2,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
+import { LoadingState } from '@/components/LoadingState';
 import { colors } from '@/constants/colors';
 import { getFriendlyErrorMessage } from '@/services/api/client';
 import {
@@ -167,10 +168,7 @@ export default function SpecialistsScreen() {
         <Card style={styles.card}>
           <Text style={styles.cardTitle}>Resultados</Text>
           {loading ? (
-            <View style={styles.loadingRow}>
-              <ActivityIndicator color={colors.primary} />
-              <Text style={styles.description}>Buscando especialistas...</Text>
-            </View>
+            <LoadingState message="Buscando especialistas..." variant="inline" />
           ) : specialists.length === 0 ? (
             <Text style={styles.description}>No encontramos especialistas con esos filtros.</Text>
           ) : (
