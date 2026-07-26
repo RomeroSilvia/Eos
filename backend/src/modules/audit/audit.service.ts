@@ -47,6 +47,24 @@ export async function recordAuditLog(params: RecordAuditLogParams): Promise<void
   }
 }
 
+/**
+ * Wrappers de solo-lectura/escritura sobre audit_logs para el batching de
+ * auditoria de rutinas (ver routines.service.ts). La decision de cuando
+ * agrupar es logica de dominio de rutinas; estos wrappers solo evitan que
+ * routines.service.ts importe audit.repository directamente.
+ */
+export async function findRecentRoutineAuditBatch(params: {
+  routineId: string;
+  actorId: string;
+  sinceIso: string;
+}): Promise<AuditLogRow | null> {
+  return auditRepository.findRecentRoutineBatch(params);
+}
+
+export async function updateRoutineAuditBatch(id: string, metadata: unknown, createdAt: string): Promise<void> {
+  return auditRepository.updateRoutineBatch(id, metadata, createdAt);
+}
+
 export function isIsoDate(date: string): boolean {
   if (!ISO_DATE_PATTERN.test(date)) {
     return false;

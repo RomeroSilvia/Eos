@@ -1,52 +1,33 @@
 import type { RequestHandler } from 'express';
-import { supabase } from '../../config/supabase';
 import { ApiError } from '../../utils/ApiError';
 import { asyncHandler } from '../../utils/asyncHandler';
+import { env } from '../../config/env';
 import { productsService } from './products.service';
-
-const PRODUCT_IMAGES_BUCKET = 'product-images';
-
-async function uploadProductImage(
-  source: { buffer: Buffer; mimetype: string; ext: string },
-  userId: string
-): Promise<string | null> {
-  const path = `products/${userId}/${Date.now()}.${source.ext}`;
-  console.log('[products.controller] uploadProductImage — bucket:', PRODUCT_IMAGES_BUCKET, 'path:', path, 'bufferLen:', source.buffer.length, 'mimetype:', source.mimetype);
-  const { error } = await (supabase as any).storage
-    .from(PRODUCT_IMAGES_BUCKET)
-    .upload(path, source.buffer, { contentType: source.mimetype, upsert: true });
-  if (error) {
-    console.error('[uploadProductImage] Supabase storage error:', error.message);
-    return null;
-  }
-  const { data } = (supabase as any).storage.from(PRODUCT_IMAGES_BUCKET).getPublicUrl(path);
-  const publicUrl = (data as { publicUrl: string }).publicUrl ?? null;
-  console.log('[products.controller] uploadProductImage — URL pública:', publicUrl);
-  return publicUrl;
-}
 
 function resolveImageSource(
   file: Express.Multer.File | undefined,
   body: Record<string, unknown>
 ): { buffer: Buffer; mimetype: string; ext: string } | null {
-  console.log('[products.controller] resolveImageSource — req.file:', file ? { fieldname: file.fieldname, originalname: file.originalname, mimetype: file.mimetype, bufferLen: file.buffer?.length } : 'undefined');
-  console.log('[products.controller] resolveImageSource — body keys:', Object.keys(body), 'imageBase64Len:', typeof body.imageBase64 === 'string' ? body.imageBase64.length : 'N/A');
-
   if (file?.buffer?.length) {
     const ext = (file.originalname.split('.').pop() ?? 'jpg').toLowerCase();
-    console.log('[products.controller] usando req.file (multer), ext:', ext);
     return { buffer: file.buffer, mimetype: file.mimetype, ext };
   }
+
   const base64 = body.imageBase64;
   const mimeType = typeof body.imageMimeType === 'string' ? body.imageMimeType : 'image/jpeg';
   const filename = typeof body.imageFilename === 'string' ? body.imageFilename : 'product.jpg';
+
   if (typeof base64 === 'string' && base64.length > 0) {
     const buffer = Buffer.from(base64, 'base64');
     const ext = (filename.split('.').pop() ?? 'jpg').toLowerCase();
-    console.log('[products.controller] usando imageBase64, bufferLen:', buffer.length, 'ext:', ext);
+
+    if (env.nodeEnv === 'development') {
+      console.log('[products.controller] usando imageBase64, bufferLen:', buffer.length, 'ext:', ext);
+    }
+
     return { buffer, mimetype: mimeType, ext };
   }
-  console.log('[products.controller] sin imagen disponible → image_url será null');
+
   return null;
 }
 
@@ -83,7 +64,7 @@ export const createProduct: RequestHandler = asyncHandler(async (req, res) => {
   }
 
   const imgSource = resolveImageSource(req.file as Express.Multer.File | undefined, req.body as Record<string, unknown>);
-  const imageUrl = imgSource ? await uploadProductImage(imgSource, req.user.id) : null;
+  const imageUrl = imgSource ? await productsService.uploadImage(imgSource, req.user.id) : null;
 
   const product = await productsService.create({
     user_id: req.user.id,
@@ -105,7 +86,7 @@ export const updateProduct: RequestHandler = asyncHandler(async (req, res) => {
   }
 
   const imgSource = resolveImageSource(req.file as Express.Multer.File | undefined, req.body as Record<string, unknown>);
-  const imageUrl = imgSource ? await uploadProductImage(imgSource, req.user.id) : undefined;
+  const imageUrl = imgSource ? await productsService.uploadImage(imgSource, req.user.id) : undefined;
 
   const payload: Record<string, unknown> = {};
   if (typeof req.body.name === 'string') payload.name = req.body.name.trim();

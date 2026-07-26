@@ -1,7 +1,6 @@
 import { routinesRepository } from '../routines.repository';
 import { routinesService } from '../routines.service';
-import { recordAuditLog } from '../../audit/audit.service';
-import { auditRepository } from '../../audit/audit.repository';
+import { recordAuditLog, findRecentRoutineAuditBatch, updateRoutineAuditBatch } from '../../audit/audit.service';
 import type { ProductRow, RoutineRow, RoutineStepProductRow } from '../../../database/schema.types';
 
 jest.mock('../routines.repository', () => ({
@@ -27,19 +26,15 @@ jest.mock('../routines.repository', () => ({
 }));
 
 jest.mock('../../audit/audit.service', () => ({
-  recordAuditLog: jest.fn(async () => undefined)
-}));
-
-jest.mock('../../audit/audit.repository', () => ({
-  auditRepository: {
-    findRecentRoutineBatch: jest.fn(async () => null),
-    updateRoutineBatch: jest.fn(async () => undefined)
-  }
+  recordAuditLog: jest.fn(async () => undefined),
+  findRecentRoutineAuditBatch: jest.fn(async () => null),
+  updateRoutineAuditBatch: jest.fn(async () => undefined)
 }));
 
 const mockedRepo = jest.mocked(routinesRepository);
 const mockedRecordAuditLog = jest.mocked(recordAuditLog);
-const mockedAuditRepository = jest.mocked(auditRepository);
+const mockedFindRecentRoutineAuditBatch = jest.mocked(findRecentRoutineAuditBatch);
+const mockedUpdateRoutineAuditBatch = jest.mocked(updateRoutineAuditBatch);
 
 function makeRoutine(overrides: Partial<RoutineRow> = {}): RoutineRow {
   return {
@@ -383,7 +378,7 @@ describe('routinesService - ownership de rutinas y pasos', () => {
       created_at: '2026-01-01T00:00:00.000Z'
     };
 
-    mockedAuditRepository.findRecentRoutineBatch
+    mockedFindRecentRoutineAuditBatch
       .mockResolvedValueOnce(null)
       .mockResolvedValueOnce(existingBatchRow as any);
 
@@ -402,7 +397,7 @@ describe('routinesService - ownership de rutinas y pasos', () => {
     });
 
     expect(mockedRecordAuditLog).toHaveBeenCalledTimes(1);
-    expect(mockedAuditRepository.updateRoutineBatch).toHaveBeenCalledWith(
+    expect(mockedUpdateRoutineAuditBatch).toHaveBeenCalledWith(
       'audit-1',
       expect.objectContaining({
         changeType: 'routine_batch',
@@ -438,8 +433,8 @@ describe('routinesService - ownership de rutinas y pasos', () => {
     }));
 
     let storedRow: any = null;
-    mockedAuditRepository.findRecentRoutineBatch.mockImplementation(async () => storedRow);
-    mockedAuditRepository.updateRoutineBatch.mockImplementation(async (id, metadata, createdAt) => {
+    mockedFindRecentRoutineAuditBatch.mockImplementation(async () => storedRow);
+    mockedUpdateRoutineAuditBatch.mockImplementation(async (id, metadata, createdAt) => {
       storedRow = { ...storedRow, id, metadata, created_at: createdAt };
     });
     mockedRecordAuditLog.mockImplementation(async (params: any) => {

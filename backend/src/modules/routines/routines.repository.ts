@@ -29,6 +29,16 @@ export const routinesRepository = {
     return data ?? [];
   },
 
+  findActiveUserRoutineNames: async (): Promise<{ user_id: string; name: string }[]> => {
+    const { data, error } = await supabase
+      .from(TABLE_NAMES.routines)
+      .select('user_id, name')
+      .eq('is_active', true);
+
+    if (error) throw error;
+    return data ?? [];
+  },
+
   findById: async (routineId: string, userId: string): Promise<any> => {
     const { data, error } = await supabase
       .from(TABLE_NAMES.routines)

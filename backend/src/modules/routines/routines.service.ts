@@ -1,7 +1,6 @@
 import { routinesRepository } from './routines.repository';
 import { ApiError } from '../../utils/ApiError';
-import { recordAuditLog } from '../audit/audit.service';
-import { auditRepository } from '../audit/audit.repository';
+import { recordAuditLog, findRecentRoutineAuditBatch, updateRoutineAuditBatch } from '../audit/audit.service';
 import type {
   RoutineInsert,
   RoutineRow,
@@ -198,7 +197,7 @@ async function recordRoutineAudit(params: {
 }): Promise<void> {
   try {
     const sinceIso = new Date(Date.now() - ROUTINE_BATCH_WINDOW_MS).toISOString();
-    const existingBatch = await auditRepository.findRecentRoutineBatch({
+    const existingBatch = await findRecentRoutineAuditBatch({
       routineId: params.routineId,
       actorId: params.actorId,
       sinceIso
@@ -222,7 +221,7 @@ async function recordRoutineAudit(params: {
       };
       const existingSteps = Array.isArray(existingMetadata.steps) ? existingMetadata.steps : [];
 
-      await auditRepository.updateRoutineBatch(
+      await updateRoutineAuditBatch(
         existingBatch.id,
         {
           changeType: 'routine_batch',
