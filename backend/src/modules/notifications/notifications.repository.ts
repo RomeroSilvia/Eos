@@ -35,7 +35,7 @@ export const notificationsRepository = {
 
   deleteToken: async (userId: string): Promise<void> => {
     const { error } = await supabase
-      .from(TABLE_NAMES.pushTokens as any)
+      .from(TABLE_NAMES.pushTokens)
       .delete()
       .eq('user_id', userId);
 

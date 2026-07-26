@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { env } from '../../config/env';
 import { supabase } from '../../config/supabase';
+import { TABLE_NAMES } from '../../database/tableNames';
 import type { ProfileInsert, ProfileRow } from '../../database/schema.types';
 
 type SupabaseResult<TData> = {
@@ -61,7 +62,7 @@ export const authRepository = {
 
   findProfileById: async (userId: string): Promise<ProfileRow | null> => {
     const { data, error } = await supabase
-      .from('profiles')
+      .from(TABLE_NAMES.profiles)
       .select('*')
       .eq('id', userId)
       .maybeSingle();
@@ -72,7 +73,7 @@ export const authRepository = {
 
   upsertProfile: async (data: ProfileInsert): Promise<ProfileRow> => {
     const { data: profile, error } = await supabase
-      .from('profiles')
+      .from(TABLE_NAMES.profiles)
       .upsert(data, { onConflict: 'id' })
       .select('*')
       .single();
@@ -83,7 +84,7 @@ export const authRepository = {
 
   createProfile: async (data: ProfileInsert): Promise<ProfileRow> => {
     const { data: profile, error } = await supabase
-      .from('profiles')
+      .from(TABLE_NAMES.profiles)
       .insert(data)
       .select('*')
       .single();

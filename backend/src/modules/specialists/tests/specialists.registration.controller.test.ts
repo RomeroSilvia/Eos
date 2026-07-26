@@ -32,6 +32,7 @@ describe('specialistController', () => {
         title_photo_url: 'user-1/titulo/titulo.jpg',
         license_status: 'pending',
         rejection_reason: null,
+        center_id: null,
         created_at: '2026-01-01T00:00:00.000Z',
         updated_at: '2026-01-01T00:00:00.000Z'
       });

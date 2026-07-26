@@ -1,6 +1,7 @@
 import cron from 'node-cron';
 import { supabase } from '../config/supabase';
 import { notificationsService } from '../modules/notifications/notifications.service';
+import { TABLE_NAMES } from '../database/tableNames';
 
 // Horarios fijos en que se envían los recordatorios (HH:mm, hora del servidor)
 const REMINDER_TIMES = ['08:00', '21:00'];
@@ -17,7 +18,7 @@ async function sendRoutineReminders(): Promise<void> {
 
   // Todos los usuarios con al menos una rutina activa (independiente de si tienen push token)
   const { data, error } = await db
-    .from('routines')
+    .from(TABLE_NAMES.routines)
     .select('user_id, name')
     .eq('is_active', true);
 

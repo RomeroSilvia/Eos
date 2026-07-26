@@ -1,4 +1,5 @@
 import { supabase } from '../../config/supabase';
+import { TABLE_NAMES } from '../../database/tableNames';
 import type { ChatMessageInsert, ChatMessageRow } from './chat.types';
 
 type RelationRow = {
@@ -30,7 +31,7 @@ type MonthlyMessageCountInput = {
 export const chatRepository = {
   findActiveRelationByClientId: async (clientId: string): Promise<RelationRow | null> => {
     const { data, error } = await supabase
-      .from('client_specialist_relations')
+      .from(TABLE_NAMES.clientSpecialistRelations)
       .select('id, client_id, specialist_id, status')
       .eq('client_id', clientId)
       .eq('status', 'active')
@@ -42,7 +43,7 @@ export const chatRepository = {
 
   findRelationById: async (relationId: string): Promise<RelationRow | null> => {
     const { data, error } = await supabase
-      .from('client_specialist_relations')
+      .from(TABLE_NAMES.clientSpecialistRelations)
       .select('id, client_id, specialist_id, status')
       .eq('id', relationId)
       .maybeSingle();
@@ -53,7 +54,7 @@ export const chatRepository = {
 
   findMessages: async (relationId: string, limit: number, before?: string): Promise<ChatMessageRow[]> => {
     const query = supabase
-      .from('chat_messages')
+      .from(TABLE_NAMES.chatMessages)
       .select('*')
       .eq('relation_id', relationId)
       .order('created_at', { ascending: false })
@@ -70,7 +71,7 @@ export const chatRepository = {
 
   findMessageById: async (relationId: string, messageId: string): Promise<ChatMessageRow | null> => {
     const { data, error } = await supabase
-      .from('chat_messages')
+      .from(TABLE_NAMES.chatMessages)
       .select('*')
       .eq('id', messageId)
       .eq('relation_id', relationId)
@@ -85,7 +86,7 @@ export const chatRepository = {
     const db = supabase as any;
 
     const { data, error } = await db
-      .from('chat_messages')
+      .from(TABLE_NAMES.chatMessages)
       .insert(payload)
       .select()
       .single();
@@ -98,7 +99,7 @@ export const chatRepository = {
     const db = supabase as any;
 
     const { error } = await db
-      .from('chat_messages')
+      .from(TABLE_NAMES.chatMessages)
       .update({ read_at: new Date().toISOString() })
       .eq('relation_id', relationId)
       .is('read_at', null)
@@ -109,7 +110,7 @@ export const chatRepository = {
 
   deleteMessagesByRelationId: async (relationId: string): Promise<void> => {
     const { error } = await supabase
-      .from('chat_messages')
+      .from(TABLE_NAMES.chatMessages)
       .delete()
       .eq('relation_id', relationId);
 
@@ -145,7 +146,7 @@ export const chatRepository = {
     const db = supabase as any;
 
     const { data, error } = await db
-      .from('profiles')
+      .from(TABLE_NAMES.profiles)
       .select('id, full_name, email')
       .eq('id', userId)
       .maybeSingle();
@@ -156,7 +157,7 @@ export const chatRepository = {
 
   countMonthlyTextMessagesBySender: async (input: MonthlyMessageCountInput): Promise<number> => {
     const { count, error } = await supabase
-      .from('chat_messages')
+      .from(TABLE_NAMES.chatMessages)
       .select('id', { count: 'exact', head: true })
       .eq('sender_id', input.senderId)
       .eq('message_type', 'text')
@@ -169,7 +170,7 @@ export const chatRepository = {
 
   countMonthlyImageMessagesBySender: async (input: MonthlyMessageCountInput): Promise<number> => {
     const { count, error } = await supabase
-      .from('chat_messages')
+      .from(TABLE_NAMES.chatMessages)
       .select('id', { count: 'exact', head: true })
       .eq('sender_id', input.senderId)
       .eq('message_type', 'image')

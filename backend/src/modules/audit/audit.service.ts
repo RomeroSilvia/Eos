@@ -1,5 +1,6 @@
 import { supabase } from '../../config/supabase';
 import { ApiError } from '../../utils/ApiError';
+import { TABLE_NAMES } from '../../database/tableNames';
 import { auditRepository } from './audit.repository';
 import type { AuditLogEntry, AuditLogFilters, AuditLogPage, AuditLogRow, RecordAuditLogParams } from './audit.types';
 
@@ -26,7 +27,7 @@ export async function recordAuditLog(params: RecordAuditLogParams): Promise<void
       metadata: params.metadata ?? null
     };
 
-    const { error } = await db.from('audit_logs').insert(payload);
+    const { error } = await db.from(TABLE_NAMES.auditLogs).insert(payload);
 
     if (error) {
       // Best-effort by contract. Keep a debug trace in non-production only.

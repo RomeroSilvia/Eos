@@ -388,7 +388,7 @@ export const specialistsDirectoryRepository = {
     }
 
     const { data, error } = await supabase
-      .from(TABLE_NAMES.skinProfiles as 'skin_profiles')
+      .from(TABLE_NAMES.skinProfiles)
       .select('user_id, skin_type, age_range, main_goal, imperfections, routine_steps, created_at')
       .in('user_id', userIds)
       .order('created_at', { ascending: false });
@@ -416,7 +416,7 @@ export const specialistsDirectoryRepository = {
     const db = supabase as any;
 
     const { data, error } = await db
-      .from('skin_profiles')
+      .from(TABLE_NAMES.skinProfiles)
       .select('user_id, skin_type, created_at')
       .in('user_id', userIds)
       .order('created_at', { ascending: false });
@@ -476,7 +476,7 @@ export const specialistsDirectoryRepository = {
     const db = supabase as any;
 
     const { data, error } = await db
-      .from('chat_messages')
+      .from(TABLE_NAMES.chatMessages)
       .select('relation_id')
       .in('relation_id', relationIds)
       .neq('sender_id', readerId)

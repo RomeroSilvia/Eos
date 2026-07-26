@@ -1,25 +1,8 @@
-export type ChatMessageRow = {
-  id: string;
-  relation_id: string;
-  sender_id: string;
-  content: string;
-  message_type?: 'text' | 'image' | null;
-  media_path?: string | null;
-  media_mime_type?: string | null;
-  media_size?: number | null;
-  read_at: string | null;
-  created_at: string;
-};
+import type { Tables, TablesInsert } from '../../database/database.types';
 
-export type ChatMessageInsert = {
-  relation_id: string;
-  sender_id: string;
-  content: string;
-  message_type?: 'text' | 'image';
-  media_path?: string | null;
-  media_mime_type?: string | null;
-  media_size?: number | null;
-};
+export type ChatMessageRow = Tables<'chat_messages'>;
+
+export type ChatMessageInsert = Omit<TablesInsert<'chat_messages'>, 'id' | 'read_at' | 'created_at'>;
 
 export type ChatMessageResponse = Omit<ChatMessageRow, 'media_path'> & {
   mediaUrl?: string | null;

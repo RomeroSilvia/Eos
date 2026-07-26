@@ -2,6 +2,7 @@ import type { RequestHandler } from 'express';
 import { supabase } from '../../config/supabase';
 import { ApiError } from '../../utils/ApiError';
 import { recordAuditLog } from '../audit/audit.service';
+import { TABLE_NAMES } from '../../database/tableNames';
 
 type SaveQuizBody = {
   ageRange?: string;
@@ -34,7 +35,7 @@ export const saveQuiz: RequestHandler = async (req, res, next) => {
     };
 
     const { data: previousProfile } = await supabase
-      .from('skin_profiles')
+      .from(TABLE_NAMES.skinProfiles)
       .select('id, user_id, age_range, skin_type, imperfections, main_goal, routine_steps, created_at')
       .eq('user_id', req.user.id)
       .order('created_at', { ascending: false })
@@ -42,7 +43,7 @@ export const saveQuiz: RequestHandler = async (req, res, next) => {
       .maybeSingle();
 
     const { data, error } = await supabase
-      .from('skin_profiles')
+      .from(TABLE_NAMES.skinProfiles)
       .insert({
         user_id: req.user.id,
         age_range: normalizedBody.ageRange,
@@ -74,7 +75,7 @@ export const saveQuiz: RequestHandler = async (req, res, next) => {
 
     if (normalizedSkinType) {
       await supabase
-        .from('profiles')
+        .from(TABLE_NAMES.profiles)
         .update({ skin_type: normalizedSkinType })
         .eq('id', req.user.id);
     }
@@ -91,7 +92,7 @@ export const saveQuiz: RequestHandler = async (req, res, next) => {
 export const getQuizProfile: RequestHandler = async (req, res, next) => {
   try {
     const { data, error } = await supabase
-      .from('skin_profiles')
+      .from(TABLE_NAMES.skinProfiles)
       .select('id, user_id, age_range, skin_type, imperfections, main_goal, routine_steps, created_at')
       .eq('user_id', req.user.id)
       .order('created_at', { ascending: false })

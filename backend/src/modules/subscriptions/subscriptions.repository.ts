@@ -1,10 +1,11 @@
 import { supabase } from '../../config/supabase';
+import { TABLE_NAMES } from '../../database/tableNames';
 
 export const subscriptionsRepository = {
   findUserById: async (userId: string): Promise<any | null> => {
     const db = supabase as any;
     const { data, error } = await db
-      .from('profiles')
+      .from(TABLE_NAMES.profiles)
       .select('id, role')
       .eq('id', userId)
       .eq('role', 'user')
@@ -17,7 +18,7 @@ export const subscriptionsRepository = {
   findActiveCenterById: async (centerId: string): Promise<any | null> => {
     const db = supabase as any;
     const { data, error } = await db
-      .from('centers')
+      .from(TABLE_NAMES.centers)
       .select('id, is_active')
       .eq('id', centerId)
       .eq('is_active', true)
@@ -30,7 +31,7 @@ export const subscriptionsRepository = {
   findAdminCenterAssignment: async (adminUserId: string, centerId: string): Promise<any | null> => {
     const db = supabase as any;
     const { data, error } = await db
-      .from('center_admins')
+      .from(TABLE_NAMES.centerAdmins)
       .select('id, user_id, center_id')
       .eq('user_id', adminUserId)
       .eq('center_id', centerId)
@@ -43,7 +44,7 @@ export const subscriptionsRepository = {
   findCurrentSubscriptionByUserId: async (userId: string): Promise<any | null> => {
     const db = supabase as any;
     const { data, error } = await db
-      .from('subscriptions')
+      .from(TABLE_NAMES.subscriptions)
       .select('*, subscription_plans(*)')
       .eq('owner_type', 'user')
       .eq('owner_id', userId)
@@ -60,7 +61,7 @@ export const subscriptionsRepository = {
   searchUsersByEmail: async (emailQuery: string): Promise<any[]> => {
     const db = supabase as any;
     const { data, error } = await db
-      .from('profiles')
+      .from(TABLE_NAMES.profiles)
       .select('id, full_name, email, role')
       .eq('role', 'user')
       .not('email', 'is', null)
@@ -75,7 +76,7 @@ export const subscriptionsRepository = {
   listPlans: async (): Promise<any[]> => {
     const db = supabase as any;
     const { data, error } = await db
-      .from('subscription_plans')
+      .from(TABLE_NAMES.subscriptionPlans)
       .select('*')
       .order('created_at', { ascending: false });
 
@@ -86,7 +87,7 @@ export const subscriptionsRepository = {
   createPlan: async (payload: Record<string, unknown>): Promise<any> => {
     const db = supabase as any;
     const { data, error } = await db
-      .from('subscription_plans')
+      .from(TABLE_NAMES.subscriptionPlans)
       .insert(payload)
       .select('*')
       .single();
@@ -98,7 +99,7 @@ export const subscriptionsRepository = {
   updatePlan: async (planId: string, payload: Record<string, unknown>): Promise<any | null> => {
     const db = supabase as any;
     const { data, error } = await db
-      .from('subscription_plans')
+      .from(TABLE_NAMES.subscriptionPlans)
       .update(payload)
       .eq('id', planId)
       .select('*')
@@ -111,7 +112,7 @@ export const subscriptionsRepository = {
   findPlanById: async (planId: string): Promise<any | null> => {
     const db = supabase as any;
     const { data, error } = await db
-      .from('subscription_plans')
+      .from(TABLE_NAMES.subscriptionPlans)
       .select('*')
       .eq('id', planId)
       .maybeSingle();
@@ -123,7 +124,7 @@ export const subscriptionsRepository = {
   listSubscriptions: async (): Promise<any[]> => {
     const db = supabase as any;
     const { data, error } = await db
-      .from('subscriptions')
+      .from(TABLE_NAMES.subscriptions)
       .select('*, subscription_plans(*)')
       .order('created_at', { ascending: false });
 
@@ -134,7 +135,7 @@ export const subscriptionsRepository = {
   findSubscriptionById: async (subscriptionId: string): Promise<any | null> => {
     const db = supabase as any;
     const { data, error } = await db
-      .from('subscriptions')
+      .from(TABLE_NAMES.subscriptions)
       .select('*, subscription_plans(*)')
       .eq('id', subscriptionId)
       .maybeSingle();
@@ -146,7 +147,7 @@ export const subscriptionsRepository = {
   updateSubscriptionStatus: async (subscriptionId: string, payload: Record<string, unknown>): Promise<any | null> => {
     const db = supabase as any;
     const { data, error } = await db
-      .from('subscriptions')
+      .from(TABLE_NAMES.subscriptions)
       .update(payload)
       .eq('id', subscriptionId)
       .select('*, subscription_plans(*)')
@@ -159,7 +160,7 @@ export const subscriptionsRepository = {
   createSubscription: async (payload: Record<string, unknown>): Promise<any> => {
     const db = supabase as any;
     const { data, error } = await db
-      .from('subscriptions')
+      .from(TABLE_NAMES.subscriptions)
       .insert(payload)
       .select('*, subscription_plans(*)')
       .single();
@@ -171,7 +172,7 @@ export const subscriptionsRepository = {
   deactivateActiveSubscriptions: async (ownerType: string, ownerId: string): Promise<void> => {
     const db = supabase as any;
     const { error } = await db
-      .from('subscriptions')
+      .from(TABLE_NAMES.subscriptions)
       .update({
         status: 'canceled',
         updated_at: new Date().toISOString(),
