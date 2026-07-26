@@ -9,7 +9,7 @@ export class ApiError extends Error {
   }
 }
 
-function toValidHttpStatus(statusCode: number): number {
+export function toValidHttpStatus(statusCode: number): number {
   if (Number.isInteger(statusCode) && statusCode >= 100 && statusCode <= 599) {
     return statusCode;
   }

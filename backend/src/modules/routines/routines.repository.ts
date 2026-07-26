@@ -176,7 +176,11 @@ export const routinesRepository = {
       .select()
       .single();
 
-    if (error) return null;
+    if (error) {
+      if (isRowNotFoundError(error)) return null;
+      throw error;
+    }
+
     return updated;
   },
 
@@ -186,7 +190,8 @@ export const routinesRepository = {
       .delete()
       .eq('id', routineId);
 
-    return !error;
+    if (error) throw error;
+    return true;
   },
 
   findStepsByRoutineId: async (routineId: string): Promise<RoutineStepRow[]> => {
@@ -225,7 +230,11 @@ export const routinesRepository = {
       .select()
       .single();
 
-    if (error) return null;
+    if (error) {
+      if (isRowNotFoundError(error)) return null;
+      throw error;
+    }
+
     return updated;
   },
 
@@ -235,7 +244,8 @@ export const routinesRepository = {
       .delete()
       .eq('id', stepId);
 
-    return !error;
+    if (error) throw error;
+    return true;
   },
 
   findProductsByStepId: async (stepId: string): Promise<ProductRow[]> => {
@@ -306,6 +316,10 @@ export const routinesRepository = {
     return !error;
   }
 };
+
+function isRowNotFoundError(error: SupabaseLikeError): boolean {
+  return error.code === 'PGRST116';
+}
 
 function logSupabaseInsertError(
   table: 'routines' | 'routine_steps',
