@@ -1,4 +1,5 @@
 import { apiRequest } from '@/services/api/client';
+import { formatRoutineCount } from '@/utils/progress';
 import type {
   CalendarDayProgress,
   ProgressHistoryDay,
@@ -132,11 +133,6 @@ function mapProgressSummary(summary: BackendProgressSummary, history: ProgressHi
     ],
     historyPreview: buildHistoryPreview(history)
   };
-}
-
-function formatRoutineCount(completed: number, total: number): string {
-  const suffix = completed === 1 ? 'rutina completada' : 'rutinas completadas';
-  return `${completed} de ${total} ${suffix}`;
 }
 
 function getStreakSubtitle(currentStreak: number): string {

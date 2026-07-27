@@ -5,10 +5,9 @@ export function formatShortDate(date: Date): string {
   }).format(date);
 }
 
-export function getTodayIso(): string {
-  return new Date().toISOString().slice(0, 10);
-}
-
+// Comparan contra la hora local del dispositivo (no UTC): estas fechas
+// vienen de timestamps de notificaciones y se muestran tal como el
+// usuario las percibe en su reloj, no como fechas de calendario UTC.
 export function isToday(date: Date): boolean {
   const now = new Date();
   return date.toDateString() === now.toDateString();
