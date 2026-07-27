@@ -1,7 +1,6 @@
 # EOS — Plan de Trabajo Entrega 3
 
-> Documento ejecutable. Pensado para ser leído por agentes (Claude Code, Codex, Cursor) y por las 5 personas del equipo.
-> Sigue la convención ya establecida del repo: **división vertical por módulo** (pantalla + componentes + hook + tipos + servicio + backend + tests + docs), no por capa técnica. Ver `docs/division-modulos.md` y `AGENTS.md` para el precedente de E1/E2.
+> **Documento histórico de planificación** — describe el plan de trabajo de la Entrega 3. Para el estado vigente y verificado, ver `README.md`.
 
 ---
 

@@ -1,3 +1,5 @@
+> **Documento histórico de planificación** — es el plan técnico original de las tres entregas, escrito antes de empezar la Entrega 1 (visión aspiracional: contempla alternativas como NestJS/Firebase/Zustand que finalmente no se usaron). Puede no reflejar el estado actual del código. Para el estado vigente, ver `README.md` y `CLAUDE.md`.
+
 **Resumen Ejecutivo**  
 Eos debe construirse como una app móvil incremental, primero enfocada en el hábito diario de skincare y luego escalando hacia múltiples rutinas, autenticación, especialistas y gestión profesional.  
 El equipo de 5 integrantes debe trabajar por módulos verticales, donde cada persona implementa pantalla, lógica, datos, tipos, componentes, validaciones, documentación y pruebas de su flujo.  

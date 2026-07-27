@@ -1,6 +1,8 @@
 # EOS — Plan de Entrega 2
 **Aplicaciones Móviles · Grupo 4 · UTN-FRLP · 2026**
 
+> **Documento histórico de planificación** — describe el plan de trabajo de la Entrega 2, ya cerrada. Para el estado vigente, ver `README.md`.
+
 > Este archivo es el punto de entrada para Claude Code y GitHub Copilot.
 > Leerlo completo antes de tocar cualquier archivo del proyecto.
 
