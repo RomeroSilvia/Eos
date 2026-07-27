@@ -1,21 +1,7 @@
 import { ApiRequestError, apiRequest, getFriendlyErrorMessage } from '@/services/api/client';
+import type { PendingSpecialist, SpecialistDocuments } from '@/types/admin';
 
-export type PendingSpecialist = {
-  specialistProfileId: string;
-  userId: string;
-  fullName: string | null;
-  email: string | null;
-  specialty: 'dermatologo' | 'cosmetologo' | string;
-  licenseNumber: string;
-  licenseStatus: 'pending' | 'verified' | 'rejected' | string;
-  rejectionReason: string | null;
-  centerId: string | null;
-  center: {
-    id: string;
-    name: string;
-  } | null;
-  createdAt: string | null;
-};
+export type { PendingSpecialist, SpecialistDocument, SpecialistDocuments } from '@/types/admin';
 
 type PendingSpecialistsResponse = {
   specialists: PendingSpecialist[];
@@ -23,18 +9,6 @@ type PendingSpecialistsResponse = {
 
 type UpdateSpecialistStatusResponse = {
   specialist: PendingSpecialist;
-};
-
-export type SpecialistDocuments = {
-  dniPhoto: SpecialistDocument;
-  titlePhoto: SpecialistDocument;
-  expiresIn: number;
-};
-
-export type SpecialistDocument = {
-  available: boolean;
-  url: string | null;
-  errorMessage: string | null;
 };
 
 type SpecialistDocumentsResponse = {
