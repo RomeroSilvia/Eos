@@ -1,4 +1,4 @@
-import { ApiRequestError, apiRequest } from '@/services/api/client';
+import { ApiRequestError, apiRequest, hasTechnicalDetails } from '@/services/api/client';
 
 export type PendingSpecialist = {
   specialistProfileId: string;
@@ -124,20 +124,6 @@ function getAdminFriendlyMessage(status: number): string {
   if (status === 404) return 'No se encontró la solicitud.';
   if (status === 409) return 'La solicitud ya fue procesada.';
   return 'Ocurrió un error. Intentá nuevamente.';
-}
-
-function hasTechnicalDetails(message: string): boolean {
-  const normalized = message.toLowerCase();
-
-  return [
-    'stack',
-    'sql',
-    'supabase',
-    'storage.objects',
-    'exception',
-    'trace',
-    'error:'
-  ].some((pattern) => normalized.includes(pattern));
 }
 
 async function updateSpecialistStatus(

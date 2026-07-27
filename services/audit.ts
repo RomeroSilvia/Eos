@@ -1,4 +1,4 @@
-import { ApiRequestError, apiRequest } from '@/services/api/client';
+import { ApiRequestError, apiRequest, hasTechnicalDetails } from '@/services/api/client';
 import type { AuditLogFilters, AuditLogPage } from '@/types/audit';
 
 export async function getAuditLogs(filters: AuditLogFilters = {}): Promise<AuditLogPage> {
@@ -46,12 +46,4 @@ function getAuditLogFriendlyMessage(status: number): string {
   if (status === 401) return 'Tu sesión expiró. Iniciá sesión nuevamente.';
   if (status === 403) return 'No tenés permisos para ver el registro de auditoría.';
   return 'No pudimos cargar el registro de auditoría. Intentá nuevamente.';
-}
-
-function hasTechnicalDetails(message: string): boolean {
-  const normalized = message.toLowerCase();
-
-  return ['stack', 'sql', 'supabase', 'storage.objects', 'exception', 'trace', 'error:'].some((pattern) =>
-    normalized.includes(pattern)
-  );
 }

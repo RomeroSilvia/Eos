@@ -136,7 +136,7 @@ export async function apiRequest<TResponse>({ path, headers, ...options }: ApiRe
   return response.json() as Promise<TResponse>;
 }
 
-function hasTechnicalDetails(message: string): boolean {
+export function hasTechnicalDetails(message: string): boolean {
   const normalizedMessage = message.toLowerCase();
 
   return [

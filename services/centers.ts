@@ -1,4 +1,4 @@
-import { ApiRequestError, apiRequest } from '@/services/api/client';
+import { ApiRequestError, apiRequest, hasTechnicalDetails } from '@/services/api/client';
 import { Platform } from 'react-native';
 
 export type Center = {
@@ -150,22 +150,6 @@ export function getUpdateCenterErrorMessage(error: unknown): string {
   }
 
   return 'No pudimos editar el centro. Intenta nuevamente.';
-}
-
-function hasTechnicalDetails(message: string): boolean {
-  const normalized = message.toLowerCase();
-
-  return [
-    'stack',
-    'sql',
-    'supabase',
-    'center_admins',
-    'centers',
-    'trace',
-    'exception',
-    'error:',
-    'unexpected server error'
-  ].some((pattern) => normalized.includes(pattern));
 }
 
 async function appendImageToFormData(formData: FormData, uri: string): Promise<void> {
