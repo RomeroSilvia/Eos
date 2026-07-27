@@ -14,7 +14,7 @@ import { RemindersSection } from '@/components/RemindersSection';
 import { colors } from '@/constants/colors';
 import { useHome } from '@/hooks/useHome';
 import { getMySpecialist, type MySpecialist, type SpecialistSpecialty } from '@/services/specialist';
-import { formatStepCount } from '@/utils/format';
+import { formatStepCount } from '@/utils/progress';
 
 export default function HomeScreen() {
   const { summary, refreshSummary } = useHome();
