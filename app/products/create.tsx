@@ -72,7 +72,6 @@ export default function NewProductScreen() {
       });
       if (!result.canceled) {
         const asset = result.assets[0];
-        console.log('[products/create] picker OK', { uri: asset.uri, mimeType: asset.mimeType, fileSize: asset.fileSize, mode: isEditMode ? 'edit' : 'create' });
         setCompressingImage(true);
         try {
           const compressed = await ImageManipulator.manipulateAsync(
@@ -80,11 +79,10 @@ export default function NewProductScreen() {
             [{ resize: { width: 1280 } }],
             { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG, base64: true }
           );
-          console.log('[products/create] compresión OK', { uri: compressed.uri, base64Len: compressed.base64?.length ?? 0 });
           setImageUri(compressed.uri);
           setImageBase64(compressed.base64 ?? null);
         } catch (err) {
-          console.error('[products/create] compresión falló, usando URI original:', err);
+          if (__DEV__) console.error('[products/create] compresión falló, usando URI original:', err);
           setImageUri(asset.uri);
           setImageBase64(null);
         } finally {
@@ -92,13 +90,12 @@ export default function NewProductScreen() {
         }
       }
     } catch (error) {
-      console.error('[handlePickImage]', error);
+      if (__DEV__) console.error('[handlePickImage]', error);
     }
   };
 
   const handleSave = async () => {
     if (!name.trim()) return;
-    console.log('[products/create] handleSave', { mode: isEditMode ? 'edit' : 'create', hasImageUri: !!imageUri, hasBase64: !!imageBase64, base64Len: imageBase64?.length ?? 0 });
     setLoading(true);
     try {
       if (isEditMode) {

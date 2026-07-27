@@ -125,7 +125,7 @@ export default function Step3() {
               })
               .catch((error) => {
                 clearRoutineWizardTransition();
-                console.error(error);
+                if (__DEV__) console.error(error);
                 Alert.alert('Rutina', 'No pudimos guardar el tipo de rutina. Podés intentarlo nuevamente.');
               });
           }}

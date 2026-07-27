@@ -124,7 +124,7 @@ export default function QuizScreen() {
 
       router.replace('/resultados');
     } catch (error) {
-      console.error(error);
+      if (__DEV__) console.error(error);
       Alert.alert(
         'Error al guardar',
         error instanceof Error ? error.message : 'No pudimos guardar tus respuestas.'

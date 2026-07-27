@@ -47,7 +47,7 @@ export default function Step6Confirm() {
         setRoutine(data);
         logRoutineWizardWork('Step6 load routine summary', startedAt, { routineId });
       })
-      .catch((error) => console.error(error));
+      .catch((error) => { if (__DEV__) console.error(error); });
   }, [routineId]);
 
   const groupedSteps = useMemo(() => {

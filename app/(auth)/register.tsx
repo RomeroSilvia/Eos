@@ -203,7 +203,7 @@ export default function RegisterScreen() {
           });
         } catch (specialistError) {
           setIsSpecialistAccountReady(true);
-          if (process.env.NODE_ENV !== 'production') {
+          if (__DEV__) {
             console.warn('[register/specialist]', specialistError);
           }
 
@@ -223,7 +223,7 @@ export default function RegisterScreen() {
 
       router.push('/start-diagnosis');
     } catch (error) {
-      if (process.env.NODE_ENV !== 'production') {
+      if (__DEV__) {
         console.error(error);
       }
       const isDuplicateEmail = error instanceof ApiRequestError && error.status === 409;

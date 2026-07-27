@@ -57,7 +57,7 @@ export default function QuizResultsScreen() {
           mainGoal: data.skinProfile.main_goal ?? ''
         });
       } catch (error) {
-        console.error(error);
+        if (__DEV__) console.error(error);
         Alert.alert('Error', error instanceof Error ? error.message : 'No pudimos cargar tus resultados.');
       } finally {
         setIsLoading(false);

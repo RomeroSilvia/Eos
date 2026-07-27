@@ -58,7 +58,7 @@ export default function AddStep() {
         setDescription(currentStep.description ?? '');
         setSelectedProducts(existingProducts);
       } catch (e) {
-        console.error(e);
+        if (__DEV__) console.error(e);
       }
     };
 
@@ -104,7 +104,7 @@ export default function AddStep() {
       await refreshSteps(routineId);
       router.back();
     } catch (e) {
-      console.error(e);
+      if (__DEV__) console.error(e);
     } finally {
       setIsSaving(false);
     }

@@ -30,7 +30,7 @@ export default function SpecialistProfileScreen() {
       setStatus(null);
       setHasError(true);
 
-      if (process.env.NODE_ENV !== 'production') {
+      if (__DEV__) {
         console.warn('[specialist/profile]', getFriendlyErrorMessage(error));
       }
     } finally {

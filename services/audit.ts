@@ -20,7 +20,7 @@ export async function getAuditLogs(filters: AuditLogFilters = {}): Promise<Audit
 
 export function getAuditLogErrorMessage(error: unknown): string {
   if (error instanceof ApiRequestError) {
-    if (process.env.NODE_ENV !== 'production') {
+    if (__DEV__) {
       console.warn('[audit/api]', {
         status: error.status,
         body: error.body
@@ -34,7 +34,7 @@ export function getAuditLogErrorMessage(error: unknown): string {
     return getAuditLogFriendlyMessage(error.status);
   }
 
-  if (process.env.NODE_ENV !== 'production' && error instanceof Error) {
+  if (__DEV__ && error instanceof Error) {
     console.warn('[audit/api]', error.message);
   }
 

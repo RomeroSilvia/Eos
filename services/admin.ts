@@ -97,7 +97,7 @@ export async function assignSpecialistCenter(
 
 export function getAdminErrorMessage(error: unknown): string {
   if (error instanceof ApiRequestError) {
-    if (process.env.NODE_ENV !== 'production') {
+    if (__DEV__) {
       console.warn('[admin/api]', {
         status: error.status,
         body: error.body
@@ -111,7 +111,7 @@ export function getAdminErrorMessage(error: unknown): string {
     return getAdminFriendlyMessage(error.status);
   }
 
-  if (process.env.NODE_ENV !== 'production' && error instanceof Error) {
+  if (__DEV__ && error instanceof Error) {
     console.warn('[admin/api]', error.message);
   }
 

@@ -110,15 +110,15 @@ export async function apiRequest<TResponse>({ path, headers, ...options }: ApiRe
       parsed = undefined;
     }
 
-    if (response.status === 404) {
+    if (__DEV__ && response.status === 404) {
       const isRouteNotFound = typeof parsed?.message === 'string' && parsed.message.toLowerCase().includes('route not found');
       if (isRouteNotFound) {
-        console.error('URL NO EXISTE:', url);
+        console.error('[api/client] Ruta no encontrada:', url);
       }
     }
 
-    if (response.status !== 401 && response.status !== 403 && response.status !== 409) {
-      console.error('RESPONSE ERROR:', text);
+    if (__DEV__ && response.status !== 401 && response.status !== 403 && response.status !== 409) {
+      console.error('[api/client] Error de respuesta:', text);
     }
     throw new ApiClientError(
       response.status,

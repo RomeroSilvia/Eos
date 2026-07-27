@@ -108,13 +108,6 @@ export default function ChatScreen() {
   const sentToDeliveredTimerByIdRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
   const hasScrolledInitiallyRef = useRef(false);
   const previousLastMessageIdRef = useRef<string | null>(null);
-  const diagnosticsRef = useRef({
-    loadMessages: 0,
-    markAsRead: 0,
-    realtimeSubscriptions: 0,
-    refreshSingleMessage: 0,
-    messageBubbleRender: 0
-  });
 
   const scrollToLatestMessage = useCallback((animated = true, attempts = 1) => {
     const runScroll = (remainingAttempts: number) => {
@@ -235,11 +228,6 @@ export default function ChatScreen() {
     lastMarkAsReadAtRef.current = now;
     markAsReadInFlightRef.current = true;
 
-    if (__DEV__) {
-      diagnosticsRef.current.markAsRead += 1;
-      console.log('[chat:diagnostic] markAsRead', diagnosticsRef.current.markAsRead, nextRelationId);
-    }
-
     void markChatAsRead(nextRelationId)
       .catch(() => undefined)
       .finally(() => {
@@ -250,11 +238,6 @@ export default function ChatScreen() {
   const loadMessages = useCallback(async (nextRelationId?: string) => {
     const syncVersion = messageSyncVersionRef.current;
     setIsLoading(true);
-
-    if (__DEV__) {
-      diagnosticsRef.current.loadMessages += 1;
-      console.log('[chat:diagnostic] loadMessages', diagnosticsRef.current.loadMessages, nextRelationId ?? relationIdFromParams ?? 'auto');
-    }
 
     try {
       const response = await getChatMessages({ relationId: nextRelationId, limit: 50 });
@@ -418,11 +401,6 @@ export default function ChatScreen() {
     let isMounted = true;
     setIsRealtimeSubscribed(false);
 
-    if (__DEV__) {
-      diagnosticsRef.current.realtimeSubscriptions += 1;
-      console.log('[chat:diagnostic] realtimeSubscription', diagnosticsRef.current.realtimeSubscriptions, relationId);
-    }
-
     void (async () => {
       const supabase = await prepareSupabaseRealtimeClient();
 
@@ -458,11 +436,6 @@ export default function ChatScreen() {
             if (parsedPayload.kind === 'image' && !parsedPayload.url) {
               if (!refreshedMessageIdsRef.current.has(nextMessage.id)) {
                 refreshedMessageIdsRef.current.add(nextMessage.id);
-
-                if (__DEV__) {
-                  diagnosticsRef.current.refreshSingleMessage += 1;
-                  console.log('[chat:diagnostic] refreshSingleMessage', diagnosticsRef.current.refreshSingleMessage, nextMessage.id);
-                }
 
                 void refreshSingleMessageSilently(nextMessage.id, relationId);
               }
@@ -1072,13 +1045,6 @@ const ChatMessageBubble = memo(function ChatMessageBubble({
   message,
   parsed
 }: ChatMessageBubbleProps) {
-  const renderCountRef = useRef(0);
-
-  renderCountRef.current += 1;
-
-  if (__DEV__ && renderCountRef.current <= 5) {
-    console.log('[chat:diagnostic] MessageBubble render', message.id, renderCountRef.current);
-  }
 
   const visualStatus = isMine
     ? (message.read_at ? 'read' : (messageStatus ?? 'delivered'))

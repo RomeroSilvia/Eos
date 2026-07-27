@@ -90,7 +90,7 @@ export async function getPostLoginRoute(profile: Pick<UserProfile, 'role'>): Pro
 
 export function getLoginErrorMessage(error: unknown): string {
   if (error instanceof ApiRequestError) {
-    if (process.env.NODE_ENV !== 'production') {
+    if (__DEV__) {
       console.warn('[auth/login]', {
         status: error.status,
         body: error.body
@@ -104,7 +104,7 @@ export function getLoginErrorMessage(error: unknown): string {
     return 'No pudimos completar la accion. Intenta nuevamente.';
   }
 
-  if (process.env.NODE_ENV !== 'production' && error instanceof Error) {
+  if (__DEV__ && error instanceof Error) {
     console.warn('[auth/login]', error.message);
   }
 
@@ -143,7 +143,7 @@ export async function logout(): Promise<void> {
   try {
     await unregisterPushToken();
   } catch (error) {
-    if (process.env.NODE_ENV !== 'production') {
+    if (__DEV__) {
       console.warn('[auth/logout] No se pudieron limpiar las notificaciones.', error);
     }
   }

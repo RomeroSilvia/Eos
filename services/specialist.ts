@@ -456,7 +456,7 @@ async function getStoredToken(): Promise<string | null> {
 }
 
 async function logBackendErrorInDevelopment(response: Response): Promise<void> {
-  if (process.env.NODE_ENV === 'production') {
+  if (!__DEV__) {
     return;
   }
 

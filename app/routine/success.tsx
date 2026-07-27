@@ -19,7 +19,7 @@ export default function SuccessScreen() {
 
     getRoutineById(routineId)
       .then(setRoutine)
-      .catch((error) => console.error(error));
+      .catch((error) => { if (__DEV__) console.error(error); });
   }, [routineId]);
 
   const stepsCount = routine?.routine_steps?.length ?? 0;

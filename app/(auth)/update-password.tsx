@@ -135,7 +135,7 @@ export default function UpdatePasswordScreen() {
 }
 
 async function logAuthResponseInDevelopment(response: Response, flow: string): Promise<void> {
-  if (process.env.NODE_ENV === 'production') {
+  if (!__DEV__) {
     return;
   }
 
@@ -147,7 +147,7 @@ async function logAuthResponseInDevelopment(response: Response, flow: string): P
 }
 
 function logAuthErrorInDevelopment(error: unknown, flow: string): void {
-  if (process.env.NODE_ENV !== 'production') {
+  if (__DEV__) {
     console.warn(`[auth/${flow}]`, error);
   }
 }

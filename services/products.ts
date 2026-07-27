@@ -35,7 +35,6 @@ function getFilename(uri: string): string {
 async function appendImageToFormData(formData: FormData, uri: string): Promise<void> {
   const type = getMimeType(uri);
   const name = getFilename(uri);
-  console.log('[products.service] appendImageToFormData', { uri, type, name, platform: Platform.OS });
 
   if (Platform.OS === 'web') {
     const response = await fetch(uri);
@@ -67,7 +66,7 @@ export async function getProducts(): Promise<Product[]> {
     const rows = await apiRequest<Record<string, unknown>[]>({ path: '/products', method: 'GET' });
     return rows.map(mapToProduct);
   } catch (error) {
-    console.error('[getProducts]', error);
+    if (__DEV__) console.error('[getProducts]', error);
     throw error instanceof Error ? error : new Error(`Error del servidor: ${String(error)}`);
   }
 }
@@ -79,7 +78,6 @@ export async function createProduct(data: {
   brand: ProductBrand;
 } & ProductImagePayload): Promise<Product> {
   try {
-    console.log('[products.service] createProduct', { name: data.name, hasUri: !!data.imageUri, hasBase64: !!data.imageBase64, base64Len: data.imageBase64?.length ?? 0 });
     const formData = new FormData();
     formData.append('name', data.name);
     formData.append('category', data.category);
@@ -91,17 +89,15 @@ export async function createProduct(data: {
     }
     appendBase64ImageToFormData(formData, data);
 
-    console.log('[products.service] enviando POST /products...');
     const res = await fetch(`${apiConfig.baseUrl}/products`, {
       method: 'POST',
       headers: await getMultipartAuthHeaders(),
       body: formData,
     });
-    console.log('[products.service] respuesta POST /products status:', res.status);
     if (!res.ok) throw new Error(await getErrorMessage(res, 'Error al crear producto'));
     return mapToProduct(await res.json() as Record<string, unknown>);
   } catch (error) {
-    console.error('[createProduct]', error);
+    if (__DEV__) console.error('[createProduct]', error);
     throw error instanceof Error ? error : new Error(`Error del servidor: ${String(error)}`);
   }
 }
@@ -113,7 +109,6 @@ export async function updateProduct(id: string, data: {
   brand?: ProductBrand;
 } & ProductImagePayload): Promise<Product> {
   try {
-    console.log('[products.service] updateProduct', { id, hasUri: !!data.imageUri, hasBase64: !!data.imageBase64, base64Len: data.imageBase64?.length ?? 0 });
     const formData = new FormData();
     if (data.name !== undefined) formData.append('name', data.name);
     if (data.category !== undefined) formData.append('category', data.category);
@@ -125,30 +120,26 @@ export async function updateProduct(id: string, data: {
     }
     appendBase64ImageToFormData(formData, data);
 
-    console.log('[products.service] enviando PATCH /products/' + id + '...');
     const res = await fetch(`${apiConfig.baseUrl}/products/${id}`, {
       method: 'PATCH',
       headers: await getMultipartAuthHeaders(),
       body: formData,
     });
-    console.log('[products.service] respuesta PATCH status:', res.status);
     if (!res.ok) throw new Error(await getErrorMessage(res, 'Error al actualizar producto'));
     return mapToProduct(await res.json() as Record<string, unknown>);
   } catch (error) {
-    console.error('[updateProduct]', error);
+    if (__DEV__) console.error('[updateProduct]', error);
     throw error instanceof Error ? error : new Error(`Error del servidor: ${String(error)}`);
   }
 }
 
 function appendBase64ImageToFormData(formData: FormData, data: ProductImagePayload): void {
   if (!data.imageBase64) {
-    console.log('[products.service] appendBase64ImageToFormData: sin base64, se omite');
     return;
   }
 
   const mimeType = data.imageMimeType ?? (data.imageUri ? getMimeType(data.imageUri) : 'image/jpeg');
   const filename = data.imageFilename ?? (data.imageUri ? getFilename(data.imageUri) : 'product.jpg');
-  console.log('[products.service] appendBase64ImageToFormData', { base64Len: data.imageBase64.length, mimeType, filename });
   formData.append('imageBase64', data.imageBase64);
   formData.append('imageMimeType', mimeType);
   formData.append('imageFilename', filename);
@@ -176,7 +167,7 @@ export async function deleteProduct(id: string): Promise<void> {
   try {
     await apiRequest<void>({ path: `/products/${id}`, method: 'DELETE' });
   } catch (error) {
-    console.error('[deleteProduct]', error);
+    if (__DEV__) console.error('[deleteProduct]', error);
     throw error instanceof Error ? error : new Error(`Error del servidor: ${String(error)}`);
   }
 }
@@ -193,7 +184,7 @@ export async function removeWithProtection(id: string): Promise<RemoveWithProtec
       };
     }
 
-    console.error('[removeWithProtection]', error);
+    if (__DEV__) console.error('[removeWithProtection]', error);
     throw error instanceof Error ? error : new Error(`Error del servidor: ${String(error)}`);
   }
 }
@@ -202,7 +193,7 @@ export async function forceRemove(id: string): Promise<void> {
   try {
     await apiRequest<void>({ path: `/products/${id}/force`, method: 'DELETE' });
   } catch (error) {
-    console.error('[forceRemove]', error);
+    if (__DEV__) console.error('[forceRemove]', error);
     throw error instanceof Error ? error : new Error(`Error del servidor: ${String(error)}`);
   }
 }
@@ -215,7 +206,7 @@ export async function replaceAndRemove(id: string, replacementProductId: string)
       body: JSON.stringify({ replacementProductId })
     });
   } catch (error) {
-    console.error('[replaceAndRemove]', error);
+    if (__DEV__) console.error('[replaceAndRemove]', error);
     throw error instanceof Error ? error : new Error(`Error del servidor: ${String(error)}`);
   }
 }
