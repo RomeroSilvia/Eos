@@ -26,6 +26,7 @@ import {
   type SpecialistDocumentImage,
   type SpecialistSpecialty
 } from '@/services/specialist';
+import { isValidPassword, PASSWORD_REQUIREMENTS_TEXT } from '@/utils/password';
 
 const specialtyOptions: { label: string; value: SpecialistSpecialty }[] = [
   { label: 'Dermatologo/a', value: 'dermatologo' },
@@ -672,8 +673,8 @@ function validateRegister(values: {
 
     if (!values.password) {
       nextErrors.password = 'La contrasena es obligatoria.';
-    } else if (values.password.length < 6) {
-      nextErrors.password = 'La contrasena debe tener al menos 6 caracteres.';
+    } else if (!isValidPassword(values.password)) {
+      nextErrors.password = PASSWORD_REQUIREMENTS_TEXT;
     }
 
     if (!values.confirmPassword) {

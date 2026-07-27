@@ -14,6 +14,7 @@ import { areNotificationsEnabled, setNotificationsEnabled } from '@/services/not
 import { updateProfile } from '@/services/profile';
 import { cancelMySubscription, getMySubscription, type Subscription } from '@/services/subscriptions';
 import { getFriendlyErrorMessage } from '@/services/api/client';
+import { isValidPassword, PASSWORD_REQUIREMENTS_TEXT } from '@/utils/password';
 
 export default function SettingsScreen() {
   const router = useRouter();
@@ -103,8 +104,8 @@ export default function SettingsScreen() {
   }
 
   async function handleChangePassword() {
-    if (newPassword.length < 6) {
-      Alert.alert('Configuracion', 'La contrasena debe tener al menos 6 caracteres.');
+    if (!isValidPassword(newPassword)) {
+      Alert.alert('Configuracion', PASSWORD_REQUIREMENTS_TEXT);
       return;
     }
 
@@ -240,7 +241,7 @@ export default function SettingsScreen() {
           <TextInput
             autoCapitalize="none"
             onChangeText={setNewPassword}
-            placeholder="Minimo 6 caracteres"
+            placeholder="Minimo 8 caracteres, con mayuscula, numero y simbolo"
             secureTextEntry
             style={styles.input}
             value={newPassword}

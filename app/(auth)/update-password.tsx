@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors } from '@/constants/colors';
 import { ApiRequestError, getFriendlyAuthErrorMessage } from '@/services/api/client';
 import { updatePasswordWithRecoveryToken } from '@/services/auth';
+import { isValidPassword } from '@/utils/password';
 
 export default function UpdatePasswordScreen() {
   const router = useRouter();
@@ -122,15 +123,6 @@ export default function UpdatePasswordScreen() {
         <Text style={styles.buttonText}>{isSubmitting ? 'Guardando...' : 'Guardar Contraseña'}</Text>
       </Pressable>
     </SafeAreaView>
-  );
-}
-
-function isValidPassword(value: string) {
-  return (
-    value.length >= 8 &&
-    /\d/.test(value) &&
-    /[A-Z]/.test(value) &&
-    /[!@#$%^&*]/.test(value)
   );
 }
 
