@@ -1,5 +1,7 @@
 # Conversacion E3 - M1 Rutinas Avanzadas & Performance
 
+> **Documento histórico** — es un registro de la sesión de trabajo del módulo M1 de la Entrega 3, no documentación de referencia. Para el contrato técnico vigente del módulo, ver `docs/routine-wizard-performance.md`.
+
 ## Contexto
 
 Modulo trabajado: **M1 - Rutinas Avanzadas & Performance** para Entrega 3.

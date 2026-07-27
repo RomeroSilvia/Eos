@@ -1,5 +1,5 @@
 import cron from 'node-cron';
-import { supabase } from '../config/supabase';
+import { routinesRepository } from '../modules/routines/routines.repository';
 import { notificationsService } from '../modules/notifications/notifications.service';
 
 // Horarios fijos en que se envían los recordatorios (HH:mm, hora del servidor)
@@ -13,24 +13,21 @@ function currentHHmm(): string {
 }
 
 async function sendRoutineReminders(): Promise<void> {
-  const db = supabase as any;
-
   // Todos los usuarios con al menos una rutina activa (independiente de si tienen push token)
-  const { data, error } = await db
-    .from('routines')
-    .select('user_id, name')
-    .eq('is_active', true);
+  let data: { user_id: string; name: string }[];
 
-  if (error) {
-    console.error('[notification.job] Error consultando rutinas activas:', error.message);
+  try {
+    data = await routinesRepository.findActiveUserRoutineNames();
+  } catch (error) {
+    console.error('[notification.job] Error consultando rutinas activas:', error instanceof Error ? error.message : error);
     return;
   }
 
-  if (!data || data.length === 0) return;
+  if (data.length === 0) return;
 
   // Primera rutina activa por usuario (para incluir su nombre en la notificación)
   const userRoutineMap = new Map<string, string>();
-  for (const row of data as { user_id: string; name: string }[]) {
+  for (const row of data) {
     if (!userRoutineMap.has(row.user_id)) {
       userRoutineMap.set(row.user_id, row.name);
     }

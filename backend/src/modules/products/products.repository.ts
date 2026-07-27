@@ -2,6 +2,8 @@ import { supabase } from '../../config/supabase';
 import type { ProductInsert, ProductRow, ProductUpdate } from '../../database/schema.types';
 import { TABLE_NAMES } from '../../database/tableNames';
 
+const PRODUCT_IMAGES_BUCKET = 'product-images';
+
 type ProductUsageRow = {
   id: string;
   routine_steps: {
@@ -141,5 +143,18 @@ export const productsRepository = {
 
       throw updateError;
     }
+  },
+
+  uploadImage: async (path: string, buffer: Buffer, contentType: string): Promise<void> => {
+    const { error } = await (supabase as any).storage
+      .from(PRODUCT_IMAGES_BUCKET)
+      .upload(path, buffer, { contentType, upsert: true });
+
+    if (error) throw error;
+  },
+
+  getImagePublicUrl: (path: string): string | null => {
+    const { data } = (supabase as any).storage.from(PRODUCT_IMAGES_BUCKET).getPublicUrl(path);
+    return (data as { publicUrl: string } | null)?.publicUrl ?? null;
   }
 };

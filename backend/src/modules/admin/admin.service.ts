@@ -57,6 +57,11 @@ type UpdateSpecialistCenterBody = {
 };
 
 export const adminService = {
+  getHealth: () => ({
+    module: 'admin',
+    status: 'ready'
+  }),
+
   listSpecialists: async (): Promise<AdminSpecialistSummary[]> => {
     const specialists = await adminRepository.findAllSpecialists();
     const profiles = await adminRepository.findProfilesByIds(
@@ -159,7 +164,17 @@ export const adminService = {
       throw new ApiError(404, 'Especialista no encontrado.');
     }
 
-    // TODO: registrar auditoria best-effort cuando exista el modulo M4.
+    void recordAuditLog({
+      actorId: adminUserId,
+      actorRole: 'center_admin',
+      action: 'update',
+      entity: 'specialist_profile',
+      entityId: updated.id,
+      before: specialist,
+      after: updated,
+      metadata: { changeType: 'center_assignment' }
+    });
+
     const [profiles, centers] = await Promise.all([
       adminRepository.findProfilesByIds([updated.user_id]),
       adminRepository.findActiveCentersByIds(updated.center_id ? [updated.center_id] : [])

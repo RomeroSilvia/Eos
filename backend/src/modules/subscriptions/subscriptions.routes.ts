@@ -9,11 +9,14 @@ import {
   listAssignableUsers,
   listSubscriptionPlans,
   listSubscriptions,
+  subscriptionsHealth,
   updateSubscriptionStatus,
   updateSubscriptionPlan
 } from './subscriptions.controller';
 
 export const subscriptionsRouter = Router();
+
+subscriptionsRouter.get('/health', subscriptionsHealth);
 
 subscriptionsRouter.use(authenticate);
 

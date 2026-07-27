@@ -4,7 +4,7 @@ import { asyncHandler } from '../../utils/asyncHandler';
 import { notificationsService } from './notifications.service';
 
 export const notificationsHealth: RequestHandler = (_req, res) => {
-  res.json({ status: 'ok', module: 'notifications' });
+  res.json(notificationsService.getHealth());
 };
 
 export const registerToken: RequestHandler = asyncHandler(async (req, res) => {

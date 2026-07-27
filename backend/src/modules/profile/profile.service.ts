@@ -22,36 +22,28 @@ export async function updateMyProfile(input: UpdateProfileInput) {
 
   const fullName = normalizeFullName(input.fullName);
 
-  try {
-    const currentProfile = await profileRepository.findById(input.userId);
+  const currentProfile = await profileRepository.findById(input.userId);
 
-    if (!currentProfile) {
-      throw new ApiError(404, 'Perfil no encontrado.');
-    }
-
-    const updatedProfile = await profileRepository.updateById(input.userId, {
-      full_name: fullName,
-      updated_at: new Date().toISOString()
-    });
-
-    void recordAuditLog({
-      actorId: input.userId,
-      actorRole: 'user',
-      action: 'update',
-      entity: 'user_profile',
-      entityId: input.userId,
-      before: currentProfile,
-      after: updatedProfile
-    });
-
-    return updatedProfile;
-  } catch (error) {
-    if (error instanceof ApiError) {
-      throw error;
-    }
-
-    throw new ApiError(500, 'No pudimos actualizar tu perfil.');
+  if (!currentProfile) {
+    throw new ApiError(404, 'Perfil no encontrado.');
   }
+
+  const updatedProfile = await profileRepository.updateById(input.userId, {
+    full_name: fullName,
+    updated_at: new Date().toISOString()
+  });
+
+  void recordAuditLog({
+    actorId: input.userId,
+    actorRole: 'user',
+    action: 'update',
+    entity: 'user_profile',
+    entityId: input.userId,
+    before: currentProfile,
+    after: updatedProfile
+  });
+
+  return updatedProfile;
 }
 
 function normalizeFullName(value: unknown): string {

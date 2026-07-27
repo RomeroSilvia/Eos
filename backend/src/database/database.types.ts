@@ -146,10 +146,11 @@ export type Database = {
           user_id: string;
           specialty: string;
           license_number: string;
-          dni_photo_url: string;
-          title_photo_url: string;
+          dni_photo_url: string | null;
+          title_photo_url: string | null;
           license_status: string;
           rejection_reason: string | null;
+          center_id: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -157,21 +158,23 @@ export type Database = {
           id?: string;
           user_id: string;
           specialty: string;
-          license_number: string;
-          dni_photo_url: string;
-          title_photo_url: string;
+          license_number?: string;
+          dni_photo_url?: string | null;
+          title_photo_url?: string | null;
           license_status?: string;
           rejection_reason?: string | null;
+          center_id?: string | null;
           created_at?: string;
           updated_at?: string;
         };
         Update: {
           specialty?: string;
           license_number?: string;
-          dni_photo_url?: string;
-          title_photo_url?: string;
+          dni_photo_url?: string | null;
+          title_photo_url?: string | null;
           license_status?: string;
           rejection_reason?: string | null;
+          center_id?: string | null;
           updated_at?: string;
         };
         Relationships: [];
@@ -300,6 +303,237 @@ export type Database = {
           expo_token?: string;
           platform?: 'ios' | 'android' | null;
           updated_at?: string;
+        };
+        Relationships: [];
+      };
+
+      client_specialist_relations: {
+        Row: {
+          id: string;
+          client_id: string;
+          specialist_id: string;
+          status: 'active' | 'inactive';
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          client_id: string;
+          specialist_id: string;
+          status?: 'active' | 'inactive';
+          created_at?: string;
+        };
+        Update: {
+          status?: 'active' | 'inactive';
+        };
+        Relationships: [];
+      };
+
+      chat_messages: {
+        Row: {
+          id: string;
+          relation_id: string;
+          sender_id: string;
+          content: string;
+          message_type: 'text' | 'image';
+          media_path: string | null;
+          media_mime_type: string | null;
+          media_size: number | null;
+          read_at: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          relation_id: string;
+          sender_id: string;
+          content: string;
+          message_type?: 'text' | 'image';
+          media_path?: string | null;
+          media_mime_type?: string | null;
+          media_size?: number | null;
+          read_at?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          read_at?: string | null;
+        };
+        Relationships: [];
+      };
+
+      notification_history: {
+        Row: {
+          id: string;
+          user_id: string;
+          title: string;
+          body: string;
+          kind: string;
+          is_read: boolean;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          title: string;
+          body: string;
+          kind: string;
+          is_read?: boolean;
+          created_at?: string;
+        };
+        Update: {
+          is_read?: boolean;
+        };
+        Relationships: [];
+      };
+
+      subscription_plans: {
+        Row: {
+          id: string;
+          name: string;
+          price: number;
+          level: string;
+          features: Record<string, unknown>;
+          is_active: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          name: string;
+          price: number;
+          level: string;
+          features?: Record<string, unknown>;
+          is_active?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          name?: string;
+          price?: number;
+          level?: string;
+          features?: Record<string, unknown>;
+          is_active?: boolean;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+
+      subscriptions: {
+        Row: {
+          id: string;
+          owner_type: 'user' | 'center';
+          owner_id: string;
+          plan_id: string;
+          status: 'active' | 'pending' | 'canceled' | 'expired' | 'past_due';
+          started_at: string;
+          ends_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          owner_type: 'user' | 'center';
+          owner_id: string;
+          plan_id: string;
+          status?: 'active' | 'pending' | 'canceled' | 'expired' | 'past_due';
+          started_at?: string;
+          ends_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          status?: 'active' | 'pending' | 'canceled' | 'expired' | 'past_due';
+          ends_at?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+
+      centers: {
+        Row: {
+          id: string;
+          name: string;
+          address: string | null;
+          phone: string | null;
+          city: string | null;
+          province: string | null;
+          image_url: string | null;
+          is_active: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          name: string;
+          address?: string | null;
+          phone?: string | null;
+          city?: string | null;
+          province?: string | null;
+          image_url?: string | null;
+          is_active?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          name?: string;
+          address?: string | null;
+          phone?: string | null;
+          city?: string | null;
+          province?: string | null;
+          image_url?: string | null;
+          is_active?: boolean;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+
+      center_admins: {
+        Row: {
+          id: string;
+          user_id: string;
+          center_id: string;
+          role: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          center_id: string;
+          role?: string;
+          created_at?: string;
+        };
+        Update: {
+          role?: string;
+        };
+        Relationships: [];
+      };
+
+      audit_logs: {
+        Row: {
+          id: string;
+          actor_id: string | null;
+          actor_role: string | null;
+          action: string;
+          entity: string;
+          entity_id: string;
+          before: unknown;
+          after: unknown;
+          metadata: unknown;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          actor_id?: string | null;
+          actor_role?: string | null;
+          action: string;
+          entity: string;
+          entity_id: string;
+          before?: unknown;
+          after?: unknown;
+          metadata?: unknown;
+          created_at?: string;
+        };
+        Update: {
+          metadata?: unknown;
+          created_at?: string;
         };
         Relationships: [];
       };

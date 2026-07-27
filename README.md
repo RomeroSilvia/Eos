@@ -50,7 +50,7 @@ EXPO_PUBLIC_SUPABASE_URL=<tu-url-supabase>
 EXPO_PUBLIC_SUPABASE_ANON_KEY=<tu-anon-key>
 ```
 
-Con `EXPO_PUBLIC_USE_MOCKS=true` la app funciona sin backend, devolviendo datos hardcodeados.
+> **Nota:** el flag `EXPO_PUBLIC_USE_MOCKS` existe en `services/api/client.ts` pero hoy no está conectado a los servicios (ningún `service` de `services/` lo consulta) — la app siempre necesita el backend corriendo, independientemente del valor de esta variable.
 
 ### 2. Backend (`backend/`)
 
@@ -73,13 +73,24 @@ CORS_ORIGIN=http://<ip-de-tu-maquina>:8081
 
 ### Health checks
 
+Todos los módulos del backend exponen `GET /health` (público, sin autenticación):
+
 ```
 GET http://localhost:3000/api/health
+GET http://localhost:3000/api/auth/health
+GET http://localhost:3000/api/admin/health
+GET http://localhost:3000/api/centers/health
 GET http://localhost:3000/api/routines/health
 GET http://localhost:3000/api/products/health
 GET http://localhost:3000/api/progress/health
-GET http://localhost:3000/api/notifications/health
+GET http://localhost:3000/api/quiz/health
+GET http://localhost:3000/api/profile/health
+GET http://localhost:3000/api/specialist/health
 GET http://localhost:3000/api/specialists/health
+GET http://localhost:3000/api/chat/health
+GET http://localhost:3000/api/notifications/health
+GET http://localhost:3000/api/subscriptions/health
+GET http://localhost:3000/api/admin/audit-log/health
 ```
 
 ## Migraciones de base de datos — Entrega 2
@@ -187,6 +198,10 @@ Implementado:
 - Navegación diferenciada por rol: `user` → `(tabs)`, `specialist` verificado → `(tabs-specialist)`, `specialist` pendiente/rechazado → `/specialist-status`, `center_admin` → `(tabs-admin)`.
 - Actualización de tipo de piel desde el perfil sin necesidad de repetir el quiz completo.
 
+Pendiente:
+
+- **Apple Sign-In**: el botón "Continuar con Apple" existe en `app/(auth)/login.tsx` pero no tiene `onPress` conectado (es decorativo) y no hay ningún endpoint ni lógica en el backend para ese proveedor. Google Sign-In sí está implementado end-to-end (`POST /api/auth/google`).
+
 ### Módulo 2 — Push Notifications
 
 Implementado:
@@ -238,6 +253,28 @@ Implementado:
 
 ## Módulos verticales — Entrega 3
 
+### Módulo 1 — Rutinas Avanzadas y Performance
+
+Implementado:
+
+- Wizard de rutina (`app/routine/*`) optimizado: navegación entre pasos sin re-render en cascada, persistencia async/debounced.
+- Edición de rutina ya creada: agregar, editar y eliminar pasos (`routine-edit.tsx`, `Add-step.tsx`), respetando permisos si la rutina fue asignada por un especialista.
+- Endpoints `PATCH /api/routines/:id/steps/:stepId`, `POST /api/routines/:id/steps`, `DELETE /api/routines/:id/steps/:stepId`.
+- Instrumentación de performance documentada en `docs/routine-wizard-performance.md` (`useRoutineWizardProfiler`, script `npm run perf:routine-wizard`).
+- Integrado con auditoría (ver Módulo 4 más abajo).
+
+### Módulo 2 — Identidad Federada y Sesión
+
+**Pendiente** (no implementado):
+
+- **Google Sign-In**: el botón "Continuar con Google" en `app/(auth)/login.tsx` no tiene `onPress`. El backend sí expone `POST /api/auth/google`, pero `services/auth.ts` no lo llama ni integra el SDK `@react-native-google-signin/google-signin` (que está instalado como dependencia pero sin wiring).
+- **Apple Sign-In**: mismo caso, botón decorativo sin lógica ni endpoint backend.
+- **Refresh de token automático**: `services/api/client.ts` no tiene interceptor para refrescar sesión ante un 401 por token expirado.
+- **Auth guard global**: `app/_layout.tsx` no redirige a `/login` si no hay sesión activa en una ruta protegida.
+- **Notificaciones en tiempo real**: `app/notifications.tsx` y `useHasUnreadNotifications.ts` no están suscriptos a Supabase Realtime — requieren recargar la app o volver a foco para reflejar notificaciones nuevas.
+
+Ver el detalle de tareas originalmente planificadas en `docs/plan_entrega3.md` (documento histórico de planificación, no actualizado a estado real).
+
 ### Módulo 3 — Centros Estéticos y Tablero Admin
 
 Implementado:
@@ -273,17 +310,30 @@ Implementado:
 
 ## Documentación adicional
 
+Documentación vigente:
+
 | Archivo | Contenido |
 |---|---|
-| `docs/plan_entrega2.md` | Plan y estado actual de la Entrega 2 |
 | `docs/estructura-proyecto.md` | Estructura detallada y convenciones |
 | `docs/backend-setup.md` | Endpoints y setup del backend |
-| `docs/database-setup.md` | Schema de base de datos y pendientes |
+| `docs/database-setup.md` | Schema de base de datos y tablas |
 | `docs/env.md` | Variables de entorno completas |
 | `docs/division-modulos.md` | División de responsabilidades por integrante |
 | `docs/progress-module-contract.md` | Contrato técnico del módulo Progreso |
-| `docs/plan-tecnico.md` | Plan técnico de las tres entregas |
+| `docs/routine-wizard-performance.md` | Instrumentación de performance del wizard de rutinas (E3-M1) |
+| `docs/e3-contracts.md` | Contratos técnicos entre módulos de la Entrega 3, con estado real de cada tarea |
+| `docs/e3-supabase-security.md` | Estado real de RLS por tabla (Entrega 3) |
 | `CLAUDE.md` | Guía para Claude Code |
+
+Documentación histórica (planes de una entrega ya cerrada, no reflejan necesariamente el estado actual — ver banner al inicio de cada archivo):
+
+| Archivo | Contenido |
+|---|---|
+| `docs/plan-tecnico.md` | Plan técnico original de las tres entregas |
+| `docs/plan_entrega2.md` | Plan de trabajo de la Entrega 2 |
+| `docs/plan_entrega3.md` | Plan de trabajo de la Entrega 3 |
+| `docs/next-steps.md` | Pendientes registrados al cierre de la Entrega 2 |
+| `docs/conversacion_e3_M1.md` | Registro de sesión de trabajo del módulo M1 de la Entrega 3 |
 
 ## Supabase CLI
 

@@ -260,6 +260,13 @@ describe('adminService', () => {
       center_id: 'center-1'
     });
     expect(result.centerId).toBe('center-1');
+    expect(mockedRecordAuditLog).toHaveBeenCalledWith(expect.objectContaining({
+      actorId: 'admin-1',
+      actorRole: 'center_admin',
+      action: 'update',
+      entity: 'specialist_profile',
+      metadata: { changeType: 'center_assignment' }
+    }));
   });
 
   it('desasocia especialista con centerId null', async () => {

@@ -11,6 +11,7 @@ import type {
   RoutineStepRow,
   SpecialistProfileRow
 } from '../../database/schema.types';
+import type { CenterReference } from '../centers/centers.types';
 
 type ClientSpecialistRelationInsert = {
   client_id: string;
@@ -29,7 +30,7 @@ type ClientSpecialistRelationRow = {
 type SpecialistWithProfile = {
   profile: Pick<ProfileRow, 'id' | 'full_name' | 'role'>;
   specialistProfile: Pick<SpecialistProfileRow, 'specialty' | 'license_status'> & {
-    center: CenterSummary | null;
+    center: CenterReference | null;
   };
 };
 
@@ -38,14 +39,14 @@ type VerifiedSpecialistProfile = SpecialistWithProfile;
 type SpecialistWithPrivateProfile = {
   profile: Pick<ProfileRow, 'id' | 'full_name' | 'email' | 'role'>;
   specialistProfile: Pick<SpecialistProfileRow, 'specialty' | 'license_status'> & {
-    center: CenterSummary | null;
+    center: CenterReference | null;
   };
 };
 
 type ActiveRelationWithSpecialist = Pick<ClientSpecialistRelationRow, 'id' | 'client_id' | 'specialist_id' | 'status'> & {
   specialist: Pick<ProfileRow, 'id' | 'full_name' | 'email'> | null;
   specialistProfile: (Pick<SpecialistProfileRow, 'specialty' | 'license_status'> & {
-    center: CenterSummary | null;
+    center: CenterReference | null;
   }) | null;
 };
 
@@ -56,16 +57,6 @@ type ClientProfileRow = Pick<ProfileRow, 'id' | 'full_name' | 'email' | 'skin_ty
 type PatientRelationRow = Pick<ClientSpecialistRelationRow, 'id' | 'client_id' | 'specialist_id' | 'status' | 'created_at'>;
 
 type SpecialistProfileIdentity = Pick<SpecialistProfileRow, 'id' | 'user_id'>;
-
-type CenterSummary = {
-  id: string;
-  name: string;
-  address?: string | null;
-  city?: string | null;
-  province?: string | null;
-  phone?: string | null;
-  imageUrl?: string | null;
-};
 
 type SpecialistProfileWithCenterId = Pick<SpecialistProfileRow, 'user_id' | 'specialty' | 'license_status'> & {
   center_id?: string | null;
@@ -230,7 +221,7 @@ export const specialistsDirectoryRepository = {
 
   findSpecialistProfileByUserId: async (
     userId: string
-  ): Promise<(Pick<SpecialistProfileRow, 'specialty' | 'license_status'> & { center: CenterSummary | null }) | null> => {
+  ): Promise<(Pick<SpecialistProfileRow, 'specialty' | 'license_status'> & { center: CenterReference | null }) | null> => {
     const data = await specialistsSharedRepository.findSpecialistProfileByUserId(userId);
 
     if (data) {
@@ -257,7 +248,7 @@ export const specialistsDirectoryRepository = {
           specialty,
           license_status: 'pending',
           center: null
-        } as Pick<SpecialistProfileRow, 'specialty' | 'license_status'> & { center: CenterSummary | null };
+        } as Pick<SpecialistProfileRow, 'specialty' | 'license_status'> & { center: CenterReference | null };
       }
     } catch {
       return null;
@@ -266,7 +257,7 @@ export const specialistsDirectoryRepository = {
     return null;
   },
 
-  findActiveCentersByIds: async (centerIds: string[]): Promise<Map<string, CenterSummary>> => {
+  findActiveCentersByIds: async (centerIds: string[]): Promise<Map<string, CenterReference>> => {
     if (centerIds.length === 0) {
       return new Map();
     }
@@ -282,7 +273,7 @@ export const specialistsDirectoryRepository = {
     if (error) throw error;
 
     return new Map(
-      (data ?? []).map((center: CenterSummary) => [
+      (data ?? []).map((center: CenterReference) => [
         center.id,
         {
           id: center.id,
@@ -388,7 +379,7 @@ export const specialistsDirectoryRepository = {
     }
 
     const { data, error } = await supabase
-      .from(TABLE_NAMES.skinProfiles as 'skin_profiles')
+      .from(TABLE_NAMES.skinProfiles)
       .select('user_id, skin_type, age_range, main_goal, imperfections, routine_steps, created_at')
       .in('user_id', userIds)
       .order('created_at', { ascending: false });
@@ -416,7 +407,7 @@ export const specialistsDirectoryRepository = {
     const db = supabase as any;
 
     const { data, error } = await db
-      .from('skin_profiles')
+      .from(TABLE_NAMES.skinProfiles)
       .select('user_id, skin_type, created_at')
       .in('user_id', userIds)
       .order('created_at', { ascending: false });
@@ -476,7 +467,7 @@ export const specialistsDirectoryRepository = {
     const db = supabase as any;
 
     const { data, error } = await db
-      .from('chat_messages')
+      .from(TABLE_NAMES.chatMessages)
       .select('relation_id')
       .in('relation_id', relationIds)
       .neq('sender_id', readerId)

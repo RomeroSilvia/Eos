@@ -1,5 +1,6 @@
 import type { ProductInsert, ProductUpdate } from '../../database/schema.types';
 import { ApiError } from '../../utils/ApiError';
+import { env } from '../../config/env';
 import { productsRepository } from './products.repository';
 import { recordAuditLog } from '../audit/audit.service';
 
@@ -9,11 +10,28 @@ type ProductUsageDetail = {
   stepName: string;
 };
 
+type ImageSource = { buffer: Buffer; mimetype: string; ext: string };
+
 export const productsService = {
   getHealth: () => ({
     module: 'products',
     status: 'ready'
   }),
+
+  uploadImage: async (source: ImageSource, userId: string): Promise<string | null> => {
+    const path = `products/${userId}/${Date.now()}.${source.ext}`;
+
+    try {
+      await productsRepository.uploadImage(path, source.buffer, source.mimetype);
+    } catch (error) {
+      if (env.nodeEnv === 'development') {
+        console.error('[products.service] Error subiendo imagen a Storage:', error);
+      }
+      return null;
+    }
+
+    return productsRepository.getImagePublicUrl(path);
+  },
 
   getByUser: (userId: string) => {
     return productsRepository.findAllByUserId(userId);

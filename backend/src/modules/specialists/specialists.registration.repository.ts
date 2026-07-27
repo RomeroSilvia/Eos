@@ -1,6 +1,7 @@
 import { supabase } from '../../config/supabase';
 import type { SpecialistProfileInsert, SpecialistProfileRow } from '../../database/schema.types';
 import { TABLE_NAMES } from '../../database/tableNames';
+import type { CenterReference } from '../centers/centers.types';
 
 export type SpecialistLicenseStatus = 'pending' | 'rejected' | 'verified' | 'not_submitted';
 export type SpecialistSpecialty = 'dermatologo' | 'cosmetologo';
@@ -13,15 +14,7 @@ export type SpecialistStatus = {
   full_name: string | null;
   center_id: string | null;
   centerId: string | null;
-  center: {
-    id: string;
-    name: string;
-    address: string | null;
-    city: string | null;
-    province: string | null;
-    phone: string | null;
-    imageUrl: string | null;
-  } | null;
+  center: CenterReference | null;
 };
 
 export const specialistsRegistrationRepository = {

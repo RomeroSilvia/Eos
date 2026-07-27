@@ -1,6 +1,8 @@
 import { ApiError } from '../../utils/ApiError';
 import { recordAuditLog } from '../audit/audit.service';
 import { subscriptionsRepository } from './subscriptions.repository';
+import type { SubscriptionRowWithPlan } from './subscriptions.repository';
+import type { SubscriptionPlanRow } from '../../database/schema.types';
 import type {
   AssignSubscriptionInput,
   CreateSubscriptionPlanInput,
@@ -15,6 +17,11 @@ import type {
 const ALLOWED_STATUSES: SubscriptionStatus[] = ['active', 'pending', 'canceled', 'expired', 'past_due'];
 
 export const subscriptionsService = {
+  getHealth: () => ({
+    module: 'subscriptions',
+    status: 'ready'
+  }),
+
   /**
    * E3 contract: subscriptions.status is informative and must not gate other modules.
    */
@@ -167,7 +174,8 @@ export const subscriptionsService = {
     return rows.map((row) => ({
       id: row.id,
       fullName: row.full_name ?? null,
-      email: row.email
+      // el repository filtra .not('email', 'is', null), por lo que siempre viene poblado acá
+      email: row.email as string
     }));
   },
 
@@ -272,7 +280,7 @@ export const subscriptionsService = {
   }
 };
 
-function mapPlanRow(row: any): SubscriptionPlan {
+function mapPlanRow(row: SubscriptionPlanRow): SubscriptionPlan {
   return {
     id: row.id,
     name: row.name,
@@ -368,7 +376,7 @@ function normalizePlanFeatures(value: unknown): SubscriptionPlanFeatures {
   return normalized;
 }
 
-function mapSubscriptionRow(row: any): Subscription {
+function mapSubscriptionRow(row: SubscriptionRowWithPlan): Subscription {
   return {
     id: row.id,
     ownerType: row.owner_type,

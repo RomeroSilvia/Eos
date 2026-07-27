@@ -15,16 +15,21 @@ Eos/
 ├── constants/        Paleta de colores y rutas tipadas
 ├── utils/            Funciones auxiliares puras (fechas, formateo, calendario)
 ├── assets/           Recursos visuales locales
-├── docs/             Documentación académica y técnica
-├── database/         Schema SQL inicial
+├── scripts/          Scripts Node (perf del wizard, wrapper de Supabase CLI local)
+├── database/         Schema SQL histórico y policies RLS por módulo/entrega
+├── supabase/         Migraciones formales (fuente de verdad del schema) — supabase/migrations/
+├── agents/skills/     Skills de referencia por feature/epic para agentes de código
+├── docs/             Documentación técnica y académica
 └── backend/          Servidor Express independiente
     └── src/
         ├── app.ts
         ├── server.ts
         ├── config/       Variables de entorno y cliente Supabase
-        ├── database/     Tipos del schema, tableNames y database.types.ts
-        ├── middlewares/  auth, error, notFound
+        ├── database/     tableNames.ts, database.types.ts, schema.types.ts
+        ├── middlewares/  auth, requireRole, error, notFound
         ├── modules/      Módulos por dominio (ver abajo)
+        ├── jobs/         Cron de recordatorios push (node-cron)
+        ├── types/        Extensión de tipos de Express (req.user)
         └── utils/        ApiError y asyncHandler
 ```
 
@@ -34,119 +39,78 @@ Eos/
 app/
 ├── _layout.tsx               Layout raíz (Stack + GestureHandlerRootView)
 ├── index.tsx                 Redirección inicial → /landing
-├── landing.tsx               Bienvenida pre-auth (botones: registro, login)
+├── landing.tsx                Bienvenida pre-auth
 ├── start-diagnosis.tsx       Inicio del flujo de diagnóstico
 ├── start-quiz.tsx            Pantalla introductoria al quiz
-├── quiz.tsx                  Quiz de 5 preguntas (edad, piel, imperfecciones, objetivo, pasos)
+├── quiz.tsx                  Quiz de diagnóstico de piel
 ├── quiz-results.tsx          Resultados del perfil de piel
 ├── resultados.tsx            Redirección post-quiz
-├── (auth)/
-│   ├── _layout.tsx
-│   ├── login.tsx
-│   ├── register.tsx
-│   ├── forgot-password.tsx
-│   └── update-password.tsx
-├── (tabs)/
-│   ├── _layout.tsx           Tabs con 5 ítems e ícono activo/inactivo
-│   ├── home.tsx
-│   ├── routine.tsx
-│   ├── products.tsx
-│   ├── progress.tsx
-│   └── profile.tsx
-├── routine/
-│   ├── Create.tsx            Step 1 del wizard
-│   ├── Step2.tsx             Crea routineId en backend
-│   ├── Step3.tsx
-│   ├── Step4.tsx
-│   ├── Step5-products.tsx    Asocia productos a pasos
-│   ├── Step6-confirm.tsx
-│   ├── success.tsx
-│   ├── Add-step.tsx          Agregar paso a rutina existente
-│   └── routine-edit.tsx      Edición de rutina
+├── chat.tsx                  Chat en tiempo real con especialista
+├── notifications.tsx         Centro de notificaciones in-app
+├── settings.tsx               Configuración de perfil/contraseña/notificaciones
+├── specialist-status.tsx     Estado de matrícula para especialistas no verificados
+├── (auth)/                   Login, registro, recuperación de contraseña
+│   ├── login.tsx · register.tsx · forgot-password.tsx · update-password.tsx
+├── (tabs)/                   Tabs de usuario final (rol user)
+│   ├── home.tsx · routine.tsx · products.tsx · progress.tsx · specialists.tsx · profile.tsx
+├── (tabs-specialist)/        Tabs de especialista verificado
+│   ├── index.tsx · pacientes.tsx · rutinas.tsx · consultas.tsx · profile.tsx
+├── (tabs-admin)/             Tabs de administrador de centro
+│   ├── index.tsx · centers.tsx · plans.tsx · audit-log.tsx · metrics.tsx
+│   └── metrics/[centerId].tsx
+├── routine/                  Wizard de creación/edición de rutina
+│   ├── Create.tsx · Step2.tsx · Step3.tsx · Step4.tsx · Step5-products.tsx
+│   ├── Step6-confirm.tsx · success.tsx · Add-step.tsx · routine-edit.tsx
 ├── products/
-│   ├── index.tsx             Listado
-│   ├── [id].tsx              Detalle
-│   ├── create.tsx            Formulario de creación con imagen
-│   └── result.tsx            Confirmación de creación
-└── progress/
-    ├── stats.tsx             Estadísticas avanzadas
-    └── history/
-        ├── index.tsx         Historial de progreso
-        └── [date].tsx        Detalle de un día específico
+│   ├── index.tsx · [id].tsx · create.tsx · result.tsx
+├── progress/
+│   ├── stats.tsx
+│   └── history/index.tsx · history/[date].tsx
+├── specialists/
+│   └── [id].tsx               Perfil público de un especialista
+└── patients/
+    └── [id].tsx                Vista de un paciente (desde la mirada del especialista)
 ```
+
+La navegación por rol se resuelve en el `_layout.tsx` de cada route group (`(tabs)`, `(tabs-specialist)`, `(tabs-admin)`), que redirige según `profile.role` y, para especialistas, `license_status`. `app/_layout.tsx` (raíz) no implementa ningún guard de sesión global todavía — ver README, Entrega 3 / Módulo 2 (pendiente).
 
 ## Módulos del backend (backend/src/modules/)
 
-Cada módulo sigue el patrón: `routes → controller → service → repository`.
+Cada módulo sigue el patrón `routes → controller → service → repository` (con las excepciones que se indican).
 
 ```txt
 modules/
-├── auth/       register, login, googleLogin, forgotPassword, updatePassword
-├── quiz/       saveQuiz, getQuizProfile  (sin service/repository propio — usa Supabase directo en controller)
-├── routines/   CRUD rutinas, pasos, asociación paso-producto, logs diarios
-├── products/   CRUD productos con imagen (multer)
-├── progress/   summary, history, stats (solo lectura, calcula desde routine_logs)
-└── profile/    GET y PATCH del perfil de usuario
+├── auth/          register, login, googleLogin, forgotPassword, updatePassword
+├── profile/       GET/PATCH del perfil de usuario
+├── quiz/          saveQuiz, getQuizProfile — sin service/repository propio, accede a Supabase directo desde el controller
+├── routines/       CRUD rutinas, pasos, asociación paso-producto, logs diarios
+├── products/       CRUD productos con imagen (multer)
+├── progress/       summary, stats, history, detalle diario y de rutina (solo lectura, calcula desde routine_logs)
+├── specialists/    dos routers: specialists.routes.ts (directorio/vínculos, /api/specialists) y specialist.legacy.routes.ts (registro/estado, /api/specialist)
+├── chat/           mensajes con soporte de imagen, videollamada, Supabase Realtime
+├── notifications/  registro de push token, historial, marcar como leída
+├── admin/          aprobación de especialistas, asignación a centro
+├── centers/        CRUD de centros estéticos y su dashboard
+├── audit/          lectura de audit_logs con filtros y paginación
+└── subscriptions/  CRUD de planes y asignación de suscripciones
 ```
 
-Tests co-localizados en `modules/<modulo>/tests/*.test.ts`.
-
-## Rutas de la API (backend)
-
-```txt
-GET  /api/health
-
-POST /api/auth/register
-POST /api/auth/login
-POST /api/auth/google
-POST /api/auth/forgot-password
-POST /api/auth/reset-password
-POST /api/auth/update-password
-
-GET  /api/quiz/profile
-POST /api/quiz/save
-
-GET    /api/routines
-POST   /api/routines
-GET    /api/routines/:id
-PATCH  /api/routines/:id
-DELETE /api/routines/:id
-GET    /api/routines/:id/steps
-POST   /api/routines/:id/steps
-GET    /api/routines/steps/:stepId/products
-PUT    /api/routines/steps/:stepId/products
-POST   /api/routines/steps/:stepId/products
-DELETE /api/routines/steps/:stepId/products/:productId
-PATCH  /api/routines/steps/:stepId
-DELETE /api/routines/steps/:stepId
-
-GET    /api/products
-GET    /api/products/:id
-POST   /api/products             (multipart/form-data con imagen)
-PATCH  /api/products/:id
-DELETE /api/products/:id
-
-GET  /api/progress/summary
-GET  /api/progress/stats
-GET  /api/progress/history
-GET  /api/progress/history/:date
-
-GET   /api/profile
-PATCH /api/profile
-```
+Tests co-localizados en `modules/<modulo>/tests/*.test.ts`. Ver el listado completo de endpoints en `docs/backend-setup.md` y en el `README.md` de la raíz (sección de health checks).
 
 ## Capas del frontend
 
 ```txt
 screens (app/)
-  └── hooks/
-        useHome · useRoutine · useProducts · useProgress
-        useProfile · useProgressHistory · useProgressStats
-        └── services/
-              auth.ts · routines.ts · products.ts · progress.ts · notifications.ts
-              └── services/api/client.ts
-                    apiRequest<T> · ApiRequestError · getAuthHeader · apiConfig
+  └── hooks/ (useHome, useRoutine, useProducts, useProgress, useProfile,
+              useProgressHistory, useProgressStats, useRoutineWizard,
+              useHasUnreadNotifications, useRoutineWizardProfiler)
+        └── services/ (auth.ts, routines.ts, products.ts, progress.ts,
+                       specialist.ts, chat.ts, admin.ts, centers.ts,
+                       subscriptions.ts, audit.ts, notifications.ts, supabase.ts)
+              └── services/api/client.ts (apiRequest<T> · ApiRequestError · getAuthHeader · apiConfig)
 ```
+
+`services/supabase.ts` es un cliente Supabase aparte, usado solo para funcionalidades de Realtime (chat) — requiere `EXPO_PUBLIC_SUPABASE_URL`/`EXPO_PUBLIC_SUPABASE_ANON_KEY`. El resto de los servicios hablan con el backend propio vía `services/api/client.ts`.
 
 ## Convenciones
 
@@ -156,5 +120,5 @@ screens (app/)
 - Estilos con `StyleSheet.create` inline en cada componente.
 - Mensajes de error al usuario en español.
 - Backend: errores con `ApiError`, handlers envueltos en `asyncHandler`.
-- Backend: `req.user.id` inyectado por `auth.middleware.ts` (Bearer token validado por Supabase).
-- Tests en español, co-localizados en `modules/<modulo>/tests/`.
+- Backend: `req.user.id`/`req.user.role` inyectados por `auth.middleware.ts` (Bearer token validado contra Supabase Auth). No hay middleware de auth mock — desarrollo y producción siempre validan un token real.
+- Tests en español, co-localizados en `modules/<modulo>/tests/` (solo backend).

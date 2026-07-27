@@ -11,6 +11,8 @@ Eos usa Supabase PostgreSQL como base de datos.
 
 ## Tablas del schema
 
+Lista completa (18 tablas), verificada contra `backend/src/database/tableNames.ts`:
+
 | Tabla | Descripción |
 |---|---|
 | `profiles` | Perfil del usuario (nombre, email, skin_type, role) |
@@ -21,11 +23,16 @@ Eos usa Supabase PostgreSQL como base de datos.
 | `routine_step_products` | Asociación N:M entre pasos y productos |
 | `routine_logs` | Registro diario de completitud por rutina |
 | `routine_step_logs` | Registro diario de completitud por paso |
-| `specialist_profiles` | Datos del especialista: matrícula, especialidad, `license_status` |
-| `specialist_clients` | Relación especialista-paciente |
+| `specialist_profiles` | Datos del especialista: matrícula, especialidad, `license_status`, `center_id` |
+| `client_specialist_relations` | Relación especialista-paciente (vínculo activo/inactivo) |
 | `push_tokens` | Token Expo de cada dispositivo para envío de push notifications |
 | `notification_history` | Historial de notificaciones enviadas al usuario (fuente de verdad del backend) |
 | `chat_messages` | Mensajes del chat en tiempo real; soporta tipo `text` e `image` con columnas `media_path`, `media_mime_type`, `media_size`; publicada en `supabase_realtime` |
+| `centers` | Centros estéticos (Entrega 3, Módulo 3) |
+| `center_admins` | Vínculo entre un usuario `center_admin` y el/los centros que administra |
+| `subscription_plans` | Planes de suscripción (Entrega 3, Módulo 5) |
+| `subscriptions` | Suscripciones asignadas a un usuario o centro; `status` es informativo, no bloquea otros módulos |
+| `audit_logs` | Registro de auditoría transversal (Entrega 3, Módulo 4); ver estado de RLS abajo |
 
 ## Obtener credenciales
 
@@ -47,10 +54,13 @@ npx supabase gen types typescript --project-id <project-id> > backend/src/databa
 
 Los aliases de conveniencia (`RoutineRow`, `ProductInsert`, etc.) están en `backend/src/database/schema.types.ts` y deben actualizarse manualmente si cambian las tablas.
 
-## Pendientes antes de producción
+## Estado de RLS (Row Level Security)
 
-- **RLS (Row Level Security):** El schema tiene las políticas comentadas (`-- TODO: Enable RLS policies before production`). Activar y definir políticas por usuario autenticado antes de cualquier despliegue.
-- **Triggers `updated_at`:** Agregar triggers para actualizar automáticamente el campo `updated_at` en cada tabla (también comentados en el schema).
+Ver el detalle completo, tabla por tabla, en `docs/e3-supabase-security.md`. En resumen: `centers`, `center_admins`, `subscription_plans` y `subscriptions` tienen RLS activo (Entrega 3); `audit_logs` todavía no tiene RLS habilitado (el acceso se controla solo vía `requireRole('center_admin')` en el backend). Las policies de `centers`/`center_admins` están versionadas en `database/centers_rls_policies.sql`.
+
+## Otros pendientes
+
+- **Triggers `updated_at`:** Agregar triggers para actualizar automáticamente el campo `updated_at` en cada tabla (comentados en el schema original).
 - **Índices:** Crear índices en columnas de búsqueda frecuente como `user_id`, `routine_id` y `log_date` (comentados en el schema; confirmar patrones de acceso primero).
 - **Enums o constraints:** Definir constraints más estrictos para categorías de productos, roles y estados si se requiere integridad a nivel de base de datos.
 - **Seeds de desarrollo:** Considerar datos de prueba si el equipo necesita un estado inicial reproducible.

@@ -1,5 +1,7 @@
 # Next steps
 
+> **Documento histórico de planificación** — describe pendientes registrados al cierre de la Entrega 2 y puede no reflejar el estado actual del código. Para el estado vigente, ver `README.md`.
+
 ## Estado actual
 
 El proyecto tiene implementados los módulos principales con integración real a Supabase.

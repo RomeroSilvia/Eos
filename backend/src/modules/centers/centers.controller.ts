@@ -3,6 +3,10 @@ import { ApiError } from '../../utils/ApiError';
 import { asyncHandler } from '../../utils/asyncHandler';
 import { centersService } from './centers.service';
 
+export const centersHealth: RequestHandler = (_req, res) => {
+  res.json(centersService.getHealth());
+};
+
 export const listCenters: RequestHandler = asyncHandler(async (req, res) => {
   const centers = await centersService.listCenters(req.user.id);
   res.json({ centers });

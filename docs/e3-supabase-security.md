@@ -14,7 +14,7 @@ specialist_profiles.center_id
 
 ### RLS Intent
 
-`centers` y `center_admins` tienen RLS habilitado.
+`centers` y `center_admins` tienen RLS habilitado. Las policies estan versionadas en `database/centers_rls_policies.sql` (correr en el SQL editor de Supabase despues de la migracion inicial).
 
 Read access:
 
@@ -25,7 +25,10 @@ Write access:
 
 - Backend fuerza `authenticate` y `requireRole('center_admin')`.
 - Services backend validan acceso por `center_admins` antes de mutaciones.
-- Politicas SQL de escritura directa desde cliente no se abren.
+- Politicas SQL de escritura directa desde cliente no se abren: solo `service_role` (el que usa el backend) tiene policy de escritura, como red de seguridad si alguna vez el rol `service_role` del proyecto pierde el atributo `BYPASSRLS` (que deberia bypassear RLS de por si, sin depender de ninguna policy). Para confirmar si ese es el problema ante un error `"new row violates row-level security policy"` a pesar de usar la service_role key, correr en el SQL editor de Supabase:
+  ```sql
+  select rolname, rolbypassrls from pg_roles where rolname = 'service_role';
+  ```
 
 ### Specialist Assignment
 

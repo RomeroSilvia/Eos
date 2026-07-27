@@ -1,5 +1,7 @@
 import { supabase } from '../../config/supabase';
+import { env } from '../../config/env';
 import { ApiError } from '../../utils/ApiError';
+import { TABLE_NAMES } from '../../database/tableNames';
 import { auditRepository } from './audit.repository';
 import type { AuditLogEntry, AuditLogFilters, AuditLogPage, AuditLogRow, RecordAuditLogParams } from './audit.types';
 
@@ -7,6 +9,13 @@ const MAX_PAGE_SIZE = 100;
 const DEFAULT_PAGE_SIZE = 10;
 const ISO_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const ENTITY_NOT_FOUND_LABEL = 'Registro eliminado o no disponible';
+
+export function getAuditHealth() {
+  return {
+    module: 'audit',
+    status: 'ready'
+  };
+}
 
 /**
  * M4 contract: best-effort audit logging.
@@ -26,11 +35,11 @@ export async function recordAuditLog(params: RecordAuditLogParams): Promise<void
       metadata: params.metadata ?? null
     };
 
-    const { error } = await db.from('audit_logs').insert(payload);
+    const { error } = await db.from(TABLE_NAMES.auditLogs).insert(payload);
 
     if (error) {
       // Best-effort by contract. Keep a debug trace in non-production only.
-      if (process.env.NODE_ENV !== 'production') {
+      if (env.nodeEnv !== 'production') {
         console.warn('[audit] No se pudo registrar evento', {
           message: error.message,
           action: params.action,
@@ -40,10 +49,28 @@ export async function recordAuditLog(params: RecordAuditLogParams): Promise<void
       }
     }
   } catch (error) {
-    if (process.env.NODE_ENV !== 'production') {
+    if (env.nodeEnv !== 'production') {
       console.warn('[audit] Error inesperado al registrar evento', error);
     }
   }
+}
+
+/**
+ * Wrappers de solo-lectura/escritura sobre audit_logs para el batching de
+ * auditoria de rutinas (ver routines.service.ts). La decision de cuando
+ * agrupar es logica de dominio de rutinas; estos wrappers solo evitan que
+ * routines.service.ts importe audit.repository directamente.
+ */
+export async function findRecentRoutineAuditBatch(params: {
+  routineId: string;
+  actorId: string;
+  sinceIso: string;
+}): Promise<AuditLogRow | null> {
+  return auditRepository.findRecentRoutineBatch(params);
+}
+
+export async function updateRoutineAuditBatch(id: string, metadata: unknown, createdAt: string): Promise<void> {
+  return auditRepository.updateRoutineBatch(id, metadata, createdAt);
 }
 
 export function isIsoDate(date: string): boolean {

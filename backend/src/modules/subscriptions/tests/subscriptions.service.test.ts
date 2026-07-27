@@ -146,7 +146,13 @@ describe('subscriptionsService', () => {
     mockedRepository.findUserById.mockResolvedValue({ id: 'user-1', role: 'user' });
     mockedRepository.findPlanById.mockResolvedValue({
       id: 'plan-1',
-      is_active: true
+      name: 'Premium',
+      level: 'premium',
+      price: 25,
+      features: {},
+      is_active: true,
+      created_at: '2026-07-01T10:00:00.000Z',
+      updated_at: '2026-07-01T10:00:00.000Z'
     });
     mockedRepository.deactivateActiveSubscriptions.mockResolvedValue(undefined);
     mockedRepository.createSubscription.mockResolvedValue({

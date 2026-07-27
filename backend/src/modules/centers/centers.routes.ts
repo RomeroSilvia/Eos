@@ -4,6 +4,7 @@ import { authenticate } from '../../middlewares/auth.middleware';
 import { requireRole } from '../../middlewares/requireRole.middleware';
 import { ApiError } from '../../utils/ApiError';
 import {
+  centersHealth,
   createCenter,
   deleteCenter,
   getCenterDashboard,
@@ -25,6 +26,8 @@ const upload = multer({
 });
 
 export const centersRouter = Router();
+
+centersRouter.get('/health', centersHealth);
 
 centersRouter.use(authenticate);
 centersRouter.use(requireRole('center_admin'));

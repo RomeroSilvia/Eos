@@ -1,10 +1,22 @@
 import { supabase } from '../../config/supabase';
+import { TABLE_NAMES } from '../../database/tableNames';
+import type { ProfileRow, SubscriptionPlanRow, SubscriptionRow } from '../../database/schema.types';
+import type { CenterAdminRow, CenterRow } from '../centers/centers.types';
+
+export type SubscriptionRowWithPlan = SubscriptionRow & {
+  subscription_plans: SubscriptionPlanRow | null;
+};
+
+type ProfileForAssignment = Pick<ProfileRow, 'id' | 'role'>;
+type CenterForAssignment = Pick<CenterRow, 'id' | 'is_active'>;
+type CenterAdminAssignment = Pick<CenterAdminRow, 'id' | 'user_id' | 'center_id'>;
+type AssignableUser = Pick<ProfileRow, 'id' | 'full_name' | 'email' | 'role'>;
 
 export const subscriptionsRepository = {
-  findUserById: async (userId: string): Promise<any | null> => {
+  findUserById: async (userId: string): Promise<ProfileForAssignment | null> => {
     const db = supabase as any;
     const { data, error } = await db
-      .from('profiles')
+      .from(TABLE_NAMES.profiles)
       .select('id, role')
       .eq('id', userId)
       .eq('role', 'user')
@@ -14,10 +26,10 @@ export const subscriptionsRepository = {
     return data ?? null;
   },
 
-  findActiveCenterById: async (centerId: string): Promise<any | null> => {
+  findActiveCenterById: async (centerId: string): Promise<CenterForAssignment | null> => {
     const db = supabase as any;
     const { data, error } = await db
-      .from('centers')
+      .from(TABLE_NAMES.centers)
       .select('id, is_active')
       .eq('id', centerId)
       .eq('is_active', true)
@@ -27,10 +39,10 @@ export const subscriptionsRepository = {
     return data ?? null;
   },
 
-  findAdminCenterAssignment: async (adminUserId: string, centerId: string): Promise<any | null> => {
+  findAdminCenterAssignment: async (adminUserId: string, centerId: string): Promise<CenterAdminAssignment | null> => {
     const db = supabase as any;
     const { data, error } = await db
-      .from('center_admins')
+      .from(TABLE_NAMES.centerAdmins)
       .select('id, user_id, center_id')
       .eq('user_id', adminUserId)
       .eq('center_id', centerId)
@@ -40,10 +52,10 @@ export const subscriptionsRepository = {
     return data ?? null;
   },
 
-  findCurrentSubscriptionByUserId: async (userId: string): Promise<any | null> => {
+  findCurrentSubscriptionByUserId: async (userId: string): Promise<SubscriptionRowWithPlan | null> => {
     const db = supabase as any;
     const { data, error } = await db
-      .from('subscriptions')
+      .from(TABLE_NAMES.subscriptions)
       .select('*, subscription_plans(*)')
       .eq('owner_type', 'user')
       .eq('owner_id', userId)
@@ -57,10 +69,10 @@ export const subscriptionsRepository = {
     return data ?? null;
   },
 
-  searchUsersByEmail: async (emailQuery: string): Promise<any[]> => {
+  searchUsersByEmail: async (emailQuery: string): Promise<AssignableUser[]> => {
     const db = supabase as any;
     const { data, error } = await db
-      .from('profiles')
+      .from(TABLE_NAMES.profiles)
       .select('id, full_name, email, role')
       .eq('role', 'user')
       .not('email', 'is', null)
@@ -72,10 +84,10 @@ export const subscriptionsRepository = {
     return data ?? [];
   },
 
-  listPlans: async (): Promise<any[]> => {
+  listPlans: async (): Promise<SubscriptionPlanRow[]> => {
     const db = supabase as any;
     const { data, error } = await db
-      .from('subscription_plans')
+      .from(TABLE_NAMES.subscriptionPlans)
       .select('*')
       .order('created_at', { ascending: false });
 
@@ -83,10 +95,10 @@ export const subscriptionsRepository = {
     return data ?? [];
   },
 
-  createPlan: async (payload: Record<string, unknown>): Promise<any> => {
+  createPlan: async (payload: Record<string, unknown>): Promise<SubscriptionPlanRow> => {
     const db = supabase as any;
     const { data, error } = await db
-      .from('subscription_plans')
+      .from(TABLE_NAMES.subscriptionPlans)
       .insert(payload)
       .select('*')
       .single();
@@ -95,10 +107,10 @@ export const subscriptionsRepository = {
     return data;
   },
 
-  updatePlan: async (planId: string, payload: Record<string, unknown>): Promise<any | null> => {
+  updatePlan: async (planId: string, payload: Record<string, unknown>): Promise<SubscriptionPlanRow | null> => {
     const db = supabase as any;
     const { data, error } = await db
-      .from('subscription_plans')
+      .from(TABLE_NAMES.subscriptionPlans)
       .update(payload)
       .eq('id', planId)
       .select('*')
@@ -108,10 +120,10 @@ export const subscriptionsRepository = {
     return data ?? null;
   },
 
-  findPlanById: async (planId: string): Promise<any | null> => {
+  findPlanById: async (planId: string): Promise<SubscriptionPlanRow | null> => {
     const db = supabase as any;
     const { data, error } = await db
-      .from('subscription_plans')
+      .from(TABLE_NAMES.subscriptionPlans)
       .select('*')
       .eq('id', planId)
       .maybeSingle();
@@ -120,10 +132,10 @@ export const subscriptionsRepository = {
     return data ?? null;
   },
 
-  listSubscriptions: async (): Promise<any[]> => {
+  listSubscriptions: async (): Promise<SubscriptionRowWithPlan[]> => {
     const db = supabase as any;
     const { data, error } = await db
-      .from('subscriptions')
+      .from(TABLE_NAMES.subscriptions)
       .select('*, subscription_plans(*)')
       .order('created_at', { ascending: false });
 
@@ -131,10 +143,10 @@ export const subscriptionsRepository = {
     return data ?? [];
   },
 
-  findSubscriptionById: async (subscriptionId: string): Promise<any | null> => {
+  findSubscriptionById: async (subscriptionId: string): Promise<SubscriptionRowWithPlan | null> => {
     const db = supabase as any;
     const { data, error } = await db
-      .from('subscriptions')
+      .from(TABLE_NAMES.subscriptions)
       .select('*, subscription_plans(*)')
       .eq('id', subscriptionId)
       .maybeSingle();
@@ -143,10 +155,13 @@ export const subscriptionsRepository = {
     return data ?? null;
   },
 
-  updateSubscriptionStatus: async (subscriptionId: string, payload: Record<string, unknown>): Promise<any | null> => {
+  updateSubscriptionStatus: async (
+    subscriptionId: string,
+    payload: Record<string, unknown>
+  ): Promise<SubscriptionRowWithPlan | null> => {
     const db = supabase as any;
     const { data, error } = await db
-      .from('subscriptions')
+      .from(TABLE_NAMES.subscriptions)
       .update(payload)
       .eq('id', subscriptionId)
       .select('*, subscription_plans(*)')
@@ -156,10 +171,10 @@ export const subscriptionsRepository = {
     return data ?? null;
   },
 
-  createSubscription: async (payload: Record<string, unknown>): Promise<any> => {
+  createSubscription: async (payload: Record<string, unknown>): Promise<SubscriptionRowWithPlan> => {
     const db = supabase as any;
     const { data, error } = await db
-      .from('subscriptions')
+      .from(TABLE_NAMES.subscriptions)
       .insert(payload)
       .select('*, subscription_plans(*)')
       .single();
@@ -171,7 +186,7 @@ export const subscriptionsRepository = {
   deactivateActiveSubscriptions: async (ownerType: string, ownerId: string): Promise<void> => {
     const db = supabase as any;
     const { error } = await db
-      .from('subscriptions')
+      .from(TABLE_NAMES.subscriptions)
       .update({
         status: 'canceled',
         updated_at: new Date().toISOString(),

@@ -1,4 +1,5 @@
 import { supabase } from '../../config/supabase';
+import { TABLE_NAMES } from '../../database/tableNames';
 import type {
   ProductRow,
   RoutineInsert,
@@ -20,7 +21,7 @@ type SupabaseLikeError = {
 export const routinesRepository = {
   findAllByUserId: async (userId: string): Promise<RoutineRow[]> => {
     const { data, error } = await supabase
-      .from('routines')
+      .from(TABLE_NAMES.routines)
       .select('*')
       .eq('user_id', userId);
 
@@ -28,9 +29,19 @@ export const routinesRepository = {
     return data ?? [];
   },
 
+  findActiveUserRoutineNames: async (): Promise<{ user_id: string; name: string }[]> => {
+    const { data, error } = await supabase
+      .from(TABLE_NAMES.routines)
+      .select('user_id, name')
+      .eq('is_active', true);
+
+    if (error) throw error;
+    return data ?? [];
+  },
+
   findById: async (routineId: string, userId: string): Promise<any> => {
     const { data, error } = await supabase
-      .from('routines')
+      .from(TABLE_NAMES.routines)
       .select(`
         *,
         routine_steps (
@@ -57,7 +68,7 @@ export const routinesRepository = {
     const stepIds = steps.map((s) => s.id);
 
     const { data: links } = await supabase
-      .from('routine_step_products')
+      .from(TABLE_NAMES.routineStepProducts)
       .select('step_id, product_id')
       .in('step_id', stepIds);
 
@@ -65,7 +76,7 @@ export const routinesRepository = {
 
     const productIds = [...new Set(links.map((l) => l.product_id))];
     const { data: products } = await supabase
-      .from('products')
+      .from(TABLE_NAMES.products)
       .select('*')
       .in('id', productIds);
 
@@ -93,7 +104,7 @@ export const routinesRepository = {
 
   findRawById: async (routineId: string): Promise<RoutineRow | null> => {
     const { data, error } = await supabase
-      .from('routines')
+      .from(TABLE_NAMES.routines)
       .select('*')
       .eq('id', routineId)
       .maybeSingle();
@@ -104,7 +115,7 @@ export const routinesRepository = {
 
   findRoutineByStepId: async (stepId: string): Promise<RoutineRow | null> => {
     const { data, error } = await supabase
-      .from('routine_steps')
+      .from(TABLE_NAMES.routineSteps)
       .select('routine_id')
       .eq('id', stepId)
       .maybeSingle();
@@ -117,7 +128,7 @@ export const routinesRepository = {
 
   findStepById: async (stepId: string): Promise<RoutineStepRow | null> => {
     const { data, error } = await supabase
-      .from('routine_steps')
+      .from(TABLE_NAMES.routineSteps)
       .select('*')
       .eq('id', stepId)
       .maybeSingle();
@@ -132,7 +143,7 @@ export const routinesRepository = {
     }
 
     const { data, error } = await supabase
-      .from('products')
+      .from(TABLE_NAMES.products)
       .select('*')
       .in('id', productIds);
 
@@ -142,12 +153,12 @@ export const routinesRepository = {
 
   create: async (data: RoutineInsert): Promise<RoutineRow | null> => {
     const { data: created, error, status, statusText } = await supabase
-      .from('routines')
+      .from(TABLE_NAMES.routines)
       .insert([data as any])
       .select();
 
     if (error) {
-      logSupabaseInsertError('routines', data, error, status, statusText);
+      logSupabaseInsertError(TABLE_NAMES.routines, data, error, status, statusText);
       throw error;
     }
 
@@ -159,28 +170,33 @@ export const routinesRepository = {
     data: RoutineUpdate
   ): Promise<RoutineRow | null> => {
     const { data: updated, error } = await supabase
-      .from('routines')
+      .from(TABLE_NAMES.routines)
       .update(data)
       .eq('id', routineId)
       .select()
       .single();
 
-    if (error) return null;
+    if (error) {
+      if (isRowNotFoundError(error)) return null;
+      throw error;
+    }
+
     return updated;
   },
 
   remove: async (routineId: string): Promise<boolean> => {
     const { error } = await supabase
-      .from('routines')
+      .from(TABLE_NAMES.routines)
       .delete()
       .eq('id', routineId);
 
-    return !error;
+    if (error) throw error;
+    return true;
   },
 
   findStepsByRoutineId: async (routineId: string): Promise<RoutineStepRow[]> => {
     const { data, error } = await supabase
-      .from('routine_steps')
+      .from(TABLE_NAMES.routineSteps)
       .select('*')
       .eq('routine_id', routineId)
       .order('step_order', { ascending: true });
@@ -191,13 +207,13 @@ export const routinesRepository = {
 
   createStep: async (data: RoutineStepInsert): Promise<RoutineStepRow | null> => {
     const { data: created, error, status, statusText } = await supabase
-      .from('routine_steps')
+      .from(TABLE_NAMES.routineSteps)
       .insert([data as any])
       .select()
       .single();
 
     if (error) {
-      logSupabaseInsertError('routine_steps', data, error, status, statusText);
+      logSupabaseInsertError(TABLE_NAMES.routineSteps, data, error, status, statusText);
       throw error;
     }
     return created;
@@ -208,28 +224,33 @@ export const routinesRepository = {
     data: RoutineStepUpdate
   ): Promise<RoutineStepRow | null> => {
     const { data: updated, error } = await supabase
-      .from('routine_steps')
+      .from(TABLE_NAMES.routineSteps)
       .update(data)
       .eq('id', stepId)
       .select()
       .single();
 
-    if (error) return null;
+    if (error) {
+      if (isRowNotFoundError(error)) return null;
+      throw error;
+    }
+
     return updated;
   },
 
   removeStep: async (stepId: string): Promise<boolean> => {
     const { error } = await supabase
-      .from('routine_steps')
+      .from(TABLE_NAMES.routineSteps)
       .delete()
       .eq('id', stepId);
 
-    return !error;
+    if (error) throw error;
+    return true;
   },
 
   findProductsByStepId: async (stepId: string): Promise<ProductRow[]> => {
     const { data: links, error: linksError } = await supabase
-      .from('routine_step_products')
+      .from(TABLE_NAMES.routineStepProducts)
       .select('product_id')
       .eq('step_id', stepId);
 
@@ -239,7 +260,7 @@ export const routinesRepository = {
     const productIds = links.map((l) => l.product_id);
 
     const { data: products, error: productsError } = await supabase
-      .from('products')
+      .from(TABLE_NAMES.products)
       .select('*')
       .in('id', productIds);
 
@@ -249,7 +270,7 @@ export const routinesRepository = {
 
   setStepProducts: async (stepId: string, productIds: string[]): Promise<void> => {
     const { error: deleteError } = await supabase
-      .from('routine_step_products')
+      .from(TABLE_NAMES.routineStepProducts)
       .delete()
       .eq('step_id', stepId);
 
@@ -259,7 +280,7 @@ export const routinesRepository = {
     const inserts = productIds.map((productId) => ({ step_id: stepId, product_id: productId }));
 
     const { error: insertError } = await supabase
-      .from('routine_step_products')
+      .from(TABLE_NAMES.routineStepProducts)
       .insert(inserts as any);
 
     if (insertError) throw insertError;
@@ -270,7 +291,7 @@ export const routinesRepository = {
     productId: string
   ): Promise<RoutineStepProductRow | null> => {
     const { data, error } = await supabase
-      .from('routine_step_products')
+      .from(TABLE_NAMES.routineStepProducts)
       .upsert(
         { step_id: stepId, product_id: productId },
         { onConflict: 'step_id,product_id' }
@@ -287,7 +308,7 @@ export const routinesRepository = {
     productId: string
   ): Promise<boolean> => {
     const { error } = await supabase
-      .from('routine_step_products')
+      .from(TABLE_NAMES.routineStepProducts)
       .delete()
       .eq('step_id', stepId)
       .eq('product_id', productId);
@@ -295,6 +316,10 @@ export const routinesRepository = {
     return !error;
   }
 };
+
+function isRowNotFoundError(error: SupabaseLikeError): boolean {
+  return error.code === 'PGRST116';
+}
 
 function logSupabaseInsertError(
   table: 'routines' | 'routine_steps',

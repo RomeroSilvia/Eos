@@ -223,7 +223,7 @@ export const chatService = {
 
 const MAX_MESSAGE_CONTENT_LENGTH = 1000;
 const IMAGE_MESSAGE_EMPTY_CONTENT = '__eos_chat_image__';
-const VIDEO_CALL_BASE_URL = process.env.VIDEO_CALL_BASE_URL ?? 'https://meet.jit.si';
+const VIDEO_CALL_BASE_URL = env.videoCallBaseUrl;
 
 type LegacyImagePayload = {
   kind: 'image';

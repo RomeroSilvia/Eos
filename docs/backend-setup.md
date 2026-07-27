@@ -23,24 +23,15 @@ npm run dev        # Desarrollo con hot reload
 npm run build      # Compilar TypeScript → dist/
 npm start          # Producción (requiere build previo)
 npm run typecheck  # Verificar tipos sin compilar
-npm test           # Todos los tests Jest
-npm test -- --testPathPattern=<modulo>   # Tests de un módulo específico
+npm test           # Todos los tests Jest (30 suites / 304 tests)
+npm test -- --testPathPatterns=<modulo>   # Tests de un módulo específico
 ```
 
 ## Endpoints
 
-### Health checks (públicos)
+Organización por módulo en `backend/src/modules/<modulo>/`. Todos los módulos exponen `GET /health` público (sin autenticación) — ver la lista completa en el `README.md` de la raíz.
 
-```
-GET /api/health
-GET /api/auth/health
-GET /api/routines/health
-GET /api/products/health
-GET /api/progress/health
-GET /api/profile/health
-```
-
-### Auth (públicos)
+### Auth — `/api/auth` (públicos, sin autenticación)
 
 ```
 POST /api/auth/register        { email, password, username, firstName, lastName, role }
@@ -51,14 +42,14 @@ POST /api/auth/reset-password  { email }
 POST /api/auth/update-password { newPassword, accessToken }
 ```
 
-### Quiz (requieren autenticación)
+### Quiz — `/api/quiz` (requieren autenticación)
 
 ```
 GET  /api/quiz/profile
 POST /api/quiz/save   { ageRange, skinType, imperfections, mainGoal, routineSteps }
 ```
 
-### Rutinas (requieren autenticación)
+### Rutinas — `/api/routines` (requieren autenticación)
 
 ```
 GET    /api/routines
@@ -76,30 +67,117 @@ PUT    /api/routines/steps/:stepId/products
 DELETE /api/routines/steps/:stepId/products/:productId
 ```
 
-### Productos (requieren autenticación)
+### Productos — `/api/products` (requieren autenticación)
 
 ```
 GET    /api/products
 GET    /api/products/:id
-POST   /api/products      (multipart/form-data — imagen incluida)
-PATCH  /api/products/:id  (multipart/form-data)
+POST   /api/products         (multipart/form-data — imagen incluida)
+PATCH  /api/products/:id     (multipart/form-data)
 DELETE /api/products/:id
+DELETE /api/products/:id/force
+PUT    /api/products/:id/replace
 ```
 
-### Progreso (requieren autenticación)
+### Progreso — `/api/progress` (requieren autenticación)
 
 ```
-GET /api/progress/summary
-GET /api/progress/stats
-GET /api/progress/history
-GET /api/progress/history/:date
+GET   /api/progress/summary
+GET   /api/progress/stats
+GET   /api/progress/day/:date
+GET   /api/progress/history
+GET   /api/progress/history/all
+GET   /api/progress/routines/:routineId/today
+PATCH /api/progress/routines/:routineId/today/steps/:stepId
 ```
 
-### Perfil (requieren autenticación)
+### Perfil — `/api/profile` (requiere autenticación)
 
 ```
-GET   /api/profile
 PATCH /api/profile
+```
+
+### Especialistas — registro/estado — `/api/specialist` (nota: singular)
+
+```
+POST /api/specialist/register   (auth + rol specialist; multipart dniPhoto/titlePhoto)
+GET  /api/specialist/status     (auth + rol specialist)
+```
+
+### Especialistas — directorio y vínculos — `/api/specialists` (nota: plural, router distinto)
+
+```
+GET    /api/specialists                         (público, sin auth)
+POST   /api/specialists/link                     (auth + rol user)
+DELETE /api/specialists/link                     (auth + rol user)
+POST   /api/specialists/unlink                    (auth + rol user)
+GET    /api/specialists/my-specialist            (auth + rol user)
+GET    /api/specialists/my-patients              (auth + rol specialist)
+GET    /api/specialists/my-patients/:patientId   (auth + rol specialist)
+POST   /api/specialists/my-patients/:patientId/routines  (auth + rol specialist)
+```
+
+### Chat — `/api/chat` (requieren autenticación)
+
+```
+GET    /api/chat/messages
+GET    /api/chat/messages/:messageId
+POST   /api/chat/messages       (soporta multipart con imagen)
+POST   /api/chat/video-call
+POST   /api/chat/media
+PATCH  /api/chat/messages/read
+DELETE /api/chat/messages
+```
+
+### Notificaciones — `/api/notifications` (requieren autenticación)
+
+```
+POST   /api/notifications/token
+DELETE /api/notifications/token
+GET    /api/notifications
+PATCH  /api/notifications/:id/read
+```
+
+### Admin — `/api/admin` (requieren autenticación + rol `center_admin`)
+
+```
+GET   /api/admin/specialists
+GET   /api/admin/specialists/pending
+PATCH /api/admin/specialists/:specialistId/center
+PATCH /api/admin/specialists/:specialistProfileId/status
+GET   /api/admin/specialists/:specialistProfileId/documents
+```
+
+### Centros — `/api/centers` (requieren autenticación + rol `center_admin`)
+
+```
+GET    /api/centers
+POST   /api/centers
+GET    /api/centers/:centerId/dashboard
+GET    /api/centers/:centerId/specialists
+POST   /api/centers/:centerId/image   (multipart, límite 5MB)
+PATCH  /api/centers/:centerId
+DELETE /api/centers/:centerId
+```
+
+### Suscripciones — `/api/subscriptions` y alias `/api/admin/subscriptions` (mismo router, montado dos veces)
+
+```
+GET   /api/subscriptions/me                (solo auth)
+PATCH /api/subscriptions/me/cancel         (solo auth)
+GET   /api/subscriptions/plans             (+ rol center_admin)
+POST  /api/subscriptions/plans             (+ rol center_admin)
+PATCH /api/subscriptions/plans/:planId     (+ rol center_admin)
+GET   /api/subscriptions/users/search      (+ rol center_admin)
+GET   /api/subscriptions                   (+ rol center_admin)
+POST  /api/subscriptions                   (+ rol center_admin)
+PATCH /api/subscriptions/:subscriptionId/status  (+ rol center_admin)
+```
+
+### Auditoría — `/api/admin/audit-log` (requiere autenticación + rol `center_admin`)
+
+```
+GET /api/admin/audit-log
 ```
 
 ## Autenticación
@@ -110,7 +188,7 @@ Todos los endpoints protegidos requieren el header:
 Authorization: Bearer <access_token>
 ```
 
-El middleware `auth.middleware.ts` valida el token con Supabase y setea `req.user.id`. En desarrollo puede reemplazarse por `mockAuth.middleware.ts`, que inyecta un UUID fijo (`11111111-1111-1111-1111-111111111111`).
+El middleware `auth.middleware.ts` valida el token contra Supabase Auth y setea `req.user.id` + `req.user.role`. No hay ningún middleware de auth mock para desarrollo — siempre se valida un token real de Supabase, incluso en local.
 
 ## Patrones de implementación
 
@@ -123,9 +201,8 @@ El middleware `auth.middleware.ts` valida el token con Supabase y setea `req.use
 
 ## Estado actual
 
-- Autenticación real implementada con Supabase Auth (JWT Bearer).
-- CRUD completo de rutinas, pasos, productos y asociaciones.
-- Módulo Progreso implementado (solo lectura, calcula desde `routine_logs`).
-- Módulo Quiz implementado (controller + routes; sin service/repository separado).
-- Subida de imágenes de productos implementada con Supabase Storage.
-- Tests unitarios en `modules/*/tests/` para products, progress y routines.
+- Autenticación real implementada con Supabase Auth (JWT Bearer), login con Google vía `POST /api/auth/google` (el backend lo soporta; el frontend todavía no lo integra — ver README, sección Entrega 3 / Módulo 2).
+- 13 módulos de dominio implementados: `auth`, `profile`, `routines`, `products`, `progress`, `quiz`, `chat`, `specialists`, `admin`, `centers`, `audit`, `subscriptions`, `notifications`.
+- CRUD completo de rutinas (incluida edición de pasos post-creación), productos, centros y planes/suscripciones.
+- Auditoría transversal (`recordAuditLog`) consumida por la mayoría de los módulos que hacen mutaciones.
+- Suite de tests: 30 suites / 304 tests, todos en verde (`npm test`).

@@ -1,6 +1,6 @@
 import type { ErrorRequestHandler } from 'express';
 import { env } from '../config/env';
-import { ApiError } from '../utils/ApiError';
+import { ApiError, toValidHttpStatus } from '../utils/ApiError';
 
 export const errorMiddleware: ErrorRequestHandler = (error, _req, res, _next) => {
   const isApiError = error instanceof ApiError;
@@ -25,14 +25,6 @@ export const errorMiddleware: ErrorRequestHandler = (error, _req, res, _next) =>
     ...(isApiError && typeof error.details !== 'undefined' ? { details: error.details } : {})
   });
 };
-
-function toValidHttpStatus(statusCode: number): number {
-  if (Number.isInteger(statusCode) && statusCode >= 100 && statusCode <= 599) {
-    return statusCode;
-  }
-
-  return 500;
-}
 
 function normalizeUnexpectedError(error: unknown): {
   name: string;

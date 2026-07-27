@@ -4,6 +4,7 @@ export const TABLE_NAMES = {
   routineSteps: 'routine_steps',
   products: 'products',
   clientSpecialistRelations: 'client_specialist_relations',
+  chatMessages: 'chat_messages',
   specialistProfiles: 'specialist_profiles',
   skinProfiles: 'skin_profiles',
   routineStepProducts: 'routine_step_products',

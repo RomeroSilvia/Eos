@@ -3,17 +3,9 @@ import { supabase } from '../../config/supabase';
 import type { Database } from '../../database/database.types';
 import type { ProfileRow, SpecialistProfileRow } from '../../database/schema.types';
 import { TABLE_NAMES } from '../../database/tableNames';
+import type { CenterReference } from '../centers/centers.types';
 
 type SupabaseDbClient = SupabaseClient<Database>;
-type CenterSummary = {
-  id: string;
-  name: string;
-  address: string | null;
-  city: string | null;
-  province: string | null;
-  phone: string | null;
-  imageUrl: string | null;
-};
 
 type SpecialistProfileWithCenterId = SpecialistProfileRow & {
   center_id: string | null;
@@ -48,7 +40,7 @@ export const specialistsSharedRepository = {
     return data ?? null;
   },
 
-  findActiveCenterById: async (centerId: string | null | undefined): Promise<CenterSummary | null> => {
+  findActiveCenterById: async (centerId: string | null | undefined): Promise<CenterReference | null> => {
     if (!centerId) return null;
 
     const db = supabase as any;

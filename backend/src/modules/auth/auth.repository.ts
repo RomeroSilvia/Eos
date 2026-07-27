@@ -1,26 +1,13 @@
 import { createClient } from '@supabase/supabase-js';
 import { env } from '../../config/env';
 import { supabase } from '../../config/supabase';
+import { TABLE_NAMES } from '../../database/tableNames';
 import type { ProfileInsert, ProfileRow } from '../../database/schema.types';
+import type { AuthProviderResponse, AuthUser } from './auth.types';
 
 type SupabaseResult<TData> = {
   data: TData;
   error: { message: string; status?: number } | null;
-};
-
-type AuthUser = {
-  id: string;
-  email?: string;
-  user_metadata?: Record<string, unknown>;
-};
-
-type AuthSession = {
-  access_token: string;
-};
-
-type AuthResponse = {
-  user: AuthUser | null;
-  session: AuthSession | null;
 };
 
 type CreateAuthUserInput = {
@@ -35,12 +22,12 @@ export const authRepository = {
     return supabase.auth.admin.createUser(input) as Promise<SupabaseResult<{ user: AuthUser | null }>>;
   },
 
-  signInWithPassword: async (email: string, password: string): Promise<SupabaseResult<AuthResponse>> => {
-    return supabase.auth.signInWithPassword({ email, password }) as Promise<SupabaseResult<AuthResponse>>;
+  signInWithPassword: async (email: string, password: string): Promise<SupabaseResult<AuthProviderResponse>> => {
+    return supabase.auth.signInWithPassword({ email, password }) as Promise<SupabaseResult<AuthProviderResponse>>;
   },
 
-  signInWithIdToken: async (provider: 'google', token: string): Promise<SupabaseResult<AuthResponse>> => {
-    return supabase.auth.signInWithIdToken({ provider, token }) as Promise<SupabaseResult<AuthResponse>>;
+  signInWithIdToken: async (provider: 'google', token: string): Promise<SupabaseResult<AuthProviderResponse>> => {
+    return supabase.auth.signInWithIdToken({ provider, token }) as Promise<SupabaseResult<AuthProviderResponse>>;
   },
 
   resetPasswordForEmail: async (email: string, redirectTo: string): Promise<SupabaseResult<Record<string, never>>> => {
@@ -61,7 +48,7 @@ export const authRepository = {
 
   findProfileById: async (userId: string): Promise<ProfileRow | null> => {
     const { data, error } = await supabase
-      .from('profiles')
+      .from(TABLE_NAMES.profiles)
       .select('*')
       .eq('id', userId)
       .maybeSingle();
@@ -72,7 +59,7 @@ export const authRepository = {
 
   upsertProfile: async (data: ProfileInsert): Promise<ProfileRow> => {
     const { data: profile, error } = await supabase
-      .from('profiles')
+      .from(TABLE_NAMES.profiles)
       .upsert(data, { onConflict: 'id' })
       .select('*')
       .single();
@@ -83,7 +70,7 @@ export const authRepository = {
 
   createProfile: async (data: ProfileInsert): Promise<ProfileRow> => {
     const { data: profile, error } = await supabase
-      .from('profiles')
+      .from(TABLE_NAMES.profiles)
       .insert(data)
       .select('*')
       .single();

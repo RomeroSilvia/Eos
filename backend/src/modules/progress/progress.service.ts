@@ -66,7 +66,7 @@ export async function getSummaryByUserId(userId: string): Promise<ProgressSummar
 
 export async function getHistoryByDate(userId: string, date: string): Promise<ProgressHistoryItem[]> {
   if (!isIsoDate(date)) {
-    throw new Error('date must use YYYY-MM-DD format');
+    throw new ApiError(400, 'date must use YYYY-MM-DD format');
   }
 
   return progressRepository.findRoutineLogsByUserIdAndDate(userId, date);
@@ -145,7 +145,7 @@ export async function getFullHistoryByUserId(userId: string): Promise<ProgressHi
 
 export async function getDayDetailByDate(userId: string, date: string): Promise<RoutineDayDetail> {
   if (!isIsoDate(date)) {
-    throw new Error('date must use YYYY-MM-DD format');
+    throw new ApiError(400, 'date must use YYYY-MM-DD format');
   }
 
   const dateValue = parseIsoDate(date);
@@ -269,7 +269,7 @@ export async function getRoutineDayProgress(
   date = toIsoDate(startOfUtcDay(new Date()))
 ): Promise<RoutineDayProgress> {
   if (!isIsoDate(date)) {
-    throw new Error('date must use YYYY-MM-DD format');
+    throw new ApiError(400, 'date must use YYYY-MM-DD format');
   }
 
   const routineLog = await progressRepository.findRoutineLogByRoutineIdAndDate(userId, routineId, date);
@@ -295,7 +295,7 @@ export async function setRoutineStepCompletion(
   date = toIsoDate(startOfUtcDay(new Date()))
 ): Promise<RoutineDayProgress> {
   if (!isIsoDate(date)) {
-    throw new Error('date must use YYYY-MM-DD format');
+    throw new ApiError(400, 'date must use YYYY-MM-DD format');
   }
 
   const routine = await progressRepository.findRoutineByIdAndUserId(routineId, userId);

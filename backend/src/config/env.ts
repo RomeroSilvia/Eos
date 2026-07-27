@@ -7,6 +7,7 @@ export const env = {
   nodeEnv: process.env.NODE_ENV ?? 'development',
   corsOrigin: process.env.CORS_ORIGIN ?? 'http://localhost:8081',
   passwordResetRedirectUrl: process.env.PASSWORD_RESET_REDIRECT_URL ?? '',
+  videoCallBaseUrl: process.env.VIDEO_CALL_BASE_URL ?? 'https://meet.jit.si',
   supabaseUrl: process.env.SUPABASE_URL ?? '',
   supabaseAnonKey: process.env.SUPABASE_ANON_KEY ?? '',
   supabaseServiceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY ?? ''

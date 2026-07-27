@@ -2,6 +2,7 @@ import type { RequestHandler } from 'express';
 import { supabase } from '../config/supabase';
 import { env } from '../config/env';
 import { ApiError } from '../utils/ApiError';
+import { TABLE_NAMES } from '../database/tableNames';
 
 export const authenticate: RequestHandler = async (req, _res, next) => {
   try {
@@ -18,7 +19,7 @@ export const authenticate: RequestHandler = async (req, _res, next) => {
     }
 
     const { data: profile, error: profileError } = await supabase
-      .from('profiles')
+      .from(TABLE_NAMES.profiles)
       .select('role')
       .eq('id', data.user.id)
       .maybeSingle();

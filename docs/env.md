@@ -17,14 +17,12 @@ EXPO_PUBLIC_API_URL=http://localhost:3000/api
 EXPO_PUBLIC_USE_MOCKS=false
 EXPO_PUBLIC_SUPABASE_URL=https://<proyecto>.supabase.co
 EXPO_PUBLIC_SUPABASE_ANON_KEY=<anon_key>
-EXPO_PUBLIC_PROGRESS_USER_ID=
 ```
 
 - `EXPO_PUBLIC_API_URL` — URL base del backend. Opcional: si no se define, se autodetecta desde `Constants.expoConfig.hostUri` (útil en Expo Go con dispositivos físicos). En Android, `localhost` se mapea automáticamente a `10.0.2.2` para emuladores.
-- `EXPO_PUBLIC_USE_MOCKS` — Cuando es `true`, todos los servicios devuelven datos hardcodeados sin llamar al backend. Valor por defecto: `false`.
+- `EXPO_PUBLIC_USE_MOCKS` — Existe en `services/api/client.ts` (`apiConfig.useMocks`) pero **hoy no está conectado a ningún servicio real** — cambiar su valor no tiene efecto, la app siempre necesita el backend corriendo.
 - `EXPO_PUBLIC_SUPABASE_URL` — URL del proyecto Supabase. Requerida para el chat en tiempo real (Supabase Realtime).
 - `EXPO_PUBLIC_SUPABASE_ANON_KEY` — Clave anónima pública de Supabase. Requerida para el chat en tiempo real.
-- `EXPO_PUBLIC_PROGRESS_USER_ID` — ID de usuario para el módulo de progreso en modo mock. Por defecto: `user-marta`.
 
 Para probar desde un celular físico, reemplazar `localhost` por la IP local de la máquina (ej. `http://192.168.1.x:3000/api`).
 
@@ -46,6 +44,7 @@ SUPABASE_ANON_KEY=<anon_key>
 SUPABASE_SERVICE_ROLE_KEY=<service_role_key>
 CORS_ORIGIN=http://localhost:8081
 PASSWORD_RESET_REDIRECT_URL=http://localhost:8081/update-password
+VIDEO_CALL_BASE_URL=https://meet.jit.si
 ```
 
 - `PORT` — Puerto del servidor. Default: `3000`.
@@ -54,10 +53,11 @@ PASSWORD_RESET_REDIRECT_URL=http://localhost:8081/update-password
 - `SUPABASE_ANON_KEY` — Clave anónima pública de Supabase.
 - `SUPABASE_SERVICE_ROLE_KEY` — Clave de service role. Solo para el backend. Nunca exponer al cliente.
 - `CORS_ORIGIN` — Origen permitido por CORS. Default: `http://localhost:8081`.
-- `PASSWORD_RESET_REDIRECT_URL` — URL de redirección para el email de recuperación de contraseña. En producción debe apuntar al dominio real.
+- `PASSWORD_RESET_REDIRECT_URL` — URL de redirección para el email de recuperación de contraseña. Si se deja vacío, cae a `${CORS_ORIGIN}/update-password`. En producción debe apuntar al dominio real.
+- `VIDEO_CALL_BASE_URL` — Base para armar los links de videollamada del chat (`chat.service.ts`). Default: `https://meet.jit.si`.
 
 ## Seguridad
 
 - No commitear archivos `.env` reales (están en `.gitignore`).
 - `SUPABASE_SERVICE_ROLE_KEY` nunca debe llegar al frontend ni aparecer en logs.
-- Antes de producción, revisar y activar RLS en Supabase (ver `docs/database-setup.md`).
+- Estado real de RLS por tabla (qué está activo y qué no) en `docs/e3-supabase-security.md`.
