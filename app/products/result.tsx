@@ -75,7 +75,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surfaceSoft
   },
   ringError: {
-    backgroundColor: '#F5D0CE'
+    backgroundColor: colors.secondaryLight
   },
   iconCircle: {
     alignItems: 'center',
@@ -88,7 +88,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary
   },
   circleError: {
-    backgroundColor: '#BA2A06'
+    backgroundColor: colors.error
   },
   icon: {
     color: colors.surface,

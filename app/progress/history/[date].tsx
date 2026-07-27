@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppHeader } from '@/components/navigation/AppHeader';
 import { ProgressStateCard } from '@/components/progress/ProgressStateCard';
 import { colors } from '@/constants/colors';
+import { getFriendlyErrorMessage } from '@/services/api/client';
 import { getProgressDayDetail } from '@/services/progress';
 import type { RoutineDayDetail } from '@/types/progress';
 import {
@@ -20,7 +21,7 @@ export default function ProgressDayDetailScreen() {
   const { date } = useLocalSearchParams<{ date?: string }>();
   const selectedDate = Array.isArray(date) ? date[0] : date;
   const [detail, setDetail] = useState<RoutineDayDetail | null>(null);
-  const [error, setError] = useState<Error | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const formattedDate = useMemo(() => formatDateTitle(selectedDate), [selectedDate]);
 
@@ -28,7 +29,7 @@ export default function ProgressDayDetailScreen() {
     let isMounted = true;
 
     if (!selectedDate) {
-      setError(new Error('No se pudo identificar la fecha seleccionada'));
+      setError('No se pudo identificar la fecha seleccionada.');
       setIsLoading(false);
       return;
     }
@@ -44,7 +45,7 @@ export default function ProgressDayDetailScreen() {
       })
       .catch((unknownError: unknown) => {
         if (isMounted) {
-          setError(unknownError instanceof Error ? unknownError : new Error('No se pudo cargar el detalle'));
+          setError(getFriendlyErrorMessage(unknownError, 'No se pudo cargar el detalle.'));
           setDetail(null);
         }
       })
@@ -68,7 +69,7 @@ export default function ProgressDayDetailScreen() {
         {isLoading ? (
           <ProgressStateCard icon="hourglass-outline" title="Cargando detalle" text="Estamos buscando tus rutinas de ese día." />
         ) : error ? (
-          <ProgressStateCard icon="alert-circle-outline" title="No pudimos cargar el detalle" text={error.message} />
+          <ProgressStateCard icon="alert-circle-outline" title="No pudimos cargar el detalle" text={error} />
         ) : !detail || detail.totalRoutines === 0 ? (
           <ProgressStateCard
             icon="calendar-outline"

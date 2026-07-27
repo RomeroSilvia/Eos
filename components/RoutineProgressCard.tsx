@@ -1,6 +1,6 @@
 import { StyleSheet, Text, View } from 'react-native';
 import { colors } from '@/constants/colors';
-import { formatStepCount } from '@/utils/format';
+import { formatStepCount } from '@/utils/progress';
 import { Card } from './Card';
 
 type RoutineProgressCardProps = {

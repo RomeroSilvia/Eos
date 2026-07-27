@@ -1,120 +1,40 @@
 import type { ImagePickerAsset } from 'expo-image-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
-import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
-import { apiConfig, apiRequest } from '@/services/api/client';
+import { ApiRequestError, apiRequest } from '@/services/api/client';
 import type { Routine } from '@/types/routine';
+import type {
+  MySpecialist,
+  SpecialistCenter,
+  SpecialistDirectoryItem,
+  SpecialistLicenseStatus,
+  SpecialistPatient,
+  SpecialistPatientDetail,
+  SpecialistSpecialty,
+  SpecialistStatus
+} from '@/types/specialist';
 
 export const SPECIALIST_DOCUMENT_MAX_SIZE_BYTES = 5 * 1024 * 1024;
 const SPECIALIST_DOCUMENT_ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp'] as const;
 
-export type SpecialistLicenseStatus =
-  | 'pending'
-  | 'rejected'
-  | 'verified'
-  | 'not_submitted'
-  | (string & {});
-export type SpecialistSpecialty = 'dermatologo' | 'cosmetologo';
+export type {
+  MySpecialist,
+  PatientProduct,
+  PatientRelationStatus,
+  PatientRoutine,
+  PatientRoutineHistoryItem,
+  PatientRoutineStep,
+  PatientSkinProfile,
+  SpecialistCenter,
+  SpecialistDirectoryItem,
+  SpecialistLicenseStatus,
+  SpecialistPatient,
+  SpecialistPatientDetail,
+  SpecialistSpecialty,
+  SpecialistStatus
+} from '@/types/specialist';
+
 export type SpecialistDocumentMimeType = typeof SPECIALIST_DOCUMENT_ALLOWED_MIME_TYPES[number];
-export type SpecialistCenter = {
-  id: string;
-  name: string;
-  address?: string | null;
-  city?: string | null;
-  province?: string | null;
-  phone?: string | null;
-  imageUrl?: string | null;
-};
-
-export type SpecialistStatus = {
-  license_status: SpecialistLicenseStatus;
-  rejection_reason: string | null;
-  specialty: SpecialistSpecialty | null;
-  license_number: string | null;
-  full_name: string | null;
-  center: SpecialistCenter | null;
-} | null;
-
-export type MySpecialist = {
-  id: string;
-  fullName: string;
-  email: string | null;
-  specialty: SpecialistSpecialty | null;
-  center: SpecialistCenter | null;
-};
-
-export type SpecialistDirectoryItem = {
-  id: string;
-  fullName: string;
-  specialty: SpecialistSpecialty;
-  center: SpecialistCenter | null;
-};
-
-export type SpecialistPatient = {
-  relationId: string;
-  id: string;
-  fullName: string;
-  email: string | null;
-  status: PatientRelationStatus;
-  skinType: string | null;
-  skinProfile: PatientSkinProfile | null;
-  profileImageUrl?: string | null;
-  unreadCount?: number;
-  lastActivityAt: string | null;
-};
-
-export type PatientRelationStatus = 'active' | 'inactive' | 'pending' | (string & {});
-
-export type PatientSkinProfile = {
-  ageRange: string | null;
-  mainGoal: string | null;
-  imperfections: string | null;
-  routineSteps: string | null;
-};
-
-export type SpecialistPatientDetail = SpecialistPatient & {
-  routines: PatientRoutine[];
-  history: PatientRoutineHistoryItem[];
-};
-
-export type PatientRoutine = {
-  id: string;
-  name: string;
-  description: string | null;
-  timeOfDay: string | null;
-  isActive: boolean;
-  steps: PatientRoutineStep[];
-};
-
-export type PatientRoutineStep = {
-  id: string;
-  name: string;
-  description?: string | null;
-  category?: string | null;
-  order?: number;
-  isCompleted?: boolean;
-  products: PatientProduct[];
-};
-
-export type PatientProduct = {
-  id: string;
-  name: string;
-  brand: string | null;
-  category: string | null;
-};
-
-export type PatientRoutineHistoryItem = {
-  id: string;
-  date: string;
-  completedAt: string | null;
-  completionPercentage: number;
-  routine: {
-    id: string;
-    name: string;
-    description: string | null;
-  } | null;
-  steps: PatientRoutineStep[];
-};
 
 export type SpecialistDocumentImage = {
   uri: string;
@@ -211,19 +131,18 @@ export async function registerSpecialist(payload: SpecialistRegisterPayload): Pr
   await appendImageToFormData(formData, 'dniPhoto', payload.dniPhoto);
   await appendImageToFormData(formData, 'titlePhoto', payload.titlePhoto);
 
-  const response = await fetch(`${apiConfig.baseUrl}/specialist/register`, {
-    method: 'POST',
-    headers: await getMultipartAuthHeaders(),
-    body: formData
-  });
-
-  if (!response.ok) {
-    await logBackendErrorInDevelopment(response);
-    throw new Error(getFriendlyErrorMessage(response.status));
+  try {
+    const body = await apiRequest<SpecialistStatusResponse>({
+      path: '/specialist/register',
+      method: 'POST',
+      body: formData
+    });
+    return normalizeSpecialistStatusResponse(body);
+  } catch (error) {
+    if (__DEV__) console.warn('[specialist/register]', error);
+    const status = error instanceof ApiRequestError ? error.status : undefined;
+    throw new Error(getRegisterSpecialistErrorMessage(status ?? 0));
   }
-
-  const body = await response.json() as SpecialistStatusResponse;
-  return normalizeSpecialistStatusResponse(body);
 }
 
 export async function getSpecialistStatus(): Promise<SpecialistStatus> {
@@ -442,31 +361,6 @@ async function appendImageToFormData(
   } as unknown as Blob);
 }
 
-async function getMultipartAuthHeaders(): Promise<HeadersInit> {
-  const token = await getStoredToken();
-  return token ? { Authorization: `Bearer ${token}` } : {};
-}
-
-async function getStoredToken(): Promise<string | null> {
-  if (Platform.OS === 'web') {
-    return localStorage.getItem('eos-access-token');
-  }
-
-  return SecureStore.getItemAsync('eos-access-token');
-}
-
-async function logBackendErrorInDevelopment(response: Response): Promise<void> {
-  if (process.env.NODE_ENV === 'production') {
-    return;
-  }
-
-  const body = await response.clone().json().catch(() => null);
-  console.warn('[specialist/register]', {
-    status: response.status,
-    body
-  });
-}
-
 async function getPreparedDocument(
   asset: ImagePickerAsset,
   kind: SpecialistDocumentKind,
@@ -559,7 +453,7 @@ function isAllowedDocumentMimeType(value: string): value is SpecialistDocumentMi
   return SPECIALIST_DOCUMENT_ALLOWED_MIME_TYPES.includes(value as SpecialistDocumentMimeType);
 }
 
-function getFriendlyErrorMessage(status: number): string {
+function getRegisterSpecialistErrorMessage(status: number): string {
   if (status === 400) return 'Datos invalidos. Revisa los campos e intenta de nuevo.';
   if (status === 401) return 'Sesion vencida. Volve a iniciar sesion.';
   if (status === 403) return 'No tenes permisos para realizar esta accion.';

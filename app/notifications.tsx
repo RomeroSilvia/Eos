@@ -77,18 +77,35 @@ export default function NotificationsScreen() {
     <SafeAreaView style={styles.screen}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Notificaciones</Text>
-        <Pressable onPress={() => router.back()} style={styles.bellButton}>
+        <Pressable
+          accessibilityLabel="Volver"
+          accessibilityRole="button"
+          onPress={() => router.back()}
+          style={styles.bellButton}
+        >
           <Ionicons color={colors.textPrimary} name="notifications-outline" size={26} />
           {unreadCount > 0 && <View style={styles.bellDot} />}
         </Pressable>
       </View>
 
       <View style={styles.tabs}>
-        <Pressable onPress={() => setActiveTab('all')} style={styles.tabButton}>
+        <Pressable
+          accessibilityLabel="Ver todas las notificaciones"
+          accessibilityRole="button"
+          accessibilityState={{ selected: activeTab === 'all' }}
+          onPress={() => setActiveTab('all')}
+          style={styles.tabButton}
+        >
           <Text style={[styles.tabLabel, activeTab === 'all' && styles.tabLabelActive]}>Todas</Text>
           {activeTab === 'all' && <View style={styles.tabUnderline} />}
         </Pressable>
-        <Pressable onPress={() => setActiveTab('unread')} style={styles.tabButton}>
+        <Pressable
+          accessibilityLabel="Ver notificaciones no leidas"
+          accessibilityRole="button"
+          accessibilityState={{ selected: activeTab === 'unread' }}
+          onPress={() => setActiveTab('unread')}
+          style={styles.tabButton}
+        >
           <View style={styles.tabLabelRow}>
             <Text style={[styles.tabLabel, activeTab === 'unread' && styles.tabLabelActive]}>No leídas</Text>
             {unreadCount > 0 && (

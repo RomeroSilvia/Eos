@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
-import { useRouter, type Href } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
 import {
   FlatList,
@@ -125,7 +125,7 @@ export default function SpecialistPatientsScreen() {
               <PatientCard
                 patient={item}
                 onPress={() =>
-                  router.push(`${routes.specialistPatientDetail.replace('[id]', item.id)}` as Href)
+                  router.push({ pathname: routes.specialistPatientDetail, params: { id: item.id } })
                 }
               />
             )}

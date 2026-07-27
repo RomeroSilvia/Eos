@@ -1,4 +1,4 @@
-import { memo, useEffect, useRef, useState } from 'react';
+import { memo, useEffect, useState } from 'react';
 import { ActivityIndicator, Image, StyleSheet, Text, View } from 'react-native';
 import { colors } from '@/constants/colors';
 import { getChatImageSignedUrl } from '@/services/chat';
@@ -22,13 +22,6 @@ export const ChatImage = memo(function ChatImage({
   const [resolvedUri, setResolvedUri] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [hasError, setHasError] = useState(false);
-  const renderCountRef = useRef(0);
-
-  renderCountRef.current += 1;
-
-  if (__DEV__ && renderCountRef.current <= 6) {
-    console.log('[chat-image] render', messageId, renderCountRef.current);
-  }
 
   useEffect(() => {
     let isMounted = true;
@@ -38,13 +31,6 @@ export const ChatImage = memo(function ChatImage({
       setHasError(false);
 
       let nextRemoteUrl = mediaUrl ?? null;
-
-      if (__DEV__) {
-        console.log('[chat-image] role:', role ?? 'unknown');
-        console.log('[chat-image] messageId:', messageId);
-        console.log('[chat-image] mediaPath:', mediaPath ?? null);
-        console.log('[chat-image] mediaUrl:', mediaUrl ?? null);
-      }
 
       if (!isMounted) {
         return;
@@ -70,10 +56,6 @@ export const ChatImage = memo(function ChatImage({
         setHasError(true);
         setIsLoading(false);
         return;
-      }
-
-      if (__DEV__) {
-        console.log('[chat-image] resolvedUri:', finalUri);
       }
 
       setResolvedUri((prev) => (prev === finalUri ? prev : finalUri));

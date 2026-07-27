@@ -1,33 +1,18 @@
 import { apiRequest } from '@/services/api/client';
 import { Platform } from 'react-native';
+import type {
+  ChatAccessInfo,
+  ChatMessage,
+  ChatParsedPayload,
+  ChatParticipant,
+  ChatTokenSummary
+} from '@/types/chat';
 
 export const MAX_CHAT_IMAGE_SIZE_MB = 15;
 export const MAX_CHAT_IMAGE_SIZE_BYTES = MAX_CHAT_IMAGE_SIZE_MB * 1024 * 1024;
 const IMAGE_MESSAGE_EMPTY_CONTENT = '__eos_chat_image__';
 
-export type ChatMessageKind = 'text' | 'image' | 'call_invite' | 'call_ended';
-
-export type ChatParsedPayload = {
-  kind: ChatMessageKind;
-  text?: string;
-  url?: string;
-  title?: string;
-};
-
-export type ChatMessage = {
-  id: string;
-  relation_id: string;
-  sender_id: string;
-  content: string;
-  message_type?: 'text' | 'image';
-  mediaPath?: string | null;
-  mediaUrl?: string | null;
-  mediaAvailable?: boolean;
-  media_mime_type?: string | null;
-  media_size?: number | null;
-  read_at: string | null;
-  created_at: string;
-};
+export type { ChatAccessInfo, ChatMessage, ChatMessageKind, ChatParsedPayload, ChatParticipant, ChatTokenSummary } from '@/types/chat';
 
 type RawChatMessage = Partial<ChatMessage> & {
   relationId?: string;
@@ -44,27 +29,6 @@ type RawChatMessage = Partial<ChatMessage> & {
   mediaSize?: number | null;
   readAt?: string | null;
   createdAt?: string;
-};
-
-export type ChatParticipant = {
-  id: string;
-  fullName: string | null;
-  email: string | null;
-};
-
-export type ChatTokenSummary = {
-  used: number;
-  limit: number | null;
-  remaining: number | null;
-  isLimited: boolean;
-};
-
-export type ChatAccessInfo = {
-  hasActiveSubscription: boolean;
-  videoCallsEnabled: boolean;
-  tokenResetWindowHours: number;
-  messageTokens: ChatTokenSummary;
-  imageTokens: ChatTokenSummary;
 };
 
 type ChatMessagesResponse = {

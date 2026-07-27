@@ -3,6 +3,8 @@ import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { ActivityIndicator, Alert, Image, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { colors } from '@/constants/colors';
+import { routes } from '@/constants/routes';
 import { getLoginErrorMessage, getPostLoginRoute, login as loginUser } from '@/services/auth';
 
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -52,10 +54,10 @@ export default function LoginScreen() {
     <SafeAreaView style={styles.screen}>
       <Pressable
         accessibilityLabel="Volver a la landing"
-        onPress={() => router.replace('/landing')}
+        onPress={() => router.replace(routes.landing)}
         style={styles.backButton}
       >
-        <Ionicons color="#0B132B" name="chevron-back" size={26} />
+        <Ionicons color={colors.textPrimary} name="chevron-back" size={26} />
       </Pressable>
 
       <View style={styles.container}>
@@ -63,12 +65,12 @@ export default function LoginScreen() {
 
         <Text style={styles.title}>Iniciar Sesion</Text>
 
-        <Pressable style={styles.socialButton}>
+        <Pressable accessibilityLabel="Continuar con Google" accessibilityRole="button" style={styles.socialButton}>
           <AntDesign color="#111111" name="google" size={20} style={styles.socialIcon} />
           <Text style={styles.socialText}>Continuar con Google</Text>
         </Pressable>
 
-        <Pressable style={styles.socialButton}>
+        <Pressable accessibilityLabel="Continuar con Apple" accessibilityRole="button" style={styles.socialButton}>
           <Ionicons color="#111111" name="logo-apple" size={22} style={styles.socialIcon} />
           <Text style={styles.socialText}>Continuar con Apple</Text>
         </Pressable>
@@ -88,7 +90,7 @@ export default function LoginScreen() {
             setErrors((current) => ({ ...current, email: undefined, form: undefined }));
           }}
           placeholder="Email"
-          placeholderTextColor="#A0AEC0"
+          placeholderTextColor={colors.textMuted}
           style={[styles.input, errors.email ? styles.inputError : null]}
           value={email}
         />
@@ -103,7 +105,7 @@ export default function LoginScreen() {
               setErrors((current) => ({ ...current, password: undefined, form: undefined }));
             }}
             placeholder="Contrasena"
-            placeholderTextColor="#A0AEC0"
+            placeholderTextColor={colors.textMuted}
             secureTextEntry={!isPasswordVisible}
             style={styles.passwordInput}
             value={password}
@@ -114,18 +116,18 @@ export default function LoginScreen() {
             onPress={() => setIsPasswordVisible((current) => !current)}
             style={styles.eyeButton}
           >
-            <Ionicons color="#718096" name={isPasswordVisible ? 'eye-off-outline' : 'eye-outline'} size={22} />
+            <Ionicons color={colors.textSecondary} name={isPasswordVisible ? 'eye-off-outline' : 'eye-outline'} size={22} />
           </Pressable>
         </View>
         {errors.password ? <Text style={styles.errorText}>{errors.password}</Text> : null}
         {errors.form ? <Text style={styles.formErrorText}>{errors.form}</Text> : null}
 
         <View style={styles.actionLinks}>
-          <Pressable onPress={() => router.push('/forgot-password')}>
+          <Pressable onPress={() => router.push(routes.forgotPassword)}>
             <Text style={styles.forgotPasswordText}>¿Olvidaste tu contraseña?</Text>
           </Pressable>
 
-          <Pressable onPress={() => router.push('/register')}>
+          <Pressable onPress={() => router.push(routes.register)}>
             <Text style={styles.registerText}>Registrarme</Text>
           </Pressable>
         </View>
@@ -141,7 +143,7 @@ export default function LoginScreen() {
           onPress={handleSubmit}
           style={[styles.primaryButton, isSubmitting && styles.primaryButtonDisabled]}
         >
-          {isSubmitting ? <ActivityIndicator color="#FFFFFF" size="small" style={styles.primaryButtonSpinner} /> : null}
+          {isSubmitting ? <ActivityIndicator color={colors.surface} size="small" style={styles.primaryButtonSpinner} /> : null}
           <Text style={styles.primaryButtonText}>{isSubmitting ? 'Continuando...' : 'Continuar'}</Text>
         </Pressable>
       </View>
@@ -168,7 +170,7 @@ function validateLogin(email: string, password: string): LoginErrors {
 
 const styles = StyleSheet.create({
   screen: {
-    backgroundColor: '#F9F9F9',
+    backgroundColor: colors.background,
     flex: 1
   },
   container: {
@@ -194,7 +196,7 @@ const styles = StyleSheet.create({
     width: 145
   },
   title: {
-    color: '#1A202C',
+    color: colors.textPrimary,
     fontSize: 28,
     fontWeight: 'bold',
     marginBottom: 30,
@@ -202,7 +204,7 @@ const styles = StyleSheet.create({
   },
   socialButton: {
     alignItems: 'center',
-    backgroundColor: '#EAF0EC',
+    backgroundColor: colors.primarySuperLight,
     borderRadius: 8,
     flexDirection: 'row',
     justifyContent: 'center',
@@ -227,33 +229,33 @@ const styles = StyleSheet.create({
     width: '100%'
   },
   dividerLine: {
-    backgroundColor: '#E2E8F0',
+    backgroundColor: colors.border,
     flex: 1,
     height: 1
   },
   dividerText: {
-    color: '#A0AEC0',
+    color: colors.textMuted,
     fontSize: 13,
     marginHorizontal: 12
   },
   input: {
-    backgroundColor: '#FFFFFF',
-    borderColor: '#E2E8F0',
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
     borderRadius: 8,
     borderWidth: 1,
-    color: '#1A202C',
+    color: colors.textPrimary,
     height: 50,
     marginBottom: 12,
     paddingHorizontal: 14,
     width: '100%'
   },
   inputError: {
-    borderColor: '#C98F90'
+    borderColor: colors.secondary
   },
   passwordWrapper: {
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderColor: '#E2E8F0',
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
     borderRadius: 8,
     borderWidth: 1,
     flexDirection: 'row',
@@ -261,7 +263,7 @@ const styles = StyleSheet.create({
     width: '100%'
   },
   passwordInput: {
-    color: '#1A202C',
+    color: colors.textPrimary,
     flex: 1,
     height: '100%',
     paddingLeft: 14,
@@ -283,29 +285,29 @@ const styles = StyleSheet.create({
   },
   errorText: {
     alignSelf: 'flex-start',
-    color: '#B42318',
+    color: colors.error,
     fontSize: 12,
     marginBottom: 8,
     marginTop: -6
   },
   formErrorText: {
     alignSelf: 'flex-start',
-    color: '#B42318',
+    color: colors.error,
     fontSize: 13,
     marginTop: 10
   },
   forgotPasswordText: {
-    color: '#C98F90',
+    color: colors.secondary,
     fontSize: 16
   },
   registerText: {
-    color: '#C98F90',
+    color: colors.secondary,
     fontSize: 16,
     fontWeight: 'bold',
     marginTop: 10
   },
   legalText: {
-    color: '#718096',
+    color: colors.textSecondary,
     fontSize: 12,
     lineHeight: 18,
     marginTop: 30,
@@ -313,7 +315,7 @@ const styles = StyleSheet.create({
   },
   primaryButton: {
     alignItems: 'center',
-    backgroundColor: '#C98F90',
+    backgroundColor: colors.secondary,
     borderRadius: 8,
     flexDirection: 'row',
     height: 50,
@@ -328,7 +330,7 @@ const styles = StyleSheet.create({
     marginRight: 10
   },
   primaryButtonText: {
-    color: '#FFFFFF',
+    color: colors.surface,
     fontSize: 16,
     fontWeight: 'bold',
     textAlign: 'center'

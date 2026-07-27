@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from '@/components/Button';
 import { AppHeader } from '@/components/navigation/AppHeader';
 import { colors } from '@/constants/colors';
+import { routes } from '@/constants/routes';
 import { useProducts } from '@/hooks/useProducts';
 import type { ProductCategory, ProductBrand } from '@/types/product';
 
@@ -72,7 +73,6 @@ export default function NewProductScreen() {
       });
       if (!result.canceled) {
         const asset = result.assets[0];
-        console.log('[products/create] picker OK', { uri: asset.uri, mimeType: asset.mimeType, fileSize: asset.fileSize, mode: isEditMode ? 'edit' : 'create' });
         setCompressingImage(true);
         try {
           const compressed = await ImageManipulator.manipulateAsync(
@@ -80,11 +80,10 @@ export default function NewProductScreen() {
             [{ resize: { width: 1280 } }],
             { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG, base64: true }
           );
-          console.log('[products/create] compresión OK', { uri: compressed.uri, base64Len: compressed.base64?.length ?? 0 });
           setImageUri(compressed.uri);
           setImageBase64(compressed.base64 ?? null);
         } catch (err) {
-          console.error('[products/create] compresión falló, usando URI original:', err);
+          if (__DEV__) console.error('[products/create] compresión falló, usando URI original:', err);
           setImageUri(asset.uri);
           setImageBase64(null);
         } finally {
@@ -92,13 +91,12 @@ export default function NewProductScreen() {
         }
       }
     } catch (error) {
-      console.error('[handlePickImage]', error);
+      if (__DEV__) console.error('[handlePickImage]', error);
     }
   };
 
   const handleSave = async () => {
     if (!name.trim()) return;
-    console.log('[products/create] handleSave', { mode: isEditMode ? 'edit' : 'create', hasImageUri: !!imageUri, hasBase64: !!imageBase64, base64Len: imageBase64?.length ?? 0 });
     setLoading(true);
     try {
       if (isEditMode) {
@@ -125,10 +123,10 @@ export default function NewProductScreen() {
         });
       }
       const returnParam = returnTo ? `&returnTo=${returnTo}` : '';
-      router.replace(`/products/result?status=success&mode=${isEditMode ? 'edit' : 'create'}${returnParam}`);
+      router.replace(`${routes.productResult}?status=success&mode=${isEditMode ? 'edit' : 'create'}${returnParam}`);
     } catch {
       const returnParam = returnTo ? `&returnTo=${returnTo}` : '';
-      router.replace(`/products/result?status=error&mode=${isEditMode ? 'edit' : 'create'}${returnParam}`);
+      router.replace(`${routes.productResult}?status=error&mode=${isEditMode ? 'edit' : 'create'}${returnParam}`);
     } finally {
       setLoading(false);
     }
@@ -146,6 +144,7 @@ export default function NewProductScreen() {
 
             <Text style={styles.label}>Nombre del producto</Text>
             <TextInput
+              accessibilityLabel="Nombre del producto"
               onChangeText={setName}
               placeholder="Gentle cleanser Cerave"
               placeholderTextColor={colors.textMuted}
@@ -155,6 +154,7 @@ export default function NewProductScreen() {
 
             <Text style={styles.label}>Descripción (opcional)</Text>
             <TextInput
+              accessibilityLabel="Descripción del producto"
               multiline
               numberOfLines={4}
               onChangeText={setDescription}
@@ -168,6 +168,9 @@ export default function NewProductScreen() {
             <View style={styles.categories}>
               {BRANDS.map((br) => (
                 <Pressable
+                  accessibilityLabel={br.label}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: brand === br.value }}
                   key={br.value}
                   onPress={() => setBrand(br.value)}
                   style={[styles.chip, brand === br.value && styles.chipActive]}
@@ -183,6 +186,9 @@ export default function NewProductScreen() {
             <View style={styles.categories}>
               {CATEGORIES.map((cat) => (
                 <Pressable
+                  accessibilityLabel={cat.label}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: category === cat.value }}
                   key={cat.value}
                   onPress={() => setCategory(cat.value)}
                   style={[styles.chip, category === cat.value && styles.chipActive]}
@@ -194,7 +200,13 @@ export default function NewProductScreen() {
               ))}
             </View>
 
-            <Pressable disabled={compressingImage} onPress={handlePickImage} style={styles.photoBox}>
+            <Pressable
+              accessibilityLabel="Foto del producto"
+              accessibilityRole="button"
+              disabled={compressingImage}
+              onPress={handlePickImage}
+              style={styles.photoBox}
+            >
               {displayImage ? (
                 <Image source={{ uri: displayImage }} style={styles.photoPreview} />
               ) : (

@@ -1,21 +1,7 @@
-import { ApiRequestError, apiRequest } from '@/services/api/client';
+import { ApiRequestError, apiRequest, getFriendlyErrorMessage } from '@/services/api/client';
+import type { PendingSpecialist, SpecialistDocuments } from '@/types/admin';
 
-export type PendingSpecialist = {
-  specialistProfileId: string;
-  userId: string;
-  fullName: string | null;
-  email: string | null;
-  specialty: 'dermatologo' | 'cosmetologo' | string;
-  licenseNumber: string;
-  licenseStatus: 'pending' | 'verified' | 'rejected' | string;
-  rejectionReason: string | null;
-  centerId: string | null;
-  center: {
-    id: string;
-    name: string;
-  } | null;
-  createdAt: string | null;
-};
+export type { PendingSpecialist, SpecialistDocument, SpecialistDocuments } from '@/types/admin';
 
 type PendingSpecialistsResponse = {
   specialists: PendingSpecialist[];
@@ -23,18 +9,6 @@ type PendingSpecialistsResponse = {
 
 type UpdateSpecialistStatusResponse = {
   specialist: PendingSpecialist;
-};
-
-export type SpecialistDocuments = {
-  dniPhoto: SpecialistDocument;
-  titlePhoto: SpecialistDocument;
-  expiresIn: number;
-};
-
-export type SpecialistDocument = {
-  available: boolean;
-  url: string | null;
-  errorMessage: string | null;
 };
 
 type SpecialistDocumentsResponse = {
@@ -97,47 +71,21 @@ export async function assignSpecialistCenter(
 
 export function getAdminErrorMessage(error: unknown): string {
   if (error instanceof ApiRequestError) {
-    if (process.env.NODE_ENV !== 'production') {
+    if (__DEV__) {
       console.warn('[admin/api]', {
         status: error.status,
         body: error.body
       });
     }
 
-    if (error.message && !hasTechnicalDetails(error.message)) {
-      return error.message;
+    if (error.status === 409) {
+      return 'La solicitud ya fue procesada.';
     }
-
-    return getAdminFriendlyMessage(error.status);
-  }
-
-  if (process.env.NODE_ENV !== 'production' && error instanceof Error) {
+  } else if (__DEV__ && error instanceof Error) {
     console.warn('[admin/api]', error.message);
   }
 
-  return 'Ocurrió un error. Intentá nuevamente.';
-}
-
-function getAdminFriendlyMessage(status: number): string {
-  if (status === 401) return 'Tu sesión expiró. Iniciá sesión nuevamente.';
-  if (status === 403) return 'No tenés permisos para realizar esta acción.';
-  if (status === 404) return 'No se encontró la solicitud.';
-  if (status === 409) return 'La solicitud ya fue procesada.';
-  return 'Ocurrió un error. Intentá nuevamente.';
-}
-
-function hasTechnicalDetails(message: string): boolean {
-  const normalized = message.toLowerCase();
-
-  return [
-    'stack',
-    'sql',
-    'supabase',
-    'storage.objects',
-    'exception',
-    'trace',
-    'error:'
-  ].some((pattern) => normalized.includes(pattern));
+  return getFriendlyErrorMessage(error, 'Ocurrió un error. Intentá nuevamente.');
 }
 
 async function updateSpecialistStatus(

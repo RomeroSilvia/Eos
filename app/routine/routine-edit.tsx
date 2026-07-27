@@ -92,7 +92,7 @@ export default function RoutineEdit() {
       setIsAssignedRoutine(Boolean(routine.assigned_by));
       setSteps(routineSteps);
     } catch (error) {
-      console.error(error);
+      if (__DEV__) console.error(error);
     } finally {
       setIsLoading(false);
     }
@@ -119,7 +119,7 @@ export default function RoutineEdit() {
 
       router.back();
     } catch (error) {
-      console.error(error);
+      if (__DEV__) console.error(error);
     } finally {
       setIsSaving(false);
     }
@@ -160,7 +160,7 @@ export default function RoutineEdit() {
       await deleteStepApi(stepId);
       setSteps(await getStepsByRoutine(routineId));
     } catch (error) {
-      console.error(error);
+      if (__DEV__) console.error(error);
       setSteps(previousSteps);
     }
   }, [isAssignedRoutine, routineId, steps]);

@@ -30,10 +30,6 @@ export async function resolveCachedChatImage(input: ResolveCachedChatImageInput)
       return null;
     }
 
-    if (__DEV__) {
-      console.log('[chat-image-cache] remote url requested', cacheKey);
-    }
-
     return input.getRemoteUrl();
   }
 
@@ -47,10 +43,6 @@ export async function resolveCachedChatImage(input: ResolveCachedChatImageInput)
     const existing = await safeGetInfo(inMemoryHit);
 
     if (existing?.exists) {
-      if (__DEV__) {
-        console.log('[chat-image-cache] memory hit', normalizedCacheKey);
-      }
-
       return inMemoryHit;
     }
 
@@ -61,21 +53,12 @@ export async function resolveCachedChatImage(input: ResolveCachedChatImageInput)
 
   if (diskInfo?.exists) {
     localUriByCacheKey.set(normalizedCacheKey, fileUri);
-
-    if (__DEV__) {
-      console.log('[chat-image-cache] disk hit', normalizedCacheKey);
-    }
-
     return fileUri;
   }
 
   let remoteUrl = input.remoteUrl ?? null;
 
   if (!remoteUrl && input.getRemoteUrl) {
-    if (__DEV__) {
-      console.log('[chat-image-cache] remote url requested', normalizedCacheKey);
-    }
-
     remoteUrl = await input.getRemoteUrl();
   }
 
@@ -95,10 +78,6 @@ export async function resolveCachedChatImage(input: ResolveCachedChatImageInput)
 
   const downloadPromise = (async () => {
     await ensureCacheDirectory();
-
-    if (__DEV__) {
-      console.log('[chat-image-cache] download', normalizedCacheKey);
-    }
 
     const result = await FileSystem.downloadAsync(remoteUrl, fileUri);
 

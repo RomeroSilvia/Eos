@@ -104,7 +104,7 @@ export default function Step4() {
       await deleteStepApi(stepId, routineId);
       await refreshSteps(routineId);
     } catch (error) {
-      console.error(error);
+      if (__DEV__) console.error(error);
       await loadRoutineState(routineId);
     }
   }, [loadRoutineState, refreshSteps, removeStepFromState, routineId]);

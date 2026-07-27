@@ -4,6 +4,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { Card } from '@/components/Card';
 import { HomeReminderItem } from '@/components/HomeReminderItem';
 import { colors } from '@/constants/colors';
+import { routes } from '@/constants/routes';
 import { getRoutines } from '@/services/routines';
 import type { Reminder } from '@/types/reminder';
 import type { Routine } from '@/types/routine';
@@ -55,7 +56,7 @@ export function RemindersSection() {
           reminders.map((reminder, index) => (
             <View key={reminder.id}>
               {index > 0 && <View style={styles.separator} />}
-              <HomeReminderItem reminder={reminder} onPress={() => router.push('/routine')} />
+              <HomeReminderItem reminder={reminder} onPress={() => router.push(routes.routine)} />
             </View>
           ))
         )}

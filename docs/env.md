@@ -14,13 +14,11 @@ Variables:
 
 ```txt
 EXPO_PUBLIC_API_URL=http://localhost:3000/api
-EXPO_PUBLIC_USE_MOCKS=false
 EXPO_PUBLIC_SUPABASE_URL=https://<proyecto>.supabase.co
 EXPO_PUBLIC_SUPABASE_ANON_KEY=<anon_key>
 ```
 
 - `EXPO_PUBLIC_API_URL` — URL base del backend. Opcional: si no se define, se autodetecta desde `Constants.expoConfig.hostUri` (útil en Expo Go con dispositivos físicos). En Android, `localhost` se mapea automáticamente a `10.0.2.2` para emuladores.
-- `EXPO_PUBLIC_USE_MOCKS` — Existe en `services/api/client.ts` (`apiConfig.useMocks`) pero **hoy no está conectado a ningún servicio real** — cambiar su valor no tiene efecto, la app siempre necesita el backend corriendo.
 - `EXPO_PUBLIC_SUPABASE_URL` — URL del proyecto Supabase. Requerida para el chat en tiempo real (Supabase Realtime).
 - `EXPO_PUBLIC_SUPABASE_ANON_KEY` — Clave anónima pública de Supabase. Requerida para el chat en tiempo real.
 

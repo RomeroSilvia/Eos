@@ -124,10 +124,11 @@ GET    /api/chat/messages
 GET    /api/chat/messages/:messageId
 POST   /api/chat/messages       (soporta multipart con imagen)
 POST   /api/chat/video-call
-POST   /api/chat/media
 PATCH  /api/chat/messages/read
 DELETE /api/chat/messages
 ```
+
+> `POST /api/chat/media` existe en las rutas pero está deprecado: el controller (`chat.controller.ts`) siempre responde `410 Gone` ("Usa POST /chat/messages para enviar imagenes."). El envío de imágenes se hace vía `POST /api/chat/messages` con `multipart/form-data`.
 
 ### Notificaciones — `/api/notifications` (requieren autenticación)
 

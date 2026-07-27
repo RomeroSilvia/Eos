@@ -7,6 +7,7 @@ import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
 import { LoadingState } from '@/components/LoadingState';
 import { colors } from '@/constants/colors';
+import { routes } from '@/constants/routes';
 import { useProfile } from '@/hooks/useProfile';
 import { logout } from '@/services/auth';
 import { getFriendlyErrorMessage } from '@/services/api/client';
@@ -30,7 +31,7 @@ export default function SpecialistProfileScreen() {
       setStatus(null);
       setHasError(true);
 
-      if (process.env.NODE_ENV !== 'production') {
+      if (__DEV__) {
         console.warn('[specialist/profile]', getFriendlyErrorMessage(error));
       }
     } finally {
@@ -49,7 +50,7 @@ export default function SpecialistProfileScreen() {
 
     try {
       await logout();
-      router.replace('/landing');
+      router.replace(routes.landing);
     } catch {
       Alert.alert('Perfil', 'No pudimos cerrar sesion. Intenta nuevamente.');
     } finally {
@@ -58,7 +59,7 @@ export default function SpecialistProfileScreen() {
   }
 
   function handleRetryApplication() {
-    router.push('/register?mode=specialist&requestOnly=1' as Href);
+    router.push(`${routes.register}?mode=specialist&requestOnly=1` as Href);
   }
 
   const isLoading = isProfileLoading || isLoadingStatus;
@@ -153,12 +154,12 @@ export default function SpecialistProfileScreen() {
                 <ActionTile
                   icon="people-outline"
                   label="Mis clientes"
-                  onPress={() => router.push('/(tabs-specialist)/pacientes' as Href)}
+                  onPress={() => router.push(routes.specialistPatients as Href)}
                 />
                 <ActionTile
                   icon="chatbubbles-outline"
                   label="Consultas"
-                  onPress={() => router.push('/(tabs-specialist)/consultas' as Href)}
+                  onPress={() => router.push(routes.specialistConsultas as Href)}
                 />
               </View>
             </Card>
@@ -168,7 +169,7 @@ export default function SpecialistProfileScreen() {
               <Text style={styles.description}>
                 Podés gestionar contraseña y notificaciones. Los datos profesionales se administran desde tu solicitud.
               </Text>
-              <Button onPress={() => router.push('/settings' as Href)} style={styles.fullButton} variant="ghost">
+              <Button onPress={() => router.push(routes.settings as Href)} style={styles.fullButton} variant="ghost">
                 Abrir configuración
               </Button>
             </Card>
@@ -275,8 +276,8 @@ function getStatusContent(status: SpecialistStatus): {
 
   if (status?.license_status === 'pending') {
     return {
-      background: '#FFF7E6',
-      color: '#B7791F',
+      background: colors.warningBg,
+      color: colors.warningText,
       description: 'Tu matrícula está en revisión. Te avisaremos cuando sea aprobada.',
       icon: 'time-outline',
       title: 'Solicitud pendiente'
@@ -285,7 +286,7 @@ function getStatusContent(status: SpecialistStatus): {
 
   if (status?.license_status === 'rejected') {
     return {
-      background: '#FDECEC',
+      background: colors.dangerBg,
       color: colors.error,
       description: 'Tu solicitud fue rechazada.',
       icon: 'alert-circle-outline',
@@ -438,7 +439,7 @@ const styles = StyleSheet.create({
     fontWeight: '800'
   },
   rejectionBox: {
-    backgroundColor: '#FDECEC',
+    backgroundColor: colors.dangerBg,
     borderRadius: 14,
     gap: 4,
     padding: 12

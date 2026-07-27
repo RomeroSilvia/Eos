@@ -1,12 +1,13 @@
 import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
-import { ApiRequestError, apiRequest } from '@/services/api/client';
+import { routes } from '@/constants/routes';
+import { ApiRequestError, apiRequest, getFriendlyAuthErrorMessage } from '@/services/api/client';
+import { deleteStoredAccessToken, setStoredAccessToken } from '@/services/api/token';
 import { registerPushToken, unregisterPushToken } from '@/services/notifications';
 import { getSpecialistStatus } from '@/services/specialist';
 import type { UserProfile } from '@/types/user';
 
 const sessionKey = 'eos-session';
-const accessTokenKey = 'eos-access-token';
 
 type AuthSession = {
   access_token: string;
@@ -48,15 +49,7 @@ type RegisterPayload = LoginPayload & {
   specialty?: 'dermatologo' | 'cosmetologo';
 };
 
-export const mockUserProfile: UserProfile = {
-  id: 'mock-user-1',
-  name: 'Usuario EOS',
-  email: 'usuario@eos.app',
-  role: 'user',
-  skinType: 'mixed'
-};
-
-export type PostLoginRoute = '/(tabs-admin)' | '/(tabs)/home' | '/(tabs-specialist)' | '/specialist-status';
+export type PostLoginRoute = typeof routes.adminHome | typeof routes.userHome | typeof routes.specialistHome | typeof routes.specialistStatus;
 
 export async function login({ email, password }: LoginPayload): Promise<UserProfile> {
   const data = await apiRequest<AuthResponse>({
@@ -72,39 +65,39 @@ export async function login({ email, password }: LoginPayload): Promise<UserProf
 
 export async function getPostLoginRoute(profile: Pick<UserProfile, 'role'>): Promise<PostLoginRoute> {
   if (profile.role === 'center_admin') {
-    return '/(tabs-admin)';
+    return routes.adminHome;
   }
 
   if (profile.role !== 'specialist') {
-    return '/(tabs)/home';
+    return routes.userHome;
   }
 
   const status = await getSpecialistStatus().catch(() => null);
 
   if (status?.license_status === 'verified') {
-    return '/(tabs-specialist)';
+    return routes.specialistHome;
   }
 
-  return '/specialist-status';
+  return routes.specialistStatus;
 }
 
 export function getLoginErrorMessage(error: unknown): string {
   if (error instanceof ApiRequestError) {
-    if (process.env.NODE_ENV !== 'production') {
+    if (__DEV__) {
       console.warn('[auth/login]', {
         status: error.status,
         body: error.body
       });
     }
 
-    if (error.status === 401) return 'Email o contrasena incorrectos.';
-    if (error.status === 400) return 'Revisa los datos ingresados e intenta nuevamente.';
-    if (error.status === 403) return 'No tenes permisos para realizar esta accion.';
-    if (error.status === 429) return 'Demasiados intentos. Proba nuevamente en unos minutos.';
-    return 'No pudimos completar la accion. Intenta nuevamente.';
+    if (error.status === 401) {
+      return 'Email o contrasena incorrectos.';
+    }
+
+    return getFriendlyAuthErrorMessage(error.status);
   }
 
-  if (process.env.NODE_ENV !== 'production' && error instanceof Error) {
+  if (__DEV__ && error instanceof Error) {
     console.warn('[auth/login]', error.message);
   }
 
@@ -143,14 +136,14 @@ export async function logout(): Promise<void> {
   try {
     await unregisterPushToken();
   } catch (error) {
-    if (process.env.NODE_ENV !== 'production') {
+    if (__DEV__) {
       console.warn('[auth/logout] No se pudieron limpiar las notificaciones.', error);
     }
   }
 
   await Promise.all([
     deleteStoredItem(sessionKey),
-    deleteStoredItem(accessTokenKey)
+    deleteStoredAccessToken()
   ]);
 }
 
@@ -159,6 +152,28 @@ export async function changePassword(newPassword: string): Promise<void> {
     path: '/auth/update-password',
     method: 'POST',
     body: JSON.stringify({ newPassword })
+  });
+}
+
+export async function resetPassword(email: string): Promise<void> {
+  await apiRequest({
+    path: '/auth/reset-password',
+    method: 'POST',
+    body: JSON.stringify({ email })
+  });
+}
+
+/**
+ * Actualiza la contraseña usando el token de recuperación del link de email
+ * (no el token de sesión guardado, que puede no existir o pertenecer a otra
+ * cuenta si hay una sesión activa en el mismo navegador).
+ */
+export async function updatePasswordWithRecoveryToken(newPassword: string, accessToken: string): Promise<void> {
+  await apiRequest({
+    path: '/auth/update-password',
+    method: 'POST',
+    headers: { Authorization: `Bearer ${accessToken}` },
+    body: JSON.stringify({ newPassword, accessToken })
   });
 }
 
@@ -172,7 +187,7 @@ export async function updateStoredProfile(profile: UserProfile): Promise<void> {
 }
 
 export async function saveAccessToken(token: string): Promise<void> {
-  await setStoredItem(accessTokenKey, token);
+  await setStoredAccessToken(token);
 }
 
 async function persistAuthSession(data: AuthResponse): Promise<void> {

@@ -1,10 +1,12 @@
 import { useRouter } from 'expo-router';
-import * as SecureStore from 'expo-secure-store';
 import { useState } from 'react';
-import { Alert, Image, Platform, Pressable, StyleSheet, Text, View, type DimensionValue } from 'react-native';
+import { Alert, Image, Pressable, StyleSheet, Text, View, type DimensionValue } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LoadingState } from '@/components/LoadingState';
-import { apiConfig } from '@/services/api/client';
+import { colors } from '@/constants/colors';
+import { routes } from '@/constants/routes';
+import { ApiRequestError, getFriendlyErrorMessage } from '@/services/api/client';
+import { saveQuiz } from '@/services/quiz';
 
 type QuizOption = {
   label: string;
@@ -87,60 +89,33 @@ export default function QuizScreen() {
       return;
     }
 
+    setCurrentStep(5);
+    setIsSaving(true);
+
     try {
-      const token = await getStoredToken();
-
-      if (!token) {
-        Alert.alert('Sesion requerida', 'Inicia sesion para guardar los resultados del quiz.');
-        router.replace('/login');
-        return;
-      }
-
-      setCurrentStep(5);
-      setIsSaving(true);
-
-      const payload = {
+      await saveQuiz({
         ageRange: getAnswer(finalAnswers, 0),
         skinType: getAnswer(finalAnswers, 1),
         imperfections: getAnswer(finalAnswers, 2),
         mainGoal: getAnswer(finalAnswers, 3),
         routineSteps: getAnswer(finalAnswers, 4)
-      };
-
-      const response = await fetch(`${apiConfig.baseUrl}/quiz/save`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {})
-        },
-        body: JSON.stringify(payload)
       });
 
-      const data = (await response.json().catch(() => null)) as { message?: string } | null;
+      router.replace(routes.resultados);
+    } catch (error) {
+      if (__DEV__) console.error(error);
 
-      if (!response.ok) {
-        throw new Error(data?.message ?? 'No pudimos guardar tus respuestas.');
+      if (error instanceof ApiRequestError && error.status === 401) {
+        Alert.alert('Sesion requerida', 'Inicia sesion para guardar los resultados del quiz.');
+        router.replace(routes.login);
+        return;
       }
 
-      router.replace('/resultados');
-    } catch (error) {
-      console.error(error);
-      Alert.alert(
-        'Error al guardar',
-        error instanceof Error ? error.message : 'No pudimos guardar tus respuestas.'
-      );
+      Alert.alert('Error al guardar', getFriendlyErrorMessage(error, 'No pudimos guardar tus respuestas.'));
       setCurrentStep(quizQuestions.length - 1);
     } finally {
       setIsSaving(false);
     }
-  }
-
-  async function getStoredToken() {
-    if (Platform.OS === 'web') {
-      return localStorage.getItem('eos-access-token');
-    }
-
-    return SecureStore.getItemAsync('eos-access-token');
   }
 
   function getAnswer(finalAnswers: Record<number, string>, index: number) {
@@ -205,25 +180,25 @@ export default function QuizScreen() {
 
 const styles = StyleSheet.create({
   screen: {
-    backgroundColor: '#F8F9FA',
+    backgroundColor: colors.background,
     flex: 1,
     paddingHorizontal: 24,
     paddingTop: 60
   },
   progressTrack: {
-    backgroundColor: '#E2E8F0',
+    backgroundColor: colors.border,
     borderRadius: 2,
     height: 4,
     overflow: 'hidden',
     width: '100%'
   },
   progressFill: {
-    backgroundColor: '#C98F90',
+    backgroundColor: colors.secondary,
     borderRadius: 2,
     height: 4
   },
   title: {
-    color: '#0B132B',
+    color: colors.textPrimary,
     fontSize: 31,
     fontWeight: '800',
     lineHeight: 38,
@@ -233,7 +208,7 @@ const styles = StyleSheet.create({
   optionButton: {
     alignItems: 'center',
     backgroundColor: 'transparent',
-    borderColor: '#0B132B',
+    borderColor: colors.textPrimary,
     borderRadius: 16,
     borderWidth: 1,
     flexDirection: 'row',
@@ -242,8 +217,8 @@ const styles = StyleSheet.create({
     width: '100%'
   },
   optionButtonSelected: {
-    backgroundColor: '#EADCDC',
-    borderColor: '#0B132B'
+    backgroundColor: colors.secondaryLight,
+    borderColor: colors.textPrimary
   },
   optionTextContainer: {
     flex: 1,
@@ -255,18 +230,18 @@ const styles = StyleSheet.create({
     width: 32
   },
   optionLabel: {
-    color: '#0B132B',
+    color: colors.textPrimary,
     fontSize: 18,
     fontWeight: 'bold'
   },
   optionDescription: {
-    color: '#6C757D',
+    color: colors.textSecondary,
     fontSize: 12,
     lineHeight: 18,
     marginTop: 4
   },
   resultText: {
-    color: '#0B132B',
+    color: colors.textPrimary,
     fontSize: 20,
     fontWeight: 'bold',
     marginTop: 40,

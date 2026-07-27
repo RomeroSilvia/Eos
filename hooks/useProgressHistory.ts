@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useState } from 'react';
+import { getFriendlyErrorMessage } from '@/services/api/client';
 import { getProgressHistory } from '@/services/progress';
 import type { ProgressHistoryDay } from '@/types/progress';
 
 export function useProgressHistory() {
   const [history, setHistory] = useState<ProgressHistoryDay[]>([]);
-  const [error, setError] = useState<Error | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   const refetch = useCallback(async () => {
@@ -16,7 +17,7 @@ export function useProgressHistory() {
       setHistory(progressHistory);
     } catch (unknownError) {
       setHistory([]);
-      setError(unknownError instanceof Error ? unknownError : new Error('No se pudo cargar tu historial'));
+      setError(getFriendlyErrorMessage(unknownError, 'No se pudo cargar tu historial.'));
     } finally {
       setIsLoading(false);
     }

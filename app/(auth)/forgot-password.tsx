@@ -2,7 +2,10 @@ import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { ActivityIndicator, Alert, Image, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { apiConfig, getFriendlyAuthErrorMessage } from '@/services/api/client';
+import { colors } from '@/constants/colors';
+import { routes } from '@/constants/routes';
+import { ApiRequestError, getFriendlyAuthErrorMessage } from '@/services/api/client';
+import { resetPassword } from '@/services/auth';
 
 export default function ForgotPasswordScreen() {
   const router = useRouter();
@@ -19,28 +22,18 @@ export default function ForgotPasswordScreen() {
     setIsSubmitting(true);
 
     try {
-      const response = await fetch(`${apiConfig.baseUrl}/auth/reset-password`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ email: email.trim() })
-      });
-
-      if (!response.ok) {
-        await logAuthResponseInDevelopment(response, 'forgot-password');
-        Alert.alert('Error del Servidor', getFriendlyAuthErrorMessage(response.status));
-        return;
-      }
+      await resetPassword(email.trim());
 
       Alert.alert(
         'Correo enviado',
         'Si el email está registrado, vas a recibir instrucciones para recuperar tu contraseña.'
       );
-      router.push('/login');
+      router.push(routes.login);
     } catch (error) {
-      logAuthErrorInDevelopment(error, 'forgot-password');
-      Alert.alert('Error de Conexion', 'Ocurrió un error. Intentá nuevamente.');
+      if (__DEV__) console.warn('[auth/forgot-password]', error);
+
+      const status = error instanceof ApiRequestError ? error.status : undefined;
+      Alert.alert('Error', getFriendlyAuthErrorMessage(status));
     } finally {
       setIsSubmitting(false);
     }
@@ -58,49 +51,34 @@ export default function ForgotPasswordScreen() {
       </View>
 
       <TextInput
+        accessibilityLabel="Email"
         autoCapitalize="none"
         keyboardType="email-address"
         onChangeText={setEmail}
         placeholder="email@domain.com"
-        placeholderTextColor="#94A3B8"
+        placeholderTextColor={colors.textMuted}
         style={styles.input}
         value={email}
       />
 
       <Pressable
+        accessibilityLabel="Restablecer contraseña"
+        accessibilityRole="button"
         accessibilityState={{ disabled: !canSubmit, busy: isSubmitting }}
         disabled={!canSubmit}
         onPress={handleResetPassword}
         style={[styles.button, !canSubmit && styles.buttonDisabled]}
       >
-        {isSubmitting ? <ActivityIndicator color="#FFFFFF" size="small" style={styles.buttonSpinner} /> : null}
+        {isSubmitting ? <ActivityIndicator color={colors.surface} size="small" style={styles.buttonSpinner} /> : null}
         <Text style={styles.buttonText}>{isSubmitting ? 'Enviando...' : 'Restablecer'}</Text>
       </Pressable>
     </SafeAreaView>
   );
 }
 
-async function logAuthResponseInDevelopment(response: Response, flow: string): Promise<void> {
-  if (process.env.NODE_ENV === 'production') {
-    return;
-  }
-
-  const body = await response.clone().json().catch(() => null);
-  console.warn(`[auth/${flow}]`, {
-    status: response.status,
-    body
-  });
-}
-
-function logAuthErrorInDevelopment(error: unknown, flow: string): void {
-  if (process.env.NODE_ENV !== 'production') {
-    console.warn(`[auth/${flow}]`, error);
-  }
-}
-
 const styles = StyleSheet.create({
   screen: {
-    backgroundColor: '#F8F9FA',
+    backgroundColor: colors.background,
     flex: 1,
     paddingHorizontal: 24,
     paddingTop: 60
@@ -115,24 +93,24 @@ const styles = StyleSheet.create({
     width: 145
   },
   title: {
-    color: '#0B132B',
+    color: colors.textPrimary,
     fontSize: 30,
     fontWeight: '800',
     textAlign: 'center'
   },
   description: {
-    color: '#6C757D',
+    color: colors.textSecondary,
     fontSize: 16,
     lineHeight: 23,
     marginTop: 16,
     textAlign: 'center'
   },
   input: {
-    backgroundColor: '#FFFFFF',
-    borderColor: '#E2E8F0',
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
     borderRadius: 8,
     borderWidth: 1,
-    color: '#0B132B',
+    color: colors.textPrimary,
     fontSize: 15,
     height: 50,
     marginTop: 30,
@@ -140,7 +118,7 @@ const styles = StyleSheet.create({
   },
   button: {
     alignItems: 'center',
-    backgroundColor: '#C98F90',
+    backgroundColor: colors.secondary,
     borderRadius: 12,
     flexDirection: 'row',
     height: 54,
@@ -155,7 +133,7 @@ const styles = StyleSheet.create({
     marginRight: 10
   },
   buttonText: {
-    color: '#FFFFFF',
+    color: colors.surface,
     fontSize: 16,
     fontWeight: '800',
     textAlign: 'center'

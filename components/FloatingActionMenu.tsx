@@ -3,6 +3,7 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { colors } from '@/constants/colors';
+import { routes } from '@/constants/routes';
 
 const fabSize = 60;
 const fabRight = 24;
@@ -26,12 +27,12 @@ export function FloatingActionMenu({ productRoute, routineRoute, tabBarHeight }:
 
   function handleAddProduct() {
     closeMenu();
-    router.push(productRoute ?? '/products/create');
+    router.push(productRoute ?? routes.productCreate);
   }
 
   function handleAddRoutine() {
     closeMenu();
-    router.push(routineRoute ?? '/routine/Create');
+    router.push(routineRoute ?? routes.routineCreate);
   }
 
   return (

@@ -31,6 +31,8 @@ const BACKGROUND_BY_KIND: Record<AppNotificationKind, string> = {
 export function NotificationListItem({ notification, onPress }: NotificationListItemProps) {
   return (
     <Pressable
+      accessibilityLabel={`${notification.title}. ${notification.body}`}
+      accessibilityRole={notification.isRead ? undefined : 'button'}
       onPress={notification.isRead ? undefined : onPress}
       style={({ pressed }) => [
         styles.item,

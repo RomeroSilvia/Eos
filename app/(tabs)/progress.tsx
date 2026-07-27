@@ -59,7 +59,7 @@ export default function ProgressScreen() {
         <View style={styles.emptyState}>
           <Ionicons color={colors.error} name="alert-circle-outline" size={34} />
           <Text style={styles.emptyTitle}>No pudimos cargar tu progreso</Text>
-          <Text style={styles.emptyText}>{error.message}</Text>
+          <Text style={styles.emptyText}>{error}</Text>
         </View>
       </SafeAreaView>
     );

@@ -1,4 +1,5 @@
 import { apiRequest } from '@/services/api/client';
+import { formatRoutineCount } from '@/utils/progress';
 import type {
   CalendarDayProgress,
   ProgressHistoryDay,
@@ -29,21 +30,6 @@ export async function getProgressSummary(): Promise<ProgressSummary> {
   ]);
 
   return mapProgressSummary(summary, history);
-}
-
-export async function getWeeklyProgress(): Promise<ProgressSummary['weeklyProgress']> {
-  const summary = await getProgressSummary();
-  return summary.weeklyProgress;
-}
-
-export async function getStreakProgress(): Promise<ProgressSummary['streakProgress']> {
-  const summary = await getProgressSummary();
-  return summary.streakProgress;
-}
-
-export async function getCalendarProgress(): Promise<ProgressSummary['calendarProgress']> {
-  const summary = await getProgressSummary();
-  return summary.calendarProgress;
 }
 
 export async function getProgressHistory(): Promise<ProgressHistoryDay[]> {
@@ -132,11 +118,6 @@ function mapProgressSummary(summary: BackendProgressSummary, history: ProgressHi
     ],
     historyPreview: buildHistoryPreview(history)
   };
-}
-
-function formatRoutineCount(completed: number, total: number): string {
-  const suffix = completed === 1 ? 'rutina completada' : 'rutinas completadas';
-  return `${completed} de ${total} ${suffix}`;
 }
 
 function getStreakSubtitle(currentStreak: number): string {

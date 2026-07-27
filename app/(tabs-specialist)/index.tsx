@@ -6,6 +6,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LoadingState } from '@/components/LoadingState';
 import { colors } from '@/constants/colors';
+import { routes } from '@/constants/routes';
 import { formatSkinType } from '@/utils/skinType';
 import {
   getMyPatients,
@@ -15,9 +16,9 @@ import {
 } from '@/services/specialist';
 
 const quickActions = [
-  { icon: 'sparkles' as const, label: 'Consultas', route: '/(tabs-specialist)/consultas' as Href },
-  { icon: 'people' as const, label: 'Pacientes', route: '/(tabs-specialist)/pacientes' as Href },
-  { icon: 'list' as const, label: 'Rutinas', route: '/(tabs-specialist)/rutinas' as Href }
+  { icon: 'sparkles' as const, label: 'Consultas', route: routes.specialistConsultas as Href },
+  { icon: 'people' as const, label: 'Pacientes', route: routes.specialistPatients as Href },
+  { icon: 'list' as const, label: 'Rutinas', route: routes.specialistRutinas as Href }
 ];
 
 type HomeState = {
@@ -98,7 +99,7 @@ export default function SpecialistHomeScreen() {
                 </Text>
                 <Pressable
                   accessibilityRole="button"
-                  onPress={() => router.push('/(tabs-specialist)/consultas')}
+                  onPress={() => router.push(routes.specialistConsultas)}
                   style={styles.primaryButton}
                 >
                   <Text style={styles.primaryButtonText}>Ver consultas</Text>
@@ -125,7 +126,7 @@ export default function SpecialistHomeScreen() {
 
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>Consultas activas</Text>
-              <Pressable accessibilityRole="button" onPress={() => router.push('/(tabs-specialist)/consultas')}>
+              <Pressable accessibilityRole="button" onPress={() => router.push(routes.specialistConsultas)}>
                 <Text style={styles.viewAll}>Ver todas</Text>
               </Pressable>
             </View>
@@ -142,7 +143,7 @@ export default function SpecialistHomeScreen() {
                     key={consultation.relationId}
                     onPress={() =>
                       router.push({
-                        pathname: '/chat',
+                        pathname: routes.chat,
                         params: { relationId: consultation.relationId }
                       })
                     }

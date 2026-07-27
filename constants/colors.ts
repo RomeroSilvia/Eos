@@ -22,7 +22,14 @@ export const colors = {
   success: '#A9DFBF',
   pending: '#E1E6E2',
 
-  warning: '#F2C94C'
+  warning: '#F2C94C',
+
+  warningBg: '#FFF7E6',
+  warningText: '#B7791F',
+  warningBorder: '#D89C3D',
+  dangerBg: '#FDECEC',
+  successBg: '#EBF4EC',
+  successText: '#4F6F52'
 } as const;
 
 export type ColorName = keyof typeof colors;

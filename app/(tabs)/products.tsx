@@ -9,10 +9,11 @@ import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
 import { LoadingState } from '@/components/LoadingState';
 import { colors } from '@/constants/colors';
+import { routes } from '@/constants/routes';
 import { useProducts } from '@/hooks/useProducts';
 
 export default function ProductsScreen() {
-  const { products, isLoading, refreshProducts } = useProducts();
+  const { products, error, isLoading, refreshProducts } = useProducts();
 
   useFocusEffect(
     useCallback(() => {
@@ -25,6 +26,31 @@ export default function ProductsScreen() {
       <SafeAreaView edges={['top', 'left', 'right']} style={styles.screen}>
         <View style={styles.center}>
           <LoadingState message="Cargando productos..." />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (products.length === 0 && error) {
+    return (
+      <SafeAreaView edges={['top', 'left', 'right']} style={styles.screen}>
+        <View style={styles.header}>
+          <Text style={styles.title}>Mis Productos</Text>
+          <BellButton />
+        </View>
+
+        <View style={styles.emptyContainer}>
+          <View style={styles.emptyIcon}>
+            <Ionicons color={colors.error} name="alert-circle-outline" size={64} />
+          </View>
+          <Text style={styles.emptyTitle}>No pudimos cargar tus productos</Text>
+          <Text style={styles.emptyDescription}>{error}</Text>
+        </View>
+
+        <View style={styles.footer}>
+          <Button onPress={() => refreshProducts(true)} style={styles.button} variant="secondary">
+            Reintentar
+          </Button>
         </View>
       </SafeAreaView>
     );
@@ -50,7 +76,7 @@ export default function ProductsScreen() {
         </View>
 
         <View style={styles.footer}>
-          <Button onPress={() => router.push('/products/create')} style={styles.button}>
+          <Button onPress={() => router.push(routes.productCreate)} style={styles.button}>
             Comenzar
           </Button>
         </View>

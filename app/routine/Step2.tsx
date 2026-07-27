@@ -70,32 +70,6 @@ export default function Step2() {
             time_of_day: null
         };
 
-        if (process.env.NODE_ENV !== 'production') {
-            console.warn('[routine/Step2:request]', {
-                endpoint: effectiveClientId
-                    ? `/specialists/my-patients/${effectiveClientId}/routines`
-                    : '/routines',
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    Authorization: 'Bearer <redacted>'
-                },
-                payload,
-                navigationParams: {
-                    assignClientId,
-                    patientId,
-                    clientId
-                },
-                ids: {
-                    assignClientId: assignClientIdParam ?? null,
-                    patientId: patientIdParam ?? null,
-                    clientId: clientIdParam ?? null,
-                    effectiveClientId: effectiveClientId ?? null
-                },
-                flowMode: effectiveClientId ? 'assigned-routine' : 'own-routine'
-            });
-        }
-
         setDescription(selectedGoal?.label ?? '');
         const transitionStartedAt = markRoutineWizardTransition('Step2', 'Step3', {
             flowMode: effectiveClientId ? 'assigned-routine' : 'own-routine'
@@ -116,7 +90,7 @@ export default function Step2() {
             .catch((error) => {
                 clearRoutineWizardTransition();
 
-                if (process.env.NODE_ENV !== 'production') {
+                if (__DEV__) {
                     console.warn('[routine/Step2:create]', {
                         assigningToPatient: Boolean(effectiveClientId),
                         patientId: effectiveClientId,

@@ -12,6 +12,7 @@ const STALE_AFTER_MS = 30_000;
 
 export function useHome() {
   const [summary, setSummary] = useState<DailyHomeSummary | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const lastFetchedAt = useRef<number>(0);
 
@@ -31,6 +32,7 @@ export function useHome() {
     if (!force && Date.now() - lastFetchedAt.current < STALE_AFTER_MS) return;
     try {
       setIsLoading(true);
+      setError(null);
       const [user, activeRoutine] = await Promise.all([
         getCurrentProfile(),
         getActiveRoutine(),
@@ -54,9 +56,10 @@ export function useHome() {
         ],
         reminders: []
       });
-    } catch (error) {
-      console.error(error);
+    } catch (err) {
+      console.error(err);
       setSummary(null);
+      setError('No pudimos cargar tu información. Intentá nuevamente.');
     } finally {
       setIsLoading(false);
     }
@@ -66,7 +69,7 @@ export function useHome() {
     void refreshSummary(true);
   }, [refreshSummary]);
 
-  return { summary, isLoading, refreshSummary, toggleReminder };
+  return { summary, error, isLoading, refreshSummary, toggleReminder };
 }
 
 function getMetricStepsByCategory(steps: RoutineStep[], allowedCategories: Set<string>): RoutineStep[] {

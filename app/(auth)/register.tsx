@@ -17,6 +17,8 @@ import {
   View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { colors } from '@/constants/colors';
+import { routes } from '@/constants/routes';
 import { ApiRequestError, getFriendlyErrorMessage } from '@/services/api/client';
 import { register as registerUser } from '@/services/auth';
 import {
@@ -25,6 +27,7 @@ import {
   type SpecialistDocumentImage,
   type SpecialistSpecialty
 } from '@/services/specialist';
+import { isValidPassword, PASSWORD_REQUIREMENTS_TEXT } from '@/utils/password';
 
 const specialtyOptions: { label: string; value: SpecialistSpecialty }[] = [
   { label: 'Dermatologo/a', value: 'dermatologo' },
@@ -203,7 +206,7 @@ export default function RegisterScreen() {
           });
         } catch (specialistError) {
           setIsSpecialistAccountReady(true);
-          if (process.env.NODE_ENV !== 'production') {
+          if (__DEV__) {
             console.warn('[register/specialist]', specialistError);
           }
 
@@ -217,13 +220,13 @@ export default function RegisterScreen() {
           return;
         }
 
-        router.replace('/specialist-status' as never);
+        router.replace(routes.specialistStatus as never);
         return;
       }
 
-      router.push('/start-diagnosis');
+      router.push(routes.startDiagnosis);
     } catch (error) {
-      if (process.env.NODE_ENV !== 'production') {
+      if (__DEV__) {
         console.error(error);
       }
       const isDuplicateEmail = error instanceof ApiRequestError && error.status === 409;
@@ -253,10 +256,10 @@ export default function RegisterScreen() {
         >
           <Pressable
             accessibilityLabel="Volver a la landing"
-            onPress={() => router.replace('/landing')}
+            onPress={() => router.replace(routes.landing)}
             style={styles.backButton}
           >
-            <Ionicons color="#0B132B" name="chevron-back" size={26} />
+            <Ionicons color={colors.textPrimary} name="chevron-back" size={26} />
           </Pressable>
 
           {role === 'user' ? (
@@ -275,7 +278,7 @@ export default function RegisterScreen() {
                   setErrors((current) => ({ ...current, username: undefined, form: undefined }));
                 }}
                 placeholder="@example_example"
-                placeholderTextColor="#A0AEC0"
+                placeholderTextColor={colors.textMuted}
                 style={[styles.input, errors.username ? styles.inputError : null]}
                 value={username}
               />
@@ -288,7 +291,7 @@ export default function RegisterScreen() {
                   setErrors((current) => ({ ...current, firstName: undefined, form: undefined }));
                 }}
                 placeholder="Example"
-                placeholderTextColor="#A0AEC0"
+                placeholderTextColor={colors.textMuted}
                 style={[styles.input, errors.firstName ? styles.inputError : null]}
                 value={firstName}
               />
@@ -301,7 +304,7 @@ export default function RegisterScreen() {
                   setErrors((current) => ({ ...current, lastName: undefined, form: undefined }));
                 }}
                 placeholder="Example"
-                placeholderTextColor="#A0AEC0"
+                placeholderTextColor={colors.textMuted}
                 style={[styles.input, errors.lastName ? styles.inputError : null]}
                 value={lastName}
               />
@@ -318,7 +321,7 @@ export default function RegisterScreen() {
                   setErrors((current) => ({ ...current, fullName: undefined, form: undefined }));
                 }}
                 placeholder="Dra. Marta Lopez"
-                placeholderTextColor="#A0AEC0"
+                placeholderTextColor={colors.textMuted}
                 style={[styles.input, errors.fullName ? styles.inputError : null]}
                 value={fullName}
               />
@@ -328,7 +331,7 @@ export default function RegisterScreen() {
 
           {isSpecialistRequestOnly ? (
             <View style={styles.retryNotice}>
-              <Ionicons color="#6D8D76" name="information-circle-outline" size={22} />
+              <Ionicons color={colors.primary} name="information-circle-outline" size={22} />
               <Text style={styles.retryText}>
                 Tu cuenta ya esta creada. Envia o reintenta la solicitud con tu matricula y documentos.
               </Text>
@@ -347,7 +350,7 @@ export default function RegisterScreen() {
                   setErrors((current) => ({ ...current, email: undefined, form: undefined }));
                 }}
                 placeholder="email@domain.com"
-                placeholderTextColor="#A0AEC0"
+                placeholderTextColor={colors.textMuted}
                 style={[styles.input, errors.email ? styles.inputError : null]}
                 value={email}
               />
@@ -414,7 +417,7 @@ export default function RegisterScreen() {
             style={[styles.submitButton, (isSubmitting || compressingDocument !== null) && styles.submitButtonDisabled]}
           >
             {isSubmitting || compressingDocument !== null ? (
-              <ActivityIndicator color="#FFFFFF" size="small" style={styles.submitButtonSpinner} />
+              <ActivityIndicator color={colors.surface} size="small" style={styles.submitButtonSpinner} />
             ) : null}
             <Text style={styles.submitButtonText}>
               {compressingDocument ? 'Preparando imagen...' : getSubmitLabel(isSubmitting, role, isSpecialistRequestOnly)}
@@ -433,11 +436,11 @@ function UserAvatar({ onPickImage, profileImageUri }: { onPickImage: () => void;
         {profileImageUri ? (
           <Image source={{ uri: profileImageUri }} style={styles.avatarImage} />
         ) : (
-          <Ionicons color="#6D8D76" name="person-outline" size={58} />
+          <Ionicons color={colors.primary} name="person-outline" size={58} />
         )}
       </View>
       <Pressable style={styles.editButton} onPress={onPickImage}>
-        <MaterialIcons color="#495057" name="edit" size={18} />
+        <MaterialIcons color={colors.textSecondary} name="edit" size={18} />
       </Pressable>
     </View>
   );
@@ -447,7 +450,7 @@ function SpecialistIntro() {
   return (
     <View style={styles.specialistIntro}>
       <View style={styles.specialistIcon}>
-        <Ionicons color="#6D8D76" name="medkit-outline" size={30} />
+        <Ionicons color={colors.primary} name="medkit-outline" size={30} />
       </View>
       <View style={styles.specialistIntroCopy}>
         <Text style={styles.specialistTitle}>Registro de especialista</Text>
@@ -491,7 +494,7 @@ function SpecialistFields({
       <FieldLabel text="Especialidad" />
       <Pressable style={styles.selectInput} onPress={() => setIsSpecialtyMenuOpen((current) => !current)}>
         <Text style={styles.selectText}>{getSpecialtyLabel(specialty)}</Text>
-        <Ionicons color="#495057" name="chevron-down" size={20} />
+        <Ionicons color={colors.textSecondary} name="chevron-down" size={20} />
       </Pressable>
       {errors.specialty ? <Text style={styles.errorText}>{errors.specialty}</Text> : null}
 
@@ -521,7 +524,7 @@ function SpecialistFields({
           onSetErrors((current) => ({ ...current, licenseNumber: undefined, form: undefined }));
         }}
         placeholder="MN-12345"
-        placeholderTextColor="#A0AEC0"
+        placeholderTextColor={colors.textMuted}
         style={[styles.input, errors.licenseNumber ? styles.inputError : null]}
         value={licenseNumber}
       />
@@ -577,7 +580,7 @@ function PasswordField({
         autoCorrect={false}
         onChangeText={onChangeText}
         placeholder={placeholder}
-        placeholderTextColor="#A0AEC0"
+        placeholderTextColor={colors.textMuted}
         secureTextEntry={!isVisible}
         style={styles.passwordInput}
         value={value}
@@ -588,7 +591,7 @@ function PasswordField({
         onPress={onToggleVisibility}
         style={styles.passwordToggle}
       >
-        <Ionicons color="#718096" name={isVisible ? 'eye-off-outline' : 'eye-outline'} size={22} />
+        <Ionicons color={colors.textSecondary} name={isVisible ? 'eye-off-outline' : 'eye-outline'} size={22} />
       </Pressable>
     </View>
   );
@@ -620,7 +623,7 @@ function DocumentPickerButton({
         {document ? (
           <Image source={{ uri: document.uri }} style={styles.documentPreview} />
         ) : (
-          <Ionicons color="#6D8D76" name="image-outline" size={24} />
+          <Ionicons color={colors.primary} name="image-outline" size={24} />
         )}
         <View style={styles.documentCopy}>
           <Text style={styles.documentButtonText}>
@@ -671,8 +674,8 @@ function validateRegister(values: {
 
     if (!values.password) {
       nextErrors.password = 'La contrasena es obligatoria.';
-    } else if (values.password.length < 6) {
-      nextErrors.password = 'La contrasena debe tener al menos 6 caracteres.';
+    } else if (!isValidPassword(values.password)) {
+      nextErrors.password = PASSWORD_REQUIREMENTS_TEXT;
     }
 
     if (!values.confirmPassword) {
@@ -739,7 +742,7 @@ function formatFileSize(size: number | null): string {
 
 const styles = StyleSheet.create({
   screen: {
-    backgroundColor: '#F8F9FA',
+    backgroundColor: colors.background,
     flex: 1
   },
   keyboardView: {
@@ -770,8 +773,8 @@ const styles = StyleSheet.create({
   },
   avatar: {
     alignItems: 'center',
-    backgroundColor: '#EBF4EC',
-    borderColor: '#C3E0C5',
+    backgroundColor: colors.primarySuperLight,
+    borderColor: colors.primaryLight,
     borderRadius: 60,
     borderWidth: 2,
     height: 120,
@@ -785,7 +788,7 @@ const styles = StyleSheet.create({
   },
   editButton: {
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface,
     borderRadius: 18,
     bottom: 4,
     height: 36,
@@ -801,8 +804,8 @@ const styles = StyleSheet.create({
   },
   specialistIntro: {
     alignItems: 'center',
-    backgroundColor: '#EBF4EC',
-    borderColor: '#DDEADD',
+    backgroundColor: colors.primarySuperLight,
+    borderColor: colors.primaryLight,
     borderRadius: 14,
     borderWidth: 1,
     flexDirection: 'row',
@@ -813,7 +816,7 @@ const styles = StyleSheet.create({
   },
   specialistIcon: {
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface,
     borderRadius: 26,
     height: 52,
     justifyContent: 'center',
@@ -823,20 +826,20 @@ const styles = StyleSheet.create({
     flex: 1
   },
   specialistTitle: {
-    color: '#0B132B',
+    color: colors.textPrimary,
     fontSize: 19,
     fontWeight: '900'
   },
   specialistSubtitle: {
-    color: '#6C757D',
+    color: colors.textSecondary,
     fontSize: 14,
     lineHeight: 20,
     marginTop: 4
   },
   retryNotice: {
     alignItems: 'flex-start',
-    backgroundColor: '#EBF4EC',
-    borderColor: '#C3E0C5',
+    backgroundColor: colors.primarySuperLight,
+    borderColor: colors.primaryLight,
     borderRadius: 10,
     borderWidth: 1,
     flexDirection: 'row',
@@ -845,38 +848,38 @@ const styles = StyleSheet.create({
     padding: 12
   },
   retryText: {
-    color: '#495057',
+    color: colors.textSecondary,
     flex: 1,
     fontSize: 13,
     lineHeight: 19
   },
   label: {
-    color: '#495057',
+    color: colors.textSecondary,
     fontSize: 15,
     fontWeight: '600',
     marginBottom: 8,
     marginTop: 16
   },
   required: {
-    color: '#C98F90'
+    color: colors.secondary
   },
   input: {
-    backgroundColor: '#FFFFFF',
-    borderColor: '#E2E8F0',
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
     borderRadius: 8,
     borderWidth: 1,
-    color: '#1A202C',
+    color: colors.textPrimary,
     height: 50,
     paddingHorizontal: 14,
     width: '100%'
   },
   inputError: {
-    borderColor: '#C98F90'
+    borderColor: colors.secondary
   },
   passwordWrapper: {
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderColor: '#E2E8F0',
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
     borderRadius: 8,
     borderWidth: 1,
     flexDirection: 'row',
@@ -884,7 +887,7 @@ const styles = StyleSheet.create({
     width: '100%'
   },
   passwordInput: {
-    color: '#1A202C',
+    color: colors.textPrimary,
     flex: 1,
     height: '100%',
     paddingLeft: 14,
@@ -900,8 +903,8 @@ const styles = StyleSheet.create({
   },
   selectInput: {
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderColor: '#E2E8F0',
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
     borderRadius: 8,
     borderWidth: 1,
     flexDirection: 'row',
@@ -911,12 +914,12 @@ const styles = StyleSheet.create({
     width: '100%'
   },
   selectText: {
-    color: '#1A202C',
+    color: colors.textPrimary,
     fontSize: 15
   },
   roleMenu: {
-    backgroundColor: '#FFFFFF',
-    borderColor: '#E2E8F0',
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
     borderRadius: 8,
     borderWidth: 1,
     marginTop: 8,
@@ -928,7 +931,7 @@ const styles = StyleSheet.create({
     paddingVertical: 14
   },
   roleOptionText: {
-    color: '#495057',
+    color: colors.textSecondary,
     fontSize: 15
   },
   specialistSection: {
@@ -936,8 +939,8 @@ const styles = StyleSheet.create({
   },
   documentButton: {
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderColor: '#E2E8F0',
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
     borderRadius: 8,
     borderWidth: 1,
     flexDirection: 'row',
@@ -959,28 +962,28 @@ const styles = StyleSheet.create({
     width: 40
   },
   documentButtonText: {
-    color: '#495057',
+    color: colors.textSecondary,
     fontSize: 15,
     fontWeight: '600'
   },
   documentMeta: {
-    color: '#6C757D',
+    color: colors.textSecondary,
     fontSize: 12,
     marginTop: 2
   },
   errorText: {
-    color: '#B42318',
+    color: colors.error,
     fontSize: 12,
     marginTop: 6
   },
   formErrorText: {
-    color: '#B42318',
+    color: colors.error,
     fontSize: 13,
     marginTop: 18
   },
   submitButton: {
     alignItems: 'center',
-    backgroundColor: '#C98F90',
+    backgroundColor: colors.secondary,
     borderRadius: 12,
     flexDirection: 'row',
     height: 54,
@@ -996,7 +999,7 @@ const styles = StyleSheet.create({
     marginRight: 10
   },
   submitButtonText: {
-    color: '#FFFFFF',
+    color: colors.surface,
     fontSize: 16,
     fontWeight: 'bold'
   }

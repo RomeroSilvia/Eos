@@ -3,7 +3,11 @@ import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { ActivityIndicator, Alert, Image, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { apiConfig, getFriendlyAuthErrorMessage } from '@/services/api/client';
+import { colors } from '@/constants/colors';
+import { routes } from '@/constants/routes';
+import { ApiRequestError, getFriendlyAuthErrorMessage } from '@/services/api/client';
+import { updatePasswordWithRecoveryToken } from '@/services/auth';
+import { isValidPassword } from '@/utils/password';
 
 export default function UpdatePasswordScreen() {
   const router = useRouter();
@@ -45,26 +49,15 @@ export default function UpdatePasswordScreen() {
         return;
       }
 
-      const response = await fetch(`${apiConfig.baseUrl}/auth/update-password`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${accessToken}`
-        },
-        body: JSON.stringify({ newPassword: password, accessToken })
-      });
-
-      if (!response.ok) {
-        await logAuthResponseInDevelopment(response, 'update-password');
-        Alert.alert('Error del Servidor', getFriendlyAuthErrorMessage(response.status));
-        return;
-      }
+      await updatePasswordWithRecoveryToken(password, accessToken);
 
       Alert.alert('Contraseña actualizada', 'Tu contraseña fue actualizada.');
-      router.replace('/login');
+      router.replace(routes.login);
     } catch (error) {
-      logAuthErrorInDevelopment(error, 'update-password');
-      Alert.alert('Error de Conexión', 'Ocurrió un error. Intentá nuevamente.');
+      if (__DEV__) console.warn('[auth/update-password]', error);
+
+      const status = error instanceof ApiRequestError ? error.status : undefined;
+      Alert.alert('Error', getFriendlyAuthErrorMessage(status));
     } finally {
       setIsSubmitting(false);
     }
@@ -81,19 +74,21 @@ export default function UpdatePasswordScreen() {
         <Text style={styles.label}>Nueva contraseña</Text>
         <View style={styles.inputContainer}>
           <TextInput
+            accessibilityLabel="Nueva contraseña"
             onChangeText={setPassword}
             placeholder="contraseña"
-            placeholderTextColor="#94A3B8"
+            placeholderTextColor={colors.textMuted}
             secureTextEntry={!showPassword}
             style={styles.input}
             value={password}
           />
           <Pressable
             accessibilityLabel={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+            accessibilityRole="button"
             onPress={() => setShowPassword((value) => !value)}
             style={styles.eyeButton}
           >
-            <Ionicons color="#6C757D" name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={22} />
+            <Ionicons color={colors.textSecondary} name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={22} />
           </Pressable>
         </View>
 
@@ -104,60 +99,37 @@ export default function UpdatePasswordScreen() {
         <Text style={styles.label}>Confirmar contraseña</Text>
         <View style={styles.inputContainer}>
           <TextInput
+            accessibilityLabel="Confirmar contraseña"
             onChangeText={setConfirmPassword}
             placeholder="contraseña"
-            placeholderTextColor="#94A3B8"
+            placeholderTextColor={colors.textMuted}
             secureTextEntry={!showConfirmPassword}
             style={styles.input}
             value={confirmPassword}
           />
           <Pressable
             accessibilityLabel={showConfirmPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+            accessibilityRole="button"
             onPress={() => setShowConfirmPassword((value) => !value)}
             style={styles.eyeButton}
           >
-            <Ionicons color="#6C757D" name={showConfirmPassword ? 'eye-off-outline' : 'eye-outline'} size={22} />
+            <Ionicons color={colors.textSecondary} name={showConfirmPassword ? 'eye-off-outline' : 'eye-outline'} size={22} />
           </Pressable>
         </View>
       </View>
 
       <Pressable
+        accessibilityLabel="Guardar contraseña"
+        accessibilityRole="button"
         accessibilityState={{ disabled: !canSubmit, busy: isSubmitting }}
         disabled={!canSubmit}
         onPress={handleSavePassword}
         style={[styles.button, !canSubmit && styles.buttonDisabled]}
       >
-        {isSubmitting ? <ActivityIndicator color="#FFFFFF" size="small" style={styles.buttonSpinner} /> : null}
+        {isSubmitting ? <ActivityIndicator color={colors.surface} size="small" style={styles.buttonSpinner} /> : null}
         <Text style={styles.buttonText}>{isSubmitting ? 'Guardando...' : 'Guardar Contraseña'}</Text>
       </Pressable>
     </SafeAreaView>
-  );
-}
-
-async function logAuthResponseInDevelopment(response: Response, flow: string): Promise<void> {
-  if (process.env.NODE_ENV === 'production') {
-    return;
-  }
-
-  const body = await response.clone().json().catch(() => null);
-  console.warn(`[auth/${flow}]`, {
-    status: response.status,
-    body
-  });
-}
-
-function logAuthErrorInDevelopment(error: unknown, flow: string): void {
-  if (process.env.NODE_ENV !== 'production') {
-    console.warn(`[auth/${flow}]`, error);
-  }
-}
-
-function isValidPassword(value: string) {
-  return (
-    value.length >= 8 &&
-    /\d/.test(value) &&
-    /[A-Z]/.test(value) &&
-    /[!@#$%^&*]/.test(value)
   );
 }
 
@@ -179,7 +151,7 @@ function getRecoveryAccessToken(): string | null {
 
 const styles = StyleSheet.create({
   screen: {
-    backgroundColor: '#F8F9FA',
+    backgroundColor: colors.background,
     flex: 1,
     paddingHorizontal: 24,
     paddingTop: 60
@@ -194,7 +166,7 @@ const styles = StyleSheet.create({
     width: 145
   },
   title: {
-    color: '#0B132B',
+    color: colors.textPrimary,
     fontSize: 30,
     fontWeight: '800',
     textAlign: 'center'
@@ -203,15 +175,15 @@ const styles = StyleSheet.create({
     marginTop: 44
   },
   label: {
-    color: '#495057',
+    color: colors.textSecondary,
     fontSize: 13,
     fontWeight: '800',
     marginBottom: 8
   },
   inputContainer: {
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderColor: '#E2E8F0',
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
     borderRadius: 8,
     borderWidth: 1,
     flexDirection: 'row',
@@ -219,7 +191,7 @@ const styles = StyleSheet.create({
     paddingLeft: 15
   },
   input: {
-    color: '#0B132B',
+    color: colors.textPrimary,
     flex: 1,
     fontSize: 15,
     height: '100%'
@@ -231,7 +203,7 @@ const styles = StyleSheet.create({
     width: 48
   },
   validationText: {
-    color: '#6C757D',
+    color: colors.textSecondary,
     fontSize: 12,
     fontStyle: 'italic',
     lineHeight: 18,
@@ -240,7 +212,7 @@ const styles = StyleSheet.create({
   },
   button: {
     alignItems: 'center',
-    backgroundColor: '#C98F90',
+    backgroundColor: colors.secondary,
     borderRadius: 12,
     flexDirection: 'row',
     height: 54,
@@ -255,7 +227,7 @@ const styles = StyleSheet.create({
     marginRight: 10
   },
   buttonText: {
-    color: '#FFFFFF',
+    color: colors.surface,
     fontSize: 16,
     fontWeight: '800',
     textAlign: 'center'

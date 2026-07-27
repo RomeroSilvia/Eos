@@ -6,6 +6,7 @@ import { Card } from '@/components/Card';
 import { LoadingState } from '@/components/LoadingState';
 import { AppHeader } from '@/components/navigation/AppHeader';
 import { colors } from '@/constants/colors';
+import { routes } from '@/constants/routes';
 import { getSpecialistStatus, type SpecialistStatus } from '@/services/specialist';
 import { logout } from '@/services/auth';
 import { useFocusEffect, useRouter } from 'expo-router';
@@ -24,7 +25,7 @@ export default function SpecialistStatusScreen() {
       const nextStatus = await getSpecialistStatus();
 
       if (nextStatus?.license_status === 'verified') {
-        router.replace('/(tabs-specialist)' as never);
+        router.replace(routes.specialistHome as never);
         return;
       }
 
@@ -58,11 +59,11 @@ export default function SpecialistStatusScreen() {
 
   async function handleLogout() {
     await logout();
-    router.replace('/landing');
+    router.replace(routes.landing);
   }
 
   function handleSendApplication() {
-    router.push('/register?mode=specialist&requestOnly=1' as never);
+    router.push(`${routes.register}?mode=specialist&requestOnly=1` as never);
   }
 
   const content = getStatusContent(status);
@@ -107,7 +108,7 @@ export default function SpecialistStatusScreen() {
               ) : null}
 
               {canSendApplication ? (
-                <Pressable style={styles.primaryButton} onPress={handleSendApplication}>
+                <Pressable accessibilityRole="button" style={styles.primaryButton} onPress={handleSendApplication}>
                   <Text style={styles.primaryButtonText}>Completar solicitud</Text>
                 </Pressable>
               ) : null}
@@ -117,14 +118,14 @@ export default function SpecialistStatusScreen() {
                   <Text style={styles.description}>
                     Podes volver a enviar la solicitud desde el formulario de especialista.
                   </Text>
-                  <Pressable style={styles.primaryButton} onPress={handleSendApplication}>
+                  <Pressable accessibilityRole="button" style={styles.primaryButton} onPress={handleSendApplication}>
                     <Text style={styles.primaryButtonText}>Reintentar solicitud</Text>
                   </Pressable>
                 </>
               ) : null}
 
               {error || isUnknownStatus ? (
-                <Pressable style={styles.secondaryButton} onPress={refreshStatus}>
+                <Pressable accessibilityRole="button" style={styles.secondaryButton} onPress={refreshStatus}>
                   <Text style={styles.secondaryButtonText}>Reintentar</Text>
                 </Pressable>
               ) : null}
@@ -132,7 +133,7 @@ export default function SpecialistStatusScreen() {
           )}
         </Card>
 
-        <Pressable style={styles.logoutButton} onPress={handleLogout}>
+        <Pressable accessibilityLabel="Cerrar sesion" accessibilityRole="button" style={styles.logoutButton} onPress={handleLogout}>
           <Text style={styles.logoutText}>Cerrar sesion</Text>
         </Pressable>
       </View>
@@ -149,8 +150,8 @@ function getStatusContent(status: SpecialistStatus): {
 } {
   if (!status) {
     return {
-      background: '#FDECEC',
-      color: '#B42318',
+      background: colors.dangerBg,
+      color: colors.error,
       description: 'No pudimos interpretar el estado de tu solicitud. Actualiza la pantalla o intenta nuevamente.',
       icon: 'alert-circle-outline',
       title: 'Estado desconocido'
@@ -159,8 +160,8 @@ function getStatusContent(status: SpecialistStatus): {
 
   if (status.license_status === 'pending') {
     return {
-      background: '#FFF7E6',
-      color: '#B7791F',
+      background: colors.warningBg,
+      color: colors.warningText,
       description: 'Estamos revisando tu DNI y titulo profesional.',
       icon: 'time-outline',
       title: 'Solicitud pendiente'
@@ -169,8 +170,8 @@ function getStatusContent(status: SpecialistStatus): {
 
   if (status.license_status === 'rejected') {
     return {
-      background: '#FDECEC',
-      color: '#B42318',
+      background: colors.dangerBg,
+      color: colors.error,
       description: 'Tu solicitud necesita correcciones antes de ser aprobada.',
       icon: 'close-circle-outline',
       title: 'Solicitud rechazada'
@@ -179,7 +180,7 @@ function getStatusContent(status: SpecialistStatus): {
 
   if (status.license_status === 'verified') {
     return {
-      background: '#EBF4EC',
+      background: colors.successBg,
       color: colors.primaryDark,
       description: 'Tu matricula fue verificada. El panel de especialista llegara en el modulo correspondiente.',
       icon: 'checkmark-circle-outline',
@@ -189,7 +190,7 @@ function getStatusContent(status: SpecialistStatus): {
 
   if (status.license_status === 'not_submitted') {
     return {
-      background: '#EBF4EC',
+      background: colors.successBg,
       color: colors.primaryDark,
       description: 'Todavia no completaste tu solicitud de especialista.',
       icon: 'document-text-outline',
@@ -198,8 +199,8 @@ function getStatusContent(status: SpecialistStatus): {
   }
 
   return {
-    background: '#FDECEC',
-    color: '#B42318',
+    background: colors.dangerBg,
+    color: colors.error,
     description: 'Recibimos un estado que la app todavia no reconoce. Actualiza la pantalla o intenta nuevamente.',
     icon: 'alert-circle-outline',
     title: 'Estado desconocido'
@@ -272,7 +273,7 @@ const styles = StyleSheet.create({
   },
   meta: {
     alignSelf: 'stretch',
-    backgroundColor: '#F8F9FA',
+    backgroundColor: colors.background,
     borderRadius: 8,
     gap: 8,
     padding: 14
@@ -283,7 +284,7 @@ const styles = StyleSheet.create({
     fontWeight: '700'
   },
   rejectionText: {
-    color: '#B42318',
+    color: colors.error,
     fontSize: 14,
     lineHeight: 20
   },

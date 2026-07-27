@@ -8,12 +8,14 @@ import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
 import { LoadingState } from '@/components/LoadingState';
 import { colors } from '@/constants/colors';
+import { routes } from '@/constants/routes';
 import { useProfile } from '@/hooks/useProfile';
 import { changePassword } from '@/services/auth';
 import { areNotificationsEnabled, setNotificationsEnabled } from '@/services/notifications';
 import { updateProfile } from '@/services/profile';
 import { cancelMySubscription, getMySubscription, type Subscription } from '@/services/subscriptions';
 import { getFriendlyErrorMessage } from '@/services/api/client';
+import { isValidPassword, PASSWORD_REQUIREMENTS_TEXT } from '@/utils/password';
 
 export default function SettingsScreen() {
   const router = useRouter();
@@ -103,8 +105,8 @@ export default function SettingsScreen() {
   }
 
   async function handleChangePassword() {
-    if (newPassword.length < 6) {
-      Alert.alert('Configuracion', 'La contrasena debe tener al menos 6 caracteres.');
+    if (!isValidPassword(newPassword)) {
+      Alert.alert('Configuracion', PASSWORD_REQUIREMENTS_TEXT);
       return;
     }
 
@@ -240,7 +242,7 @@ export default function SettingsScreen() {
           <TextInput
             autoCapitalize="none"
             onChangeText={setNewPassword}
-            placeholder="Minimo 6 caracteres"
+            placeholder="Minimo 8 caracteres, con mayuscula, numero y simbolo"
             secureTextEntry
             style={styles.input}
             value={newPassword}
@@ -352,7 +354,7 @@ export default function SettingsScreen() {
                 <Text style={styles.sectionText}>Volver a responderlo actualiza tu perfil de piel.</Text>
               </View>
             </View>
-            <Button onPress={() => router.push('/quiz')} style={styles.button} variant="ghost">
+            <Button onPress={() => router.push(routes.quiz)} style={styles.button} variant="ghost">
               Volver a tomar test de piel
             </Button>
           </Card>
@@ -560,10 +562,10 @@ function getSubscriptionStatusStyle(status: Subscription['status']): { backgroun
     case 'active':
       return { backgroundColor: colors.primaryLight, borderColor: colors.primary };
     case 'pending':
-      return { backgroundColor: '#FFF5E6', borderColor: '#D89C3D' };
+      return { backgroundColor: colors.warningBg, borderColor: colors.warningBorder };
     case 'canceled':
     case 'expired':
-      return { backgroundColor: '#FDECEC', borderColor: colors.error };
+      return { backgroundColor: colors.dangerBg, borderColor: colors.error };
     case 'past_due':
       return { backgroundColor: colors.secondaryLight, borderColor: colors.secondaryDark };
     default:
@@ -576,7 +578,7 @@ function getSubscriptionStatusTextStyle(status: Subscription['status']): { color
     case 'active':
       return { color: colors.primaryDark };
     case 'pending':
-      return { color: '#8A5A00' };
+      return { color: colors.warningText };
     case 'canceled':
     case 'expired':
       return { color: colors.error };

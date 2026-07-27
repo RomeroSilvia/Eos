@@ -38,7 +38,7 @@ export default function ProgressHistoryScreen() {
           <ProgressStateCard icon="hourglass-outline" title="Cargando historial..." text="Estamos buscando tus rutinas." />
         ) : error ? (
           <View style={styles.stateWrapper}>
-            <ProgressStateCard icon="alert-circle-outline" title="No pudimos cargar tu historial." text={error.message} />
+            <ProgressStateCard icon="alert-circle-outline" title="No pudimos cargar tu historial." text={error} />
             <Pressable accessibilityRole="button" onPress={refetch} style={styles.retryButton}>
               <Text style={styles.retryText}>Reintentar</Text>
             </Pressable>

@@ -23,7 +23,7 @@ function now() {
 }
 
 function shouldProfile() {
-  return process.env.NODE_ENV !== 'production';
+  return __DEV__;
 }
 
 function round(ms: number) {

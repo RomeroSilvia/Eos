@@ -1,6 +1,7 @@
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors } from '@/constants/colors';
+import { routes } from '@/constants/routes';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
@@ -19,7 +20,7 @@ export default function SuccessScreen() {
 
     getRoutineById(routineId)
       .then(setRoutine)
-      .catch((error) => console.error(error));
+      .catch((error) => { if (__DEV__) console.error(error); });
   }, [routineId]);
 
   const stepsCount = routine?.routine_steps?.length ?? 0;
@@ -63,11 +64,11 @@ export default function SuccessScreen() {
           style={styles.button}
           onPress={() => {
             if (assignClientId) {
-              router.push(`/patients/${assignClientId}` as never);
+              router.push({ pathname: routes.specialistPatientDetail, params: { id: assignClientId } });
               return;
             }
 
-            router.push((profile?.role === 'specialist' ? '/(tabs-specialist)/rutinas' : '/routine') as never);
+            router.push((profile?.role === 'specialist' ? routes.specialistRutinas : routes.routine) as never);
           }}
         >
           <Text style={styles.buttonText}>Ver mi rutina</Text>

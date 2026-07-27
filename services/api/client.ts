@@ -1,11 +1,9 @@
-import * as SecureStore from 'expo-secure-store';
-import { Platform } from 'react-native';
+import { getStoredAccessToken } from '@/services/api/token';
 
 const defaultApiUrl = 'http://localhost:3000/api';
 
 export const apiConfig = {
-  baseUrl: process.env.EXPO_PUBLIC_API_URL ?? defaultApiUrl,
-  useMocks: process.env.EXPO_PUBLIC_USE_MOCKS !== 'false'
+  baseUrl: process.env.EXPO_PUBLIC_API_URL ?? defaultApiUrl
 };
 
 type ApiRequestOptions = RequestInit & {
@@ -83,13 +81,16 @@ export class ApiClientError extends ApiRequestError {
 
 export async function apiRequest<TResponse>({ path, headers, ...options }: ApiRequestOptions): Promise<TResponse> {
   const url = `${apiConfig.baseUrl}/${path.replace(/^\//, '')}`;
-  const accessToken = await getStoredAccessToken();
   const isFormData = typeof FormData !== 'undefined' && options.body instanceof FormData;
   const requestHeaders = new Headers(headers ?? undefined);
 
   if (!isFormData) {
     requestHeaders.set('Content-Type', 'application/json');
   }
+
+  // Si el caller ya provee su propio Authorization (ej. token de recovery de
+  // reset de contraseña), no lo pisamos con el de la sesión guardada.
+  const accessToken = requestHeaders.has('Authorization') ? null : await getStoredAccessToken();
 
   if (accessToken) {
     requestHeaders.set('Authorization', `Bearer ${accessToken}`);
@@ -110,15 +111,15 @@ export async function apiRequest<TResponse>({ path, headers, ...options }: ApiRe
       parsed = undefined;
     }
 
-    if (response.status === 404) {
+    if (__DEV__ && response.status === 404) {
       const isRouteNotFound = typeof parsed?.message === 'string' && parsed.message.toLowerCase().includes('route not found');
       if (isRouteNotFound) {
-        console.error('URL NO EXISTE:', url);
+        console.error('[api/client] Ruta no encontrada:', url);
       }
     }
 
-    if (response.status !== 401 && response.status !== 403 && response.status !== 409) {
-      console.error('RESPONSE ERROR:', text);
+    if (__DEV__ && response.status !== 401 && response.status !== 403 && response.status !== 409) {
+      console.error('[api/client] Error de respuesta:', text);
     }
     throw new ApiClientError(
       response.status,
@@ -134,15 +135,7 @@ export async function apiRequest<TResponse>({ path, headers, ...options }: ApiRe
   return response.json() as Promise<TResponse>;
 }
 
-async function getStoredAccessToken(): Promise<string | null> {
-  if (Platform.OS === 'web') {
-    return localStorage.getItem('eos-access-token');
-  }
-
-  return SecureStore.getItemAsync('eos-access-token');
-}
-
-function hasTechnicalDetails(message: string): boolean {
+export function hasTechnicalDetails(message: string): boolean {
   const normalizedMessage = message.toLowerCase();
 
   return [

@@ -8,6 +8,7 @@ import { BellButton } from '@/components/BellButton';
 import { LoadingState } from '@/components/LoadingState';
 import { RoutineStepCard } from '@/components/RoutineStepCard';
 import { colors } from '@/constants/colors';
+import { routes } from '@/constants/routes';
 import { useRoutine } from '@/hooks/useRoutine';
 import type { Routine } from '@/types/routine';
 
@@ -41,7 +42,7 @@ export default function RoutineScreen() {
     if (!routine) return;
 
     router.push({
-      pathname: '/routine/Add-step',
+      pathname: routes.routineAddStep,
       params: {
         routineId: routine.id,
         stepId,
@@ -122,7 +123,7 @@ export default function RoutineScreen() {
           </Text>
           <Pressable
             style={styles.createButton}
-            onPress={() => router.push('/routine/Create')}
+            onPress={() => router.push(routes.routineCreate)}
           >
             <Text style={styles.createButtonText}>Crear rutina</Text>
           </Pressable>
@@ -172,7 +173,7 @@ export default function RoutineScreen() {
                   <Pressable
                     onPress={() =>
                       router.push({
-                        pathname: '/routine/routine-edit',
+                        pathname: routes.routineEdit,
                         params: { routineId: routine.id }
                       })
                     }
@@ -271,7 +272,7 @@ export default function RoutineScreen() {
           <Text style={styles.sectionTitle}>Todas tus rutinas</Text>
           <Pressable
             style={styles.iconButton}
-            onPress={() => router.push('/routine/Create')}
+            onPress={() => router.push(routes.routineCreate)}
             accessibilityLabel="Crear rutina"
             accessibilityRole="button"
           >

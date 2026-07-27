@@ -3,12 +3,7 @@ const SKIN_TYPE_LABELS: Record<string, string> = {
   dry: 'Piel seca',
   oily: 'Piel grasa',
   mixed: 'Piel mixta',
-  sensitive: 'Piel sensible',
-  Normal: 'Piel normal',
-  Mixta: 'Piel mixta',
-  Seca: 'Piel seca',
-  Grasa: 'Piel grasa',
-  Sensible: 'Piel sensible'
+  sensitive: 'Piel sensible'
 };
 
 export function formatSkinType(skinType?: string | null): string {

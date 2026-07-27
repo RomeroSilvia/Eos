@@ -12,12 +12,13 @@ import { LoadingState } from '@/components/LoadingState';
 
 import { RemindersSection } from '@/components/RemindersSection';
 import { colors } from '@/constants/colors';
+import { routes } from '@/constants/routes';
 import { useHome } from '@/hooks/useHome';
 import { getMySpecialist, type MySpecialist, type SpecialistSpecialty } from '@/services/specialist';
-import { formatStepCount } from '@/utils/format';
+import { formatStepCount } from '@/utils/progress';
 
 export default function HomeScreen() {
-  const { summary, refreshSummary } = useHome();
+  const { summary, error, refreshSummary } = useHome();
   const [mySpecialist, setMySpecialist] = useState<MySpecialist | null>(null);
   const [isLoadingSpecialist, setIsLoadingSpecialist] = useState(true);
   const [specialistError, setSpecialistError] = useState(false);
@@ -42,6 +43,21 @@ export default function HomeScreen() {
       void loadMySpecialist();
     }, [loadMySpecialist, refreshSummary])
   );
+
+  if (!summary && error) {
+    return (
+      <SafeAreaView edges={['top', 'left', 'right']} style={styles.screen}>
+        <View style={styles.emptyState}>
+          <Ionicons color={colors.error} name="alert-circle-outline" size={34} />
+          <Text style={styles.emptyTitle}>No pudimos cargar tu información</Text>
+          <Text style={styles.emptyText}>{error}</Text>
+          <Button onPress={() => refreshSummary(true)} style={styles.routineButton} variant="secondary">
+            Reintentar
+          </Button>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   if (!summary) {
     return (
@@ -117,7 +133,7 @@ export default function HomeScreen() {
           <View style={[styles.progressTrack, { backgroundColor: colors.border }]}>
             <View style={[styles.progressFill, { width: `${progress * 100}%`, backgroundColor: colors.primary }]} />
           </View>
-          <Button variant="secondary" onPress={() => router.push('/routine')} style={styles.routineButton}>
+          <Button variant="secondary" onPress={() => router.push(routes.routine)} style={styles.routineButton}>
             {hasActiveRoutine ? 'Ver rutina' : 'Crear rutina'}
           </Button>
         </Card>
@@ -165,7 +181,7 @@ export default function HomeScreen() {
           {!isLoadingSpecialist && !specialistError && mySpecialist ? (
             <View style={styles.specialistActions}>
               <Button
-               onPress={() => router.push('/chat')}
+               onPress={() => router.push(routes.chat)}
                 style={styles.specialistButton}
               >
                 Enviar Consulta
@@ -175,7 +191,7 @@ export default function HomeScreen() {
           ) : null}
 
           {!isLoadingSpecialist && !specialistError && !mySpecialist ? (
-            <Button onPress={() => router.push('/specialists')} style={styles.specialistButton} variant="secondary">
+            <Button onPress={() => router.push(routes.specialists)} style={styles.specialistButton} variant="secondary">
               Buscar especialista
             </Button>
           ) : null}
