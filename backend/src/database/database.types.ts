@@ -146,8 +146,8 @@ export type Database = {
           user_id: string;
           specialty: string;
           license_number: string;
-          dni_photo_url: string;
-          title_photo_url: string;
+          dni_photo_url: string | null;
+          title_photo_url: string | null;
           license_status: string;
           rejection_reason: string | null;
           center_id: string | null;
@@ -159,8 +159,8 @@ export type Database = {
           user_id: string;
           specialty: string;
           license_number?: string;
-          dni_photo_url: string;
-          title_photo_url: string;
+          dni_photo_url?: string | null;
+          title_photo_url?: string | null;
           license_status?: string;
           rejection_reason?: string | null;
           center_id?: string | null;
@@ -170,8 +170,8 @@ export type Database = {
         Update: {
           specialty?: string;
           license_number?: string;
-          dni_photo_url?: string;
-          title_photo_url?: string;
+          dni_photo_url?: string | null;
+          title_photo_url?: string | null;
           license_status?: string;
           rejection_reason?: string | null;
           center_id?: string | null;

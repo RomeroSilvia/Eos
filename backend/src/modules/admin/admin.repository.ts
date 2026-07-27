@@ -1,33 +1,18 @@
 import { supabase } from '../../config/supabase';
 import { TABLE_NAMES } from '../../database/tableNames';
+import type { ProfileRow, SpecialistProfileRow } from '../../database/schema.types';
+import type { CenterRow } from '../centers/centers.types';
 
-export type AdminSpecialistProfileRow = {
-  id: string;
-  user_id: string;
-  specialty: string;
-  license_number: string;
-  license_status: string;
-  rejection_reason: string | null;
-  center_id: string | null;
-  created_at: string;
-};
+export type AdminSpecialistProfileRow = Pick<
+  SpecialistProfileRow,
+  'id' | 'user_id' | 'specialty' | 'license_number' | 'license_status' | 'rejection_reason' | 'center_id' | 'created_at'
+>;
 
-export type AdminSpecialistDocumentsRow = {
-  id: string;
-  dni_photo_url: string | null;
-  title_photo_url: string | null;
-};
+export type AdminSpecialistDocumentsRow = Pick<SpecialistProfileRow, 'id' | 'dni_photo_url' | 'title_photo_url'>;
 
-export type AdminProfileRow = {
-  id: string;
-  full_name: string;
-  email: string | null;
-};
+export type AdminProfileRow = Pick<ProfileRow, 'id' | 'full_name' | 'email'>;
 
-export type AdminCenterRow = {
-  id: string;
-  name: string;
-};
+export type AdminCenterRow = Pick<CenterRow, 'id' | 'name'>;
 
 export type SpecialistStatusUpdate = {
   license_status: 'verified' | 'rejected';

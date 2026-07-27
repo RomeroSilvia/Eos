@@ -1,8 +1,19 @@
 import { supabase } from '../../config/supabase';
 import { TABLE_NAMES } from '../../database/tableNames';
+import type { ProfileRow, SubscriptionPlanRow, SubscriptionRow } from '../../database/schema.types';
+import type { CenterAdminRow, CenterRow } from '../centers/centers.types';
+
+export type SubscriptionRowWithPlan = SubscriptionRow & {
+  subscription_plans: SubscriptionPlanRow | null;
+};
+
+type ProfileForAssignment = Pick<ProfileRow, 'id' | 'role'>;
+type CenterForAssignment = Pick<CenterRow, 'id' | 'is_active'>;
+type CenterAdminAssignment = Pick<CenterAdminRow, 'id' | 'user_id' | 'center_id'>;
+type AssignableUser = Pick<ProfileRow, 'id' | 'full_name' | 'email' | 'role'>;
 
 export const subscriptionsRepository = {
-  findUserById: async (userId: string): Promise<any | null> => {
+  findUserById: async (userId: string): Promise<ProfileForAssignment | null> => {
     const db = supabase as any;
     const { data, error } = await db
       .from(TABLE_NAMES.profiles)
@@ -15,7 +26,7 @@ export const subscriptionsRepository = {
     return data ?? null;
   },
 
-  findActiveCenterById: async (centerId: string): Promise<any | null> => {
+  findActiveCenterById: async (centerId: string): Promise<CenterForAssignment | null> => {
     const db = supabase as any;
     const { data, error } = await db
       .from(TABLE_NAMES.centers)
@@ -28,7 +39,7 @@ export const subscriptionsRepository = {
     return data ?? null;
   },
 
-  findAdminCenterAssignment: async (adminUserId: string, centerId: string): Promise<any | null> => {
+  findAdminCenterAssignment: async (adminUserId: string, centerId: string): Promise<CenterAdminAssignment | null> => {
     const db = supabase as any;
     const { data, error } = await db
       .from(TABLE_NAMES.centerAdmins)
@@ -41,7 +52,7 @@ export const subscriptionsRepository = {
     return data ?? null;
   },
 
-  findCurrentSubscriptionByUserId: async (userId: string): Promise<any | null> => {
+  findCurrentSubscriptionByUserId: async (userId: string): Promise<SubscriptionRowWithPlan | null> => {
     const db = supabase as any;
     const { data, error } = await db
       .from(TABLE_NAMES.subscriptions)
@@ -58,7 +69,7 @@ export const subscriptionsRepository = {
     return data ?? null;
   },
 
-  searchUsersByEmail: async (emailQuery: string): Promise<any[]> => {
+  searchUsersByEmail: async (emailQuery: string): Promise<AssignableUser[]> => {
     const db = supabase as any;
     const { data, error } = await db
       .from(TABLE_NAMES.profiles)
@@ -73,7 +84,7 @@ export const subscriptionsRepository = {
     return data ?? [];
   },
 
-  listPlans: async (): Promise<any[]> => {
+  listPlans: async (): Promise<SubscriptionPlanRow[]> => {
     const db = supabase as any;
     const { data, error } = await db
       .from(TABLE_NAMES.subscriptionPlans)
@@ -84,7 +95,7 @@ export const subscriptionsRepository = {
     return data ?? [];
   },
 
-  createPlan: async (payload: Record<string, unknown>): Promise<any> => {
+  createPlan: async (payload: Record<string, unknown>): Promise<SubscriptionPlanRow> => {
     const db = supabase as any;
     const { data, error } = await db
       .from(TABLE_NAMES.subscriptionPlans)
@@ -96,7 +107,7 @@ export const subscriptionsRepository = {
     return data;
   },
 
-  updatePlan: async (planId: string, payload: Record<string, unknown>): Promise<any | null> => {
+  updatePlan: async (planId: string, payload: Record<string, unknown>): Promise<SubscriptionPlanRow | null> => {
     const db = supabase as any;
     const { data, error } = await db
       .from(TABLE_NAMES.subscriptionPlans)
@@ -109,7 +120,7 @@ export const subscriptionsRepository = {
     return data ?? null;
   },
 
-  findPlanById: async (planId: string): Promise<any | null> => {
+  findPlanById: async (planId: string): Promise<SubscriptionPlanRow | null> => {
     const db = supabase as any;
     const { data, error } = await db
       .from(TABLE_NAMES.subscriptionPlans)
@@ -121,7 +132,7 @@ export const subscriptionsRepository = {
     return data ?? null;
   },
 
-  listSubscriptions: async (): Promise<any[]> => {
+  listSubscriptions: async (): Promise<SubscriptionRowWithPlan[]> => {
     const db = supabase as any;
     const { data, error } = await db
       .from(TABLE_NAMES.subscriptions)
@@ -132,7 +143,7 @@ export const subscriptionsRepository = {
     return data ?? [];
   },
 
-  findSubscriptionById: async (subscriptionId: string): Promise<any | null> => {
+  findSubscriptionById: async (subscriptionId: string): Promise<SubscriptionRowWithPlan | null> => {
     const db = supabase as any;
     const { data, error } = await db
       .from(TABLE_NAMES.subscriptions)
@@ -144,7 +155,10 @@ export const subscriptionsRepository = {
     return data ?? null;
   },
 
-  updateSubscriptionStatus: async (subscriptionId: string, payload: Record<string, unknown>): Promise<any | null> => {
+  updateSubscriptionStatus: async (
+    subscriptionId: string,
+    payload: Record<string, unknown>
+  ): Promise<SubscriptionRowWithPlan | null> => {
     const db = supabase as any;
     const { data, error } = await db
       .from(TABLE_NAMES.subscriptions)
@@ -157,7 +171,7 @@ export const subscriptionsRepository = {
     return data ?? null;
   },
 
-  createSubscription: async (payload: Record<string, unknown>): Promise<any> => {
+  createSubscription: async (payload: Record<string, unknown>): Promise<SubscriptionRowWithPlan> => {
     const db = supabase as any;
     const { data, error } = await db
       .from(TABLE_NAMES.subscriptions)

@@ -11,6 +11,21 @@ export type CenterRow = {
   updated_at: string;
 };
 
+/**
+ * Referencia liviana a un centro (sin specialistsCount/fechas), usada al
+ * embeber el centro dentro de respuestas de otros dominios (ej. perfil de
+ * especialista). Para el listado/CRUD propio de centros usar CenterSummary.
+ */
+export type CenterReference = {
+  id: string;
+  name: string;
+  address: string | null;
+  city: string | null;
+  province: string | null;
+  phone: string | null;
+  imageUrl: string | null;
+};
+
 export type CenterAdminRow = {
   id: string;
   user_id: string;

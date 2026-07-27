@@ -1,11 +1,16 @@
-import type { Tables, TablesInsert, TablesUpdate } from '../../database/database.types';
+import type { Tables } from '../../database/database.types';
+import type {
+  RoutineLogInsert,
+  RoutineLogRow,
+  RoutineLogUpdate,
+  RoutineStepLogInsert,
+  RoutineStepLogRow,
+  RoutineStepLogUpdate
+} from '../../database/schema.types';
 
-export type RoutineLog = Tables<'routine_logs'>;
-export type RoutineLogInsert = TablesInsert<'routine_logs'>;
-export type RoutineLogUpdate = TablesUpdate<'routine_logs'>;
-export type RoutineStepLog = Tables<'routine_step_logs'>;
-export type RoutineStepLogInsert = TablesInsert<'routine_step_logs'>;
-export type RoutineStepLogUpdate = TablesUpdate<'routine_step_logs'>;
+export type RoutineLog = RoutineLogRow;
+export type RoutineStepLog = RoutineStepLogRow;
+export type { RoutineLogInsert, RoutineLogUpdate, RoutineStepLogInsert, RoutineStepLogUpdate };
 
 export type RoutineForProgress = Pick<Tables<'routines'>, 'id' | 'name' | 'time_of_day' | 'created_at'>;
 export type RoutineStepForProgress = Pick<Tables<'routine_steps'>, 'id' | 'routine_id' | 'name' | 'step_order'>;

@@ -1,5 +1,6 @@
 import { specialistsDirectoryRepository } from '../specialists.directory.repository';
 import { specialistsDirectoryService } from '../specialists.directory.service';
+import type { CenterReference } from '../../centers/centers.types';
 
 type MockedSpecialist = {
   profile: {
@@ -11,10 +12,7 @@ type MockedSpecialist = {
   specialistProfile: {
     specialty: 'dermatologo' | 'cosmetologo';
     license_status: 'verified';
-    center: {
-      id: string;
-      name: string;
-    } | null;
+    center: CenterReference | null;
   };
 };
 

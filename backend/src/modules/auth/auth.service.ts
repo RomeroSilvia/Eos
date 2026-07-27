@@ -3,6 +3,7 @@ import type { ProfileRow } from '../../database/schema.types';
 import { ApiError } from '../../utils/ApiError';
 import { recordAuditLog } from '../audit/audit.service';
 import { authRepository } from './auth.repository';
+import type { AuthSession, AuthUser } from './auth.types';
 
 type UserRole = 'user' | 'specialist' | 'center_admin';
 type PublicRegistrationRole = 'user' | 'specialist';
@@ -34,16 +35,6 @@ type UpdatePasswordPayload = {
   newPassword?: string;
   accessToken?: string;
   authorizationHeader?: string;
-};
-
-type AuthUser = {
-  id: string;
-  email?: string;
-  user_metadata?: Record<string, unknown>;
-};
-
-type AuthSession = {
-  access_token: string;
 };
 
 type AuthResponseBody = {

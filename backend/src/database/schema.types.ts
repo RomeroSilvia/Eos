@@ -19,6 +19,8 @@ export type RoutineStepProductRow = Tables<'routine_step_products'>;
 export type RoutineLogRow         = Tables<'routine_logs'>;
 export type RoutineStepLogRow     = Tables<'routine_step_logs'>;
 export type PushTokenRow          = Tables<'push_tokens'>;
+export type SubscriptionPlanRow   = Tables<'subscription_plans'>;
+export type SubscriptionRow       = Tables<'subscriptions'>;
 
 // ─── Insert types (escritura) ─────────────────────────────────────────────────
 
@@ -32,6 +34,8 @@ export type RoutineStepProductInsert = TablesInsert<'routine_step_products'>;
 export type RoutineLogInsert        = TablesInsert<'routine_logs'>;
 export type RoutineStepLogInsert    = TablesInsert<'routine_step_logs'>;
 export type PushTokenInsert         = TablesInsert<'push_tokens'>;
+export type SubscriptionPlanInsert  = TablesInsert<'subscription_plans'>;
+export type SubscriptionInsert      = TablesInsert<'subscriptions'>;
 
 // ─── Update types (actualización parcial) ─────────────────────────────────────
 
@@ -43,3 +47,5 @@ export type SpecialistProfileUpdate = TablesUpdate<'specialist_profiles'>;
 export type SkinProfileUpdate    = TablesUpdate<'skin_profiles'>;
 export type RoutineLogUpdate     = TablesUpdate<'routine_logs'>;
 export type RoutineStepLogUpdate = TablesUpdate<'routine_step_logs'>;
+export type SubscriptionPlanUpdate = TablesUpdate<'subscription_plans'>;
+export type SubscriptionUpdate   = TablesUpdate<'subscriptions'>;
