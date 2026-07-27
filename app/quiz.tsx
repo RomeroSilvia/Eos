@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Alert, Image, Pressable, StyleSheet, Text, View, type DimensionValue } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LoadingState } from '@/components/LoadingState';
+import { colors } from '@/constants/colors';
 import { ApiRequestError } from '@/services/api/client';
 import { saveQuiz } from '@/services/quiz';
 
@@ -181,25 +182,25 @@ export default function QuizScreen() {
 
 const styles = StyleSheet.create({
   screen: {
-    backgroundColor: '#F8F9FA',
+    backgroundColor: colors.background,
     flex: 1,
     paddingHorizontal: 24,
     paddingTop: 60
   },
   progressTrack: {
-    backgroundColor: '#E2E8F0',
+    backgroundColor: colors.border,
     borderRadius: 2,
     height: 4,
     overflow: 'hidden',
     width: '100%'
   },
   progressFill: {
-    backgroundColor: '#C98F90',
+    backgroundColor: colors.secondary,
     borderRadius: 2,
     height: 4
   },
   title: {
-    color: '#0B132B',
+    color: colors.textPrimary,
     fontSize: 31,
     fontWeight: '800',
     lineHeight: 38,
@@ -209,7 +210,7 @@ const styles = StyleSheet.create({
   optionButton: {
     alignItems: 'center',
     backgroundColor: 'transparent',
-    borderColor: '#0B132B',
+    borderColor: colors.textPrimary,
     borderRadius: 16,
     borderWidth: 1,
     flexDirection: 'row',
@@ -218,8 +219,8 @@ const styles = StyleSheet.create({
     width: '100%'
   },
   optionButtonSelected: {
-    backgroundColor: '#EADCDC',
-    borderColor: '#0B132B'
+    backgroundColor: colors.secondaryLight,
+    borderColor: colors.textPrimary
   },
   optionTextContainer: {
     flex: 1,
@@ -231,18 +232,18 @@ const styles = StyleSheet.create({
     width: 32
   },
   optionLabel: {
-    color: '#0B132B',
+    color: colors.textPrimary,
     fontSize: 18,
     fontWeight: 'bold'
   },
   optionDescription: {
-    color: '#6C757D',
+    color: colors.textSecondary,
     fontSize: 12,
     lineHeight: 18,
     marginTop: 4
   },
   resultText: {
-    color: '#0B132B',
+    color: colors.textPrimary,
     fontSize: 20,
     fontWeight: 'bold',
     marginTop: 40,

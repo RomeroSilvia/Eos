@@ -275,8 +275,8 @@ function getStatusContent(status: SpecialistStatus): {
 
   if (status?.license_status === 'pending') {
     return {
-      background: '#FFF7E6',
-      color: '#B7791F',
+      background: colors.warningBg,
+      color: colors.warningText,
       description: 'Tu matrícula está en revisión. Te avisaremos cuando sea aprobada.',
       icon: 'time-outline',
       title: 'Solicitud pendiente'
@@ -285,7 +285,7 @@ function getStatusContent(status: SpecialistStatus): {
 
   if (status?.license_status === 'rejected') {
     return {
-      background: '#FDECEC',
+      background: colors.dangerBg,
       color: colors.error,
       description: 'Tu solicitud fue rechazada.',
       icon: 'alert-circle-outline',
@@ -438,7 +438,7 @@ const styles = StyleSheet.create({
     fontWeight: '800'
   },
   rejectionBox: {
-    backgroundColor: '#FDECEC',
+    backgroundColor: colors.dangerBg,
     borderRadius: 14,
     gap: 4,
     padding: 12

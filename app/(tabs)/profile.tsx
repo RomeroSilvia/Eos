@@ -9,6 +9,7 @@ import { Card } from '@/components/Card';
 import { LoadingState } from '@/components/LoadingState';
 import { RemindersSection } from '@/components/RemindersSection';
 import { colors } from '@/constants/colors';
+import { routes } from '@/constants/routes';
 import { useProfile } from '@/hooks/useProfile';
 import { getFriendlyErrorMessage } from '@/services/api/client';
 import { logout } from '@/services/auth';
@@ -86,7 +87,7 @@ export default function ProfileScreen() {
 
     try {
       await logout();
-      router.replace('/landing');
+      router.replace(routes.landing);
     } catch {
       Alert.alert('Perfil', 'No pudimos cerrar sesion. Intenta nuevamente.');
     } finally {
@@ -122,7 +123,7 @@ export default function ProfileScreen() {
 
   function handleManageSpecialist() {
     setIsSpecialistMenuOpen(false);
-    router.push('/specialists' as Href);
+    router.push(routes.specialists as Href);
   }
 
   return (
@@ -152,7 +153,7 @@ export default function ProfileScreen() {
         <Card style={styles.settings}>
           <Text style={styles.sectionTitle}>Configuracion</Text>
           <Text style={styles.description}>Edita tu perfil, contrasena y notificaciones.</Text>
-          <Button onPress={() => router.push('/settings' as Href)} variant="ghost" style={styles.actionButton}>
+          <Button onPress={() => router.push(routes.settings as Href)} variant="ghost" style={styles.actionButton}>
             Abrir configuracion
           </Button>
         </Card>
@@ -214,7 +215,7 @@ export default function ProfileScreen() {
 
           <View style={styles.actionsWrap}>
             <Button
-              onPress={() => router.push((mySpecialist ? '/chat' : '/specialists') as Href)}
+              onPress={() => router.push((mySpecialist ? routes.chat : routes.specialists) as Href)}
               style={styles.actionButton}
               variant={mySpecialist ? 'primary' : 'secondary'}
             >

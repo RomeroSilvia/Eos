@@ -149,8 +149,8 @@ function getStatusContent(status: SpecialistStatus): {
 } {
   if (!status) {
     return {
-      background: '#FDECEC',
-      color: '#B42318',
+      background: colors.dangerBg,
+      color: colors.error,
       description: 'No pudimos interpretar el estado de tu solicitud. Actualiza la pantalla o intenta nuevamente.',
       icon: 'alert-circle-outline',
       title: 'Estado desconocido'
@@ -159,8 +159,8 @@ function getStatusContent(status: SpecialistStatus): {
 
   if (status.license_status === 'pending') {
     return {
-      background: '#FFF7E6',
-      color: '#B7791F',
+      background: colors.warningBg,
+      color: colors.warningText,
       description: 'Estamos revisando tu DNI y titulo profesional.',
       icon: 'time-outline',
       title: 'Solicitud pendiente'
@@ -169,8 +169,8 @@ function getStatusContent(status: SpecialistStatus): {
 
   if (status.license_status === 'rejected') {
     return {
-      background: '#FDECEC',
-      color: '#B42318',
+      background: colors.dangerBg,
+      color: colors.error,
       description: 'Tu solicitud necesita correcciones antes de ser aprobada.',
       icon: 'close-circle-outline',
       title: 'Solicitud rechazada'
@@ -179,7 +179,7 @@ function getStatusContent(status: SpecialistStatus): {
 
   if (status.license_status === 'verified') {
     return {
-      background: '#EBF4EC',
+      background: colors.successBg,
       color: colors.primaryDark,
       description: 'Tu matricula fue verificada. El panel de especialista llegara en el modulo correspondiente.',
       icon: 'checkmark-circle-outline',
@@ -189,7 +189,7 @@ function getStatusContent(status: SpecialistStatus): {
 
   if (status.license_status === 'not_submitted') {
     return {
-      background: '#EBF4EC',
+      background: colors.successBg,
       color: colors.primaryDark,
       description: 'Todavia no completaste tu solicitud de especialista.',
       icon: 'document-text-outline',
@@ -198,8 +198,8 @@ function getStatusContent(status: SpecialistStatus): {
   }
 
   return {
-    background: '#FDECEC',
-    color: '#B42318',
+    background: colors.dangerBg,
+    color: colors.error,
     description: 'Recibimos un estado que la app todavia no reconoce. Actualiza la pantalla o intenta nuevamente.',
     icon: 'alert-circle-outline',
     title: 'Estado desconocido'
@@ -272,7 +272,7 @@ const styles = StyleSheet.create({
   },
   meta: {
     alignSelf: 'stretch',
-    backgroundColor: '#F8F9FA',
+    backgroundColor: colors.background,
     borderRadius: 8,
     gap: 8,
     padding: 14
@@ -283,7 +283,7 @@ const styles = StyleSheet.create({
     fontWeight: '700'
   },
   rejectionText: {
-    color: '#B42318',
+    color: colors.error,
     fontSize: 14,
     lineHeight: 20
   },

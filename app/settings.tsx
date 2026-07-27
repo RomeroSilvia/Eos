@@ -560,10 +560,10 @@ function getSubscriptionStatusStyle(status: Subscription['status']): { backgroun
     case 'active':
       return { backgroundColor: colors.primaryLight, borderColor: colors.primary };
     case 'pending':
-      return { backgroundColor: '#FFF5E6', borderColor: '#D89C3D' };
+      return { backgroundColor: colors.warningBg, borderColor: colors.warningBorder };
     case 'canceled':
     case 'expired':
-      return { backgroundColor: '#FDECEC', borderColor: colors.error };
+      return { backgroundColor: colors.dangerBg, borderColor: colors.error };
     case 'past_due':
       return { backgroundColor: colors.secondaryLight, borderColor: colors.secondaryDark };
     default:
@@ -576,7 +576,7 @@ function getSubscriptionStatusTextStyle(status: Subscription['status']): { color
     case 'active':
       return { color: colors.primaryDark };
     case 'pending':
-      return { color: '#8A5A00' };
+      return { color: colors.warningText };
     case 'canceled':
     case 'expired':
       return { color: colors.error };

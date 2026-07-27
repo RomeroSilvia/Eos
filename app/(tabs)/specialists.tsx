@@ -310,7 +310,7 @@ const styles = StyleSheet.create({
     gap: 10
   },
   errorText: {
-    color: '#B3261E',
+    color: colors.error,
     fontSize: 13
   },
   resultItem: {

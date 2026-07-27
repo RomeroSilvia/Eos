@@ -212,7 +212,7 @@ export default function AdminHomeScreen() {
         <Pressable
           accessibilityLabel="Abrir gestion de centros"
           accessibilityRole="button"
-          onPress={() => router.push('/(tabs-admin)/centers' as never)}
+          onPress={() => router.push(routes.adminCenters as never)}
           style={styles.navCard}
         >
           <View style={styles.navIcon}>
@@ -228,7 +228,7 @@ export default function AdminHomeScreen() {
         <Pressable
           accessibilityLabel="Abrir metricas por centro"
           accessibilityRole="button"
-          onPress={() => router.push('/(tabs-admin)/metrics' as never)}
+          onPress={() => router.push(routes.adminMetrics as never)}
           style={styles.navCard}
         >
           <View style={styles.navIcon}>

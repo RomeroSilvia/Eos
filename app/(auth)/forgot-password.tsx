@@ -2,6 +2,7 @@ import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { ActivityIndicator, Alert, Image, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { colors } from '@/constants/colors';
 import { ApiRequestError, getFriendlyAuthErrorMessage } from '@/services/api/client';
 import { resetPassword } from '@/services/auth';
 
@@ -53,7 +54,7 @@ export default function ForgotPasswordScreen() {
         keyboardType="email-address"
         onChangeText={setEmail}
         placeholder="email@domain.com"
-        placeholderTextColor="#94A3B8"
+        placeholderTextColor={colors.textMuted}
         style={styles.input}
         value={email}
       />
@@ -64,7 +65,7 @@ export default function ForgotPasswordScreen() {
         onPress={handleResetPassword}
         style={[styles.button, !canSubmit && styles.buttonDisabled]}
       >
-        {isSubmitting ? <ActivityIndicator color="#FFFFFF" size="small" style={styles.buttonSpinner} /> : null}
+        {isSubmitting ? <ActivityIndicator color={colors.surface} size="small" style={styles.buttonSpinner} /> : null}
         <Text style={styles.buttonText}>{isSubmitting ? 'Enviando...' : 'Restablecer'}</Text>
       </Pressable>
     </SafeAreaView>
@@ -73,7 +74,7 @@ export default function ForgotPasswordScreen() {
 
 const styles = StyleSheet.create({
   screen: {
-    backgroundColor: '#F8F9FA',
+    backgroundColor: colors.background,
     flex: 1,
     paddingHorizontal: 24,
     paddingTop: 60
@@ -88,24 +89,24 @@ const styles = StyleSheet.create({
     width: 145
   },
   title: {
-    color: '#0B132B',
+    color: colors.textPrimary,
     fontSize: 30,
     fontWeight: '800',
     textAlign: 'center'
   },
   description: {
-    color: '#6C757D',
+    color: colors.textSecondary,
     fontSize: 16,
     lineHeight: 23,
     marginTop: 16,
     textAlign: 'center'
   },
   input: {
-    backgroundColor: '#FFFFFF',
-    borderColor: '#E2E8F0',
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
     borderRadius: 8,
     borderWidth: 1,
-    color: '#0B132B',
+    color: colors.textPrimary,
     fontSize: 15,
     height: 50,
     marginTop: 30,
@@ -113,7 +114,7 @@ const styles = StyleSheet.create({
   },
   button: {
     alignItems: 'center',
-    backgroundColor: '#C98F90',
+    backgroundColor: colors.secondary,
     borderRadius: 12,
     flexDirection: 'row',
     height: 54,
@@ -128,7 +129,7 @@ const styles = StyleSheet.create({
     marginRight: 10
   },
   buttonText: {
-    color: '#FFFFFF',
+    color: colors.surface,
     fontSize: 16,
     fontWeight: '800',
     textAlign: 'center'

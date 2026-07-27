@@ -1,5 +1,6 @@
 import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
+import { routes } from '@/constants/routes';
 import { ApiRequestError, apiRequest } from '@/services/api/client';
 import { deleteStoredAccessToken, setStoredAccessToken } from '@/services/api/token';
 import { registerPushToken, unregisterPushToken } from '@/services/notifications';
@@ -48,7 +49,7 @@ type RegisterPayload = LoginPayload & {
   specialty?: 'dermatologo' | 'cosmetologo';
 };
 
-export type PostLoginRoute = '/(tabs-admin)' | '/(tabs)/home' | '/(tabs-specialist)' | '/specialist-status';
+export type PostLoginRoute = typeof routes.adminHome | typeof routes.userHome | typeof routes.specialistHome | typeof routes.specialistStatus;
 
 export async function login({ email, password }: LoginPayload): Promise<UserProfile> {
   const data = await apiRequest<AuthResponse>({
@@ -64,20 +65,20 @@ export async function login({ email, password }: LoginPayload): Promise<UserProf
 
 export async function getPostLoginRoute(profile: Pick<UserProfile, 'role'>): Promise<PostLoginRoute> {
   if (profile.role === 'center_admin') {
-    return '/(tabs-admin)';
+    return routes.adminHome;
   }
 
   if (profile.role !== 'specialist') {
-    return '/(tabs)/home';
+    return routes.userHome;
   }
 
   const status = await getSpecialistStatus().catch(() => null);
 
   if (status?.license_status === 'verified') {
-    return '/(tabs-specialist)';
+    return routes.specialistHome;
   }
 
-  return '/specialist-status';
+  return routes.specialistStatus;
 }
 
 export function getLoginErrorMessage(error: unknown): string {

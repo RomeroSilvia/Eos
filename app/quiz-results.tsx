@@ -3,6 +3,7 @@ import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { colors } from '@/constants/colors';
 import { ApiRequestError } from '@/services/api/client';
 import { getQuizProfile, type SkinProfileResult } from '@/services/quiz';
 
@@ -52,7 +53,7 @@ export default function QuizResultsScreen() {
   return (
     <SafeAreaView style={styles.screen}>
       <View style={styles.iconBox}>
-        <Ionicons color="#4B7C6E" name="checkmark" size={32} />
+        <Ionicons color={colors.primaryDark} name="checkmark" size={32} />
       </View>
 
       <Text style={styles.title}>Analisis completo</Text>
@@ -89,7 +90,7 @@ function Badge({ label, variant = 'default' }: { label: string; variant?: 'defau
 
 const styles = StyleSheet.create({
   screen: {
-    backgroundColor: '#F8F9FA',
+    backgroundColor: colors.background,
     flex: 1,
     paddingHorizontal: 24,
     paddingTop: 60
@@ -97,35 +98,35 @@ const styles = StyleSheet.create({
   iconBox: {
     alignItems: 'center',
     alignSelf: 'center',
-    backgroundColor: '#D1E8E2',
+    backgroundColor: colors.primaryLight,
     borderRadius: 16,
     height: 60,
     justifyContent: 'center',
     width: 60
   },
   title: {
-    color: '#0B132B',
+    color: colors.textPrimary,
     fontSize: 30,
     fontWeight: 'bold',
     marginTop: 40,
     textAlign: 'center'
   },
   subtitle: {
-    color: '#6C757D',
+    color: colors.textSecondary,
     fontSize: 16,
     marginTop: 10,
     textAlign: 'center'
   },
   card: {
-    backgroundColor: '#FFFFFF',
-    borderColor: '#E2E8F0',
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
     borderRadius: 16,
     borderWidth: 1,
     marginVertical: 40,
     padding: 24
   },
   sectionLabel: {
-    color: '#6C757D',
+    color: colors.textSecondary,
     fontSize: 12,
     fontWeight: 'bold',
     letterSpacing: 0.8,
@@ -137,28 +138,28 @@ const styles = StyleSheet.create({
     gap: 10
   },
   badge: {
-    backgroundColor: '#EDF2F7',
+    backgroundColor: colors.surfaceSoft,
     borderRadius: 999,
     paddingHorizontal: 14,
     paddingVertical: 9
   },
   goalBadge: {
     alignSelf: 'flex-start',
-    backgroundColor: '#EADCDC'
+    backgroundColor: colors.secondaryLight
   },
   badgeText: {
-    color: '#0B132B',
+    color: colors.textPrimary,
     fontSize: 14,
     fontWeight: '600'
   },
   divider: {
-    backgroundColor: '#E2E8F0',
+    backgroundColor: colors.border,
     height: 1,
     marginVertical: 24
   },
   button: {
     alignItems: 'center',
-    backgroundColor: '#C98F90',
+    backgroundColor: colors.secondary,
     borderRadius: 12,
     height: 54,
     justifyContent: 'center',
@@ -167,13 +168,13 @@ const styles = StyleSheet.create({
     width: '100%'
   },
   buttonText: {
-    color: '#FFFFFF',
+    color: colors.surface,
     fontSize: 16,
     fontWeight: 'bold',
     textAlign: 'center'
   },
   loadingText: {
-    color: '#0B132B',
+    color: colors.textPrimary,
     fontSize: 18,
     fontWeight: '700',
     marginTop: 40,

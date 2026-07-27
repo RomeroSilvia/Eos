@@ -2,6 +2,7 @@ import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { colors } from '@/constants/colors';
 
 const benefits = [
   'Quiz de piel en 5 preguntas',
@@ -50,7 +51,7 @@ function BenefitItem({ text }: { text: string }) {
   return (
     <View style={styles.benefitItem}>
       <View style={styles.benefitIcon}>
-        <Feather color="#528265" name="check" size={18} />
+        <Feather color={colors.primary} name="check" size={18} />
       </View>
       <Text style={styles.benefitText}>{text}</Text>
     </View>
@@ -59,7 +60,7 @@ function BenefitItem({ text }: { text: string }) {
 
 const styles = StyleSheet.create({
   screen: {
-    backgroundColor: '#F8F9FA',
+    backgroundColor: colors.background,
     flex: 1,
     justifyContent: 'space-between',
     paddingBottom: 40,
@@ -73,13 +74,13 @@ const styles = StyleSheet.create({
     width: 145
   },
   title: {
-    color: '#0B132B',
+    color: colors.textPrimary,
     fontSize: 32,
     fontWeight: 'bold',
     marginTop: 40
   },
   subtitle: {
-    color: '#6C757D',
+    color: colors.textSecondary,
     fontSize: 16,
     lineHeight: 24,
     marginTop: 15
@@ -94,14 +95,14 @@ const styles = StyleSheet.create({
   },
   benefitIcon: {
     alignItems: 'center',
-    backgroundColor: '#D5E8D4',
+    backgroundColor: colors.primaryLight,
     borderRadius: 8,
     height: 32,
     justifyContent: 'center',
     width: 32
   },
   benefitText: {
-    color: '#495057',
+    color: colors.textSecondary,
     fontSize: 16,
     marginLeft: 15
   },
@@ -117,21 +118,21 @@ const styles = StyleSheet.create({
   },
   outlineButton: {
     backgroundColor: 'transparent',
-    borderColor: '#0B132B',
+    borderColor: colors.textPrimary,
     borderWidth: 1
   },
   primaryButton: {
-    backgroundColor: '#C98F90'
+    backgroundColor: colors.secondary
   },
   buttonText: {
     fontSize: 16
   },
   outlineButtonText: {
-    color: '#0B132B',
+    color: colors.textPrimary,
     fontWeight: '500'
   },
   primaryButtonText: {
-    color: '#FFFFFF',
+    color: colors.surface,
     fontWeight: '600'
   }
 });
