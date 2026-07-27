@@ -21,6 +21,8 @@ export type RoutineStepLogRow     = Tables<'routine_step_logs'>;
 export type PushTokenRow          = Tables<'push_tokens'>;
 export type SubscriptionPlanRow   = Tables<'subscription_plans'>;
 export type SubscriptionRow       = Tables<'subscriptions'>;
+export type CenterRow             = Tables<'centers'>;
+export type CenterAdminRow        = Tables<'center_admins'>;
 
 // ─── Insert types (escritura) ─────────────────────────────────────────────────
 
