@@ -13,7 +13,7 @@ Eos/
 │   └── api/          Cliente base fetch con auth y manejo de errores
 ├── types/            Contratos TypeScript compartidos (routine, product, progress,
 │                     user, notification, reminder, audit, chat, specialist,
-│                     center, subscription)
+│                     center, subscription, admin, home)
 ├── constants/        Paleta de colores y rutas tipadas
 ├── utils/            Funciones auxiliares puras (fechas, formateo, calendario,
 │                     tipo de piel, validación de contraseña)
@@ -132,7 +132,8 @@ Los tipos de dominio de cada servicio (`ChatMessage`, `SpecialistStatus`, `Cente
 - Backend: `req.user.id`/`req.user.role` inyectados por `auth.middleware.ts` (Bearer token validado contra Supabase Auth). No hay middleware de auth mock — desarrollo y producción siempre validan un token real.
 - Tests en español, co-localizados en `modules/<modulo>/tests/` (solo backend).
 - Logging condicional al entorno siempre con `__DEV__` (no `process.env.NODE_ENV`).
-- Errores de API amigables reusando `getFriendlyApiErrorMessage`/`hasTechnicalDetails` de `services/api/client.ts` en vez de reimplementarlos por servicio.
+- Errores de API amigables reusando `getFriendlyApiErrorMessage`/`getFriendlyAuthErrorMessage`/`hasTechnicalDetails` de `services/api/client.ts` en vez de reimplementarlos por servicio.
+- Hooks que exponen datos remotos usan el contrato `error: string | null` (ya con mensaje amigable vía `getFriendlyErrorMessage`, no el objeto `Error` crudo).
 - Validación de contraseña única en `utils/password.ts` (`isValidPassword`), usada en registro, cambio de contraseña (`settings.tsx`) y recuperación (`update-password.tsx`).
 
 ## Deuda técnica conocida (documentada, no arreglada)
