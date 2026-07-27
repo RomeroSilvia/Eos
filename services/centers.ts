@@ -1,4 +1,4 @@
-import { ApiRequestError, apiRequest, hasTechnicalDetails } from '@/services/api/client';
+import { ApiRequestError, apiRequest, getFriendlyErrorMessage } from '@/services/api/client';
 import { Platform } from 'react-native';
 import type { Center, CenterDashboard, CenterPayload, CenterSpecialist } from '@/types/center';
 
@@ -82,37 +82,20 @@ export async function getCenterDashboard(centerId: string): Promise<CenterDashbo
 }
 
 export function getCentersErrorMessage(error: unknown): string {
-  if (error instanceof ApiRequestError) {
-    if (error.message && !hasTechnicalDetails(error.message)) {
-      return error.message;
-    }
-
-    if (error.status === 401) return 'Tu sesion expiro. Inicia sesion nuevamente.';
-    if (error.status === 403) return 'No tenes permisos para gestionar centros.';
-    if (error.status === 404) return 'No encontramos el centro solicitado.';
-    if (error.status === 409) return 'Ya existe un centro activo con ese nombre.';
-    if (error.status === 500) return 'No pudimos crear el centro. Intentá nuevamente.';
+  if (error instanceof ApiRequestError && error.status === 409) {
+    return 'Ya existe un centro activo con ese nombre.';
   }
 
-  if (error instanceof Error && !hasTechnicalDetails(error.message)) {
-    return error.message;
-  }
-
-  return 'Ocurrio un error. Intenta nuevamente.';
+  return getFriendlyErrorMessage(error, 'Ocurrio un error. Intenta nuevamente.');
 }
 
 export function getUpdateCenterErrorMessage(error: unknown): string {
   if (error instanceof ApiRequestError) {
-    if (error.status === 403) return 'No tenes permiso para editar este centro.';
     if (error.status === 404) return 'No encontramos este centro o fue dado de baja.';
     if (error.status === 409) return 'Ya existe un centro activo con ese nombre.';
-
-    if (error.message && !hasTechnicalDetails(error.message)) {
-      return error.message;
-    }
   }
 
-  return 'No pudimos editar el centro. Intenta nuevamente.';
+  return getFriendlyErrorMessage(error, 'No pudimos editar el centro. Intenta nuevamente.');
 }
 
 async function appendImageToFormData(formData: FormData, uri: string): Promise<void> {

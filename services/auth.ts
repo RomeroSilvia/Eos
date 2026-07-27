@@ -1,7 +1,7 @@
 import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
 import { routes } from '@/constants/routes';
-import { ApiRequestError, apiRequest } from '@/services/api/client';
+import { ApiRequestError, apiRequest, getFriendlyAuthErrorMessage } from '@/services/api/client';
 import { deleteStoredAccessToken, setStoredAccessToken } from '@/services/api/token';
 import { registerPushToken, unregisterPushToken } from '@/services/notifications';
 import { getSpecialistStatus } from '@/services/specialist';
@@ -90,11 +90,11 @@ export function getLoginErrorMessage(error: unknown): string {
       });
     }
 
-    if (error.status === 401) return 'Email o contrasena incorrectos.';
-    if (error.status === 400) return 'Revisa los datos ingresados e intenta nuevamente.';
-    if (error.status === 403) return 'No tenes permisos para realizar esta accion.';
-    if (error.status === 429) return 'Demasiados intentos. Proba nuevamente en unos minutos.';
-    return 'No pudimos completar la accion. Intenta nuevamente.';
+    if (error.status === 401) {
+      return 'Email o contrasena incorrectos.';
+    }
+
+    return getFriendlyAuthErrorMessage(error.status);
   }
 
   if (__DEV__ && error instanceof Error) {

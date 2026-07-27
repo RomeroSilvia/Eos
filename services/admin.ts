@@ -1,4 +1,4 @@
-import { ApiRequestError, apiRequest, hasTechnicalDetails } from '@/services/api/client';
+import { ApiRequestError, apiRequest, getFriendlyErrorMessage } from '@/services/api/client';
 
 export type PendingSpecialist = {
   specialistProfileId: string;
@@ -104,26 +104,14 @@ export function getAdminErrorMessage(error: unknown): string {
       });
     }
 
-    if (error.message && !hasTechnicalDetails(error.message)) {
-      return error.message;
+    if (error.status === 409) {
+      return 'La solicitud ya fue procesada.';
     }
-
-    return getAdminFriendlyMessage(error.status);
-  }
-
-  if (__DEV__ && error instanceof Error) {
+  } else if (__DEV__ && error instanceof Error) {
     console.warn('[admin/api]', error.message);
   }
 
-  return 'Ocurrió un error. Intentá nuevamente.';
-}
-
-function getAdminFriendlyMessage(status: number): string {
-  if (status === 401) return 'Tu sesión expiró. Iniciá sesión nuevamente.';
-  if (status === 403) return 'No tenés permisos para realizar esta acción.';
-  if (status === 404) return 'No se encontró la solicitud.';
-  if (status === 409) return 'La solicitud ya fue procesada.';
-  return 'Ocurrió un error. Intentá nuevamente.';
+  return getFriendlyErrorMessage(error, 'Ocurrió un error. Intentá nuevamente.');
 }
 
 async function updateSpecialistStatus(

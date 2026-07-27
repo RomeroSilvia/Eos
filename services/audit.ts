@@ -1,4 +1,4 @@
-import { ApiRequestError, apiRequest, hasTechnicalDetails } from '@/services/api/client';
+import { ApiRequestError, apiRequest, getFriendlyErrorMessage } from '@/services/api/client';
 import type { AuditLogFilters, AuditLogPage } from '@/types/audit';
 
 export async function getAuditLogs(filters: AuditLogFilters = {}): Promise<AuditLogPage> {
@@ -27,23 +27,11 @@ export function getAuditLogErrorMessage(error: unknown): string {
       });
     }
 
-    if (error.message && !hasTechnicalDetails(error.message)) {
-      return error.message;
-    }
-
-    return getAuditLogFriendlyMessage(error.status);
-  }
-
-  if (__DEV__ && error instanceof Error) {
+    if (error.status === 400) return 'Revisá los filtros ingresados.';
+    if (error.status === 403) return 'No tenés permisos para ver el registro de auditoría.';
+  } else if (__DEV__ && error instanceof Error) {
     console.warn('[audit/api]', error.message);
   }
 
-  return 'Ocurrió un error. Intentá nuevamente.';
-}
-
-function getAuditLogFriendlyMessage(status: number): string {
-  if (status === 400) return 'Revisá los filtros ingresados.';
-  if (status === 401) return 'Tu sesión expiró. Iniciá sesión nuevamente.';
-  if (status === 403) return 'No tenés permisos para ver el registro de auditoría.';
-  return 'No pudimos cargar el registro de auditoría. Intentá nuevamente.';
+  return getFriendlyErrorMessage(error, 'No pudimos cargar el registro de auditoría. Intentá nuevamente.');
 }
