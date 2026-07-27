@@ -141,7 +141,7 @@ export async function registerSpecialist(payload: SpecialistRegisterPayload): Pr
   } catch (error) {
     if (__DEV__) console.warn('[specialist/register]', error);
     const status = error instanceof ApiRequestError ? error.status : undefined;
-    throw new Error(getFriendlyErrorMessage(status ?? 0));
+    throw new Error(getRegisterSpecialistErrorMessage(status ?? 0));
   }
 }
 
@@ -453,7 +453,7 @@ function isAllowedDocumentMimeType(value: string): value is SpecialistDocumentMi
   return SPECIALIST_DOCUMENT_ALLOWED_MIME_TYPES.includes(value as SpecialistDocumentMimeType);
 }
 
-function getFriendlyErrorMessage(status: number): string {
+function getRegisterSpecialistErrorMessage(status: number): string {
   if (status === 400) return 'Datos invalidos. Revisa los campos e intenta de nuevo.';
   if (status === 401) return 'Sesion vencida. Volve a iniciar sesion.';
   if (status === 403) return 'No tenes permisos para realizar esta accion.';
