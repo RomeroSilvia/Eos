@@ -1,4 +1,5 @@
 import { routinesRepository } from './routines.repository';
+import { env } from '../../config/env';
 import { ApiError } from '../../utils/ApiError';
 import { recordAuditLog, findRecentRoutineAuditBatch, updateRoutineAuditBatch } from '../audit/audit.service';
 import type {
@@ -251,7 +252,7 @@ async function recordRoutineAudit(params: {
       }
     });
   } catch (error) {
-    if (process.env.NODE_ENV !== 'production') {
+    if (env.nodeEnv !== 'production') {
       console.warn('[audit] Error inesperado al consolidar auditoría de rutina', error);
     }
   }

@@ -2,6 +2,10 @@ import type { Request, Response } from 'express';
 import { asyncHandler } from '../../utils/asyncHandler';
 import { adminService } from './admin.service';
 
+export const adminHealth = (_req: Request, res: Response) => {
+  res.json(adminService.getHealth());
+};
+
 export const listPendingSpecialists = asyncHandler(async (_req: Request, res: Response) => {
   const specialists = await adminService.listPendingSpecialists();
   res.json({ specialists });

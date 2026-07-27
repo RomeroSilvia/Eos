@@ -1,4 +1,5 @@
 import { supabase } from '../../config/supabase';
+import { env } from '../../config/env';
 import { ApiError } from '../../utils/ApiError';
 import { TABLE_NAMES } from '../../database/tableNames';
 import { auditRepository } from './audit.repository';
@@ -8,6 +9,13 @@ const MAX_PAGE_SIZE = 100;
 const DEFAULT_PAGE_SIZE = 10;
 const ISO_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const ENTITY_NOT_FOUND_LABEL = 'Registro eliminado o no disponible';
+
+export function getAuditHealth() {
+  return {
+    module: 'audit',
+    status: 'ready'
+  };
+}
 
 /**
  * M4 contract: best-effort audit logging.
@@ -31,7 +39,7 @@ export async function recordAuditLog(params: RecordAuditLogParams): Promise<void
 
     if (error) {
       // Best-effort by contract. Keep a debug trace in non-production only.
-      if (process.env.NODE_ENV !== 'production') {
+      if (env.nodeEnv !== 'production') {
         console.warn('[audit] No se pudo registrar evento', {
           message: error.message,
           action: params.action,
@@ -41,7 +49,7 @@ export async function recordAuditLog(params: RecordAuditLogParams): Promise<void
       }
     }
   } catch (error) {
-    if (process.env.NODE_ENV !== 'production') {
+    if (env.nodeEnv !== 'production') {
       console.warn('[audit] Error inesperado al registrar evento', error);
     }
   }

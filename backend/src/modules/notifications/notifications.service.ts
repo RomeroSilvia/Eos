@@ -3,6 +3,11 @@ import { notificationsRepository, type NotificationHistoryRow } from './notifica
 const EXPO_PUSH_API = 'https://exp.host/--/api/v2/push/send';
 
 export const notificationsService = {
+  getHealth: () => ({
+    module: 'notifications',
+    status: 'ready'
+  }),
+
   registerToken: async (
     userId: string,
     expoToken: string,

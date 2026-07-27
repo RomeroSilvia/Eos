@@ -1,6 +1,10 @@
 import type { RequestHandler } from 'express';
 import { asyncHandler } from '../../utils/asyncHandler';
-import { getAuditLogs as getAuditLogsService } from './audit.service';
+import { getAuditHealth, getAuditLogs as getAuditLogsService } from './audit.service';
+
+export const auditHealth: RequestHandler = (_req, res) => {
+  res.json(getAuditHealth());
+};
 
 export const getAuditLogs: RequestHandler = asyncHandler(async (req, res) => {
   const logs = await getAuditLogsService({

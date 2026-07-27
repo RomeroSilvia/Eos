@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { authenticate } from '../../middlewares/auth.middleware';
 import { requireRole } from '../../middlewares/requireRole.middleware';
 import {
+  adminHealth,
   getSpecialistDocuments,
   listSpecialists,
   listPendingSpecialists,
@@ -10,6 +11,8 @@ import {
 } from './admin.controller';
 
 export const adminRouter = Router();
+
+adminRouter.get('/health', adminHealth);
 
 adminRouter.get(
   '/specialists',

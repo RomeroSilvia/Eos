@@ -41,6 +41,11 @@ type CenterProfileRow = {
 };
 
 export const centersService = {
+  getHealth: () => ({
+    module: 'centers',
+    status: 'ready'
+  }),
+
   listCenters: async (adminUserId: string): Promise<CenterSummary[]> => {
     const centers = await centersRepository.findActiveByAdminId(adminUserId);
     const countsByCenterId = await centersRepository.findSpecialistCountsByCenterIds(centers.map((center) => center.id));

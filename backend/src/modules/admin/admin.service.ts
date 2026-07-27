@@ -57,6 +57,11 @@ type UpdateSpecialistCenterBody = {
 };
 
 export const adminService = {
+  getHealth: () => ({
+    module: 'admin',
+    status: 'ready'
+  }),
+
   listSpecialists: async (): Promise<AdminSpecialistSummary[]> => {
     const specialists = await adminRepository.findAllSpecialists();
     const profiles = await adminRepository.findProfilesByIds(

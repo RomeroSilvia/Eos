@@ -14,6 +14,13 @@ type SaveQuizBody = {
   routineSteps?: string;
 };
 
+export const quizHealth: RequestHandler = (_req, res) => {
+  res.json({
+    module: 'quiz',
+    status: 'ready'
+  });
+};
+
 export const saveQuiz: RequestHandler = asyncHandler(async (req, res) => {
   const {
     ageRange,

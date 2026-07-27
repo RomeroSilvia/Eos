@@ -2,6 +2,10 @@ import type { Request, Response } from 'express';
 import { asyncHandler } from '../../utils/asyncHandler';
 import { subscriptionsService } from './subscriptions.service';
 
+export const subscriptionsHealth = (_req: Request, res: Response) => {
+  res.json(subscriptionsService.getHealth());
+};
+
 export const listSubscriptionPlans = asyncHandler(async (_req: Request, res: Response) => {
   const plans = await subscriptionsService.listPlans();
   res.json({ plans });

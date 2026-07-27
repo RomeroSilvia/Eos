@@ -17,6 +17,11 @@ import type {
 const ALLOWED_STATUSES: SubscriptionStatus[] = ['active', 'pending', 'canceled', 'expired', 'past_due'];
 
 export const subscriptionsService = {
+  getHealth: () => ({
+    module: 'subscriptions',
+    status: 'ready'
+  }),
+
   /**
    * E3 contract: subscriptions.status is informative and must not gate other modules.
    */
