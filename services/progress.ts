@@ -32,21 +32,6 @@ export async function getProgressSummary(): Promise<ProgressSummary> {
   return mapProgressSummary(summary, history);
 }
 
-export async function getWeeklyProgress(): Promise<ProgressSummary['weeklyProgress']> {
-  const summary = await getProgressSummary();
-  return summary.weeklyProgress;
-}
-
-export async function getStreakProgress(): Promise<ProgressSummary['streakProgress']> {
-  const summary = await getProgressSummary();
-  return summary.streakProgress;
-}
-
-export async function getCalendarProgress(): Promise<ProgressSummary['calendarProgress']> {
-  const summary = await getProgressSummary();
-  return summary.calendarProgress;
-}
-
 export async function getProgressHistory(): Promise<ProgressHistoryDay[]> {
   return apiRequest<ProgressHistoryDay[]>({
     path: '/progress/history/all',

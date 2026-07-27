@@ -3,8 +3,7 @@ import { getStoredAccessToken } from '@/services/api/token';
 const defaultApiUrl = 'http://localhost:3000/api';
 
 export const apiConfig = {
-  baseUrl: process.env.EXPO_PUBLIC_API_URL ?? defaultApiUrl,
-  useMocks: process.env.EXPO_PUBLIC_USE_MOCKS !== 'false'
+  baseUrl: process.env.EXPO_PUBLIC_API_URL ?? defaultApiUrl
 };
 
 type ApiRequestOptions = RequestInit & {

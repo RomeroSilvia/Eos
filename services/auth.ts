@@ -48,14 +48,6 @@ type RegisterPayload = LoginPayload & {
   specialty?: 'dermatologo' | 'cosmetologo';
 };
 
-export const mockUserProfile: UserProfile = {
-  id: 'mock-user-1',
-  name: 'Usuario EOS',
-  email: 'usuario@eos.app',
-  role: 'user',
-  skinType: 'mixed'
-};
-
 export type PostLoginRoute = '/(tabs-admin)' | '/(tabs)/home' | '/(tabs-specialist)' | '/specialist-status';
 
 export async function login({ email, password }: LoginPayload): Promise<UserProfile> {

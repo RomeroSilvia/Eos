@@ -45,12 +45,9 @@ Variables de entorno del frontend (`.env`):
 
 ```
 EXPO_PUBLIC_API_URL=http://<ip-de-tu-maquina>:3000/api
-EXPO_PUBLIC_USE_MOCKS=false
 EXPO_PUBLIC_SUPABASE_URL=<tu-url-supabase>
 EXPO_PUBLIC_SUPABASE_ANON_KEY=<tu-anon-key>
 ```
-
-> **Nota:** el flag `EXPO_PUBLIC_USE_MOCKS` existe en `services/api/client.ts` pero hoy no está conectado a los servicios (ningún `service` de `services/` lo consulta) — la app siempre necesita el backend corriendo, independientemente del valor de esta variable.
 
 ### 2. Backend (`backend/`)
 
