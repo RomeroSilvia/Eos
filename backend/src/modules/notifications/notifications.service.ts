@@ -1,4 +1,5 @@
 import { notificationsRepository, type NotificationHistoryRow } from './notifications.repository';
+import { env } from '../../config/env';
 
 const EXPO_PUSH_API = 'https://exp.host/--/api/v2/push/send';
 
@@ -40,8 +41,11 @@ export const notificationsService = {
           { to: tokenRow.expo_token, title, body, data: data ?? {} }
         ])
       });
-    } catch {
+    } catch (error) {
       // No bloqueamos el flujo del llamador por una falla de push.
+      if (env.nodeEnv === 'development') {
+        console.error('[notifications] Error enviando push a Expo:', error);
+      }
     }
   },
 

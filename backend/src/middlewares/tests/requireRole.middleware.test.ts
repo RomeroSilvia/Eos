@@ -28,7 +28,7 @@ describe('requireRole', () => {
     }).toThrow('No tenés permiso para acceder a este recurso.');
   });
 
-  it('rechaza con 403 cuando no hay usuario autenticado', () => {
+  it('rechaza con 401 cuando no hay usuario autenticado', () => {
     const middleware = requireRole('specialist');
 
     expect(() => {
@@ -37,7 +37,7 @@ describe('requireRole', () => {
 
     expect(() => {
       middleware(makeRequest(), {} as Response, jest.fn());
-    }).toThrow('No tenés permiso para acceder a este recurso.');
+    }).toThrow('Token de autorización requerido.');
   });
 
   it('rechaza con 403 cuando un user intenta acceder a recurso de center_admin', () => {
