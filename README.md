@@ -33,6 +33,12 @@ Proyecto académico — UTN, cuarto año, Aplicaciones Móviles.
 
 ## Instalación y desarrollo
 
+Orden recomendado para levantar el proyecto de cero:
+
+1. Crear el proyecto en Supabase y cargar el schema (ver "Migraciones de base de datos" más abajo, o `docs/database-setup.md` para el detalle paso a paso).
+2. Levantar el backend (paso 2 de esta sección).
+3. Levantar la app móvil (paso 1 de esta sección).
+
 ### 1. App móvil (raíz)
 
 ```bash
@@ -89,6 +95,23 @@ GET http://localhost:3000/api/notifications/health
 GET http://localhost:3000/api/subscriptions/health
 GET http://localhost:3000/api/admin/audit-log/health
 ```
+
+## Primeros pasos en la app
+
+Con el backend corriendo (`npm run dev` en `backend/`) y la app iniciada (`npm start` en la raíz):
+
+1. Escaneá el QR con **Expo Go** (Android/iOS) o presioná `a` / `i` en la terminal para abrir un emulador. También podés presionar `w` para abrir la versión web.
+2. La app abre en `/landing`. Desde ahí:
+   - **"Comenzar análisis de piel"** → registro como usuario (`role: user`) → completa el quiz de diagnóstico de piel → home.
+   - **"Soy especialista"** → registro como especialista, pide foto de DNI y de matrícula/título. Queda con `license_status: pending` hasta que un administrador de centro lo apruebe (ver punto 4).
+   - **"Ya tengo cuenta"** → login.
+3. Como usuario (`role: user`) podés: crear una rutina (`(tabs)/routine` → wizard), agregar productos, marcar pasos completados y ver tu progreso en `(tabs)/progress`.
+4. Para probar el rol `center_admin` (aprobar especialistas, crear centros, ver métricas) no alcanza con el registro público — hay que asignar el rol manualmente en Supabase después de registrar un usuario normal: `update profiles set role = 'center_admin' where id = '<uuid-del-usuario>';`. Con ese usuario logueado vas a ver las tabs de `(tabs-admin)`.
+5. Para chatear con un especialista, un usuario `user` primero tiene que vincularse a uno desde `(tabs)/specialists` (el especialista debe estar `verified`).
+
+Notas:
+- No hay modo mock: la app siempre necesita el backend real corriendo (ver `docs/env.md`).
+- El flujo de recuperación de contraseña (`/forgot-password` → `/update-password`) solo funciona en la build web — ver "Deuda técnica conocida" en `docs/estructura-proyecto.md`.
 
 ## Migraciones de base de datos — Entrega 2
 
@@ -174,8 +197,6 @@ Ejecutar en Supabase SQL Editor luego de las migraciones de Entrega 2.
 ```sql
 -- supabase/migrations/20260702000102_e3_m4_audit_logs_schema.sql
 ```
-
-> Pendiente: esta migración no habilita RLS todavía (ver `docs/e3-supabase-security.md`, sección "audit_logs - estado real").
 
 ### 3. Planes, suscripciones y métricas (Módulo 5)
 

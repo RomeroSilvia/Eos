@@ -11,9 +11,12 @@ Eos/
 ├── hooks/            Lógica de lectura y composición por módulo
 ├── services/         Clientes HTTP y servicios de dominio
 │   └── api/          Cliente base fetch con auth y manejo de errores
-├── types/            Contratos TypeScript compartidos
+├── types/            Contratos TypeScript compartidos (routine, product, progress,
+│                     user, notification, reminder, audit, chat, specialist,
+│                     center, subscription)
 ├── constants/        Paleta de colores y rutas tipadas
-├── utils/            Funciones auxiliares puras (fechas, formateo, calendario)
+├── utils/            Funciones auxiliares puras (fechas, formateo, calendario,
+│                     tipo de piel, validación de contraseña)
 ├── assets/           Recursos visuales locales
 ├── scripts/          Scripts Node (perf del wizard, wrapper de Supabase CLI local)
 ├── database/         Schema SQL histórico y policies RLS por módulo/entrega
@@ -104,13 +107,19 @@ screens (app/)
   └── hooks/ (useHome, useRoutine, useProducts, useProgress, useProfile,
               useProgressHistory, useProgressStats, useRoutineWizard,
               useHasUnreadNotifications, useRoutineWizardProfiler)
-        └── services/ (auth.ts, routines.ts, products.ts, progress.ts,
+        └── services/ (auth.ts, routines.ts, products.ts, progress.ts, quiz.ts,
                        specialist.ts, chat.ts, admin.ts, centers.ts,
                        subscriptions.ts, audit.ts, notifications.ts, supabase.ts)
-              └── services/api/client.ts (apiRequest<T> · ApiRequestError · getAuthHeader · apiConfig)
+              └── services/api/ (client.ts: apiRequest<T> · ApiRequestError · apiConfig
+                                  token.ts: getStoredAccessToken/setStoredAccessToken/deleteStoredAccessToken,
+                                  única fuente de lectura/escritura del token de sesión)
 ```
 
 `services/supabase.ts` es un cliente Supabase aparte, usado solo para funcionalidades de Realtime (chat) — requiere `EXPO_PUBLIC_SUPABASE_URL`/`EXPO_PUBLIC_SUPABASE_ANON_KEY`. El resto de los servicios hablan con el backend propio vía `services/api/client.ts`.
+
+Los tipos de dominio de cada servicio (`ChatMessage`, `SpecialistStatus`, `Center`, `Subscription`, etc.) viven en `types/` y cada `service` los re-exporta para no romper a sus consumidores — no hay que importarlos directo de `types/` salvo que se prefiera.
+
+`components/OnboardingScreen.tsx` es un componente compartido (título, subtítulo, lista de beneficios y botones parametrizables) usado por `app/landing.tsx`, `app/start-quiz.tsx` y `app/start-diagnosis.tsx`, que antes duplicaban el mismo layout.
 
 ## Convenciones
 
@@ -122,3 +131,12 @@ screens (app/)
 - Backend: errores con `ApiError`, handlers envueltos en `asyncHandler`.
 - Backend: `req.user.id`/`req.user.role` inyectados por `auth.middleware.ts` (Bearer token validado contra Supabase Auth). No hay middleware de auth mock — desarrollo y producción siempre validan un token real.
 - Tests en español, co-localizados en `modules/<modulo>/tests/` (solo backend).
+- Logging condicional al entorno siempre con `__DEV__` (no `process.env.NODE_ENV`).
+- Errores de API amigables reusando `getFriendlyApiErrorMessage`/`hasTechnicalDetails` de `services/api/client.ts` en vez de reimplementarlos por servicio.
+- Validación de contraseña única en `utils/password.ts` (`isValidPassword`), usada en registro, cambio de contraseña (`settings.tsx`) y recuperación (`update-password.tsx`).
+
+## Deuda técnica conocida (documentada, no arreglada)
+
+- `app/routine/Step5-products.tsx` es un placeholder no funcional dentro del wizard de creación de rutina: los pasos/productos mostrados son datos fijos y los botones "+ Añadir producto" están deshabilitados a propósito. No lee ni escribe los pasos reales de la rutina.
+- `app/(auth)/update-password.tsx`: el flujo de recuperación de contraseña solo funciona en la build web (lee el token de recuperación desde `window.location.hash`/`search`). En mobile nativo siempre falla con "Link inválido".
+- 4 pantallas "god component" quedan fuera de esta pasada de consistencia por su tamaño: `app/chat.tsx`, `(tabs-admin)/plans.tsx`, `(tabs-admin)/centers.tsx`, `(tabs-admin)/index.tsx`.
