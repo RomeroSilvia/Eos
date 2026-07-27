@@ -51,6 +51,7 @@ export default function ForgotPasswordScreen() {
       </View>
 
       <TextInput
+        accessibilityLabel="Email"
         autoCapitalize="none"
         keyboardType="email-address"
         onChangeText={setEmail}
@@ -61,6 +62,8 @@ export default function ForgotPasswordScreen() {
       />
 
       <Pressable
+        accessibilityLabel="Restablecer contraseña"
+        accessibilityRole="button"
         accessibilityState={{ disabled: !canSubmit, busy: isSubmitting }}
         disabled={!canSubmit}
         onPress={handleResetPassword}

@@ -65,12 +65,12 @@ export default function LoginScreen() {
 
         <Text style={styles.title}>Iniciar Sesion</Text>
 
-        <Pressable style={styles.socialButton}>
+        <Pressable accessibilityLabel="Continuar con Google" accessibilityRole="button" style={styles.socialButton}>
           <AntDesign color="#111111" name="google" size={20} style={styles.socialIcon} />
           <Text style={styles.socialText}>Continuar con Google</Text>
         </Pressable>
 
-        <Pressable style={styles.socialButton}>
+        <Pressable accessibilityLabel="Continuar con Apple" accessibilityRole="button" style={styles.socialButton}>
           <Ionicons color="#111111" name="logo-apple" size={22} style={styles.socialIcon} />
           <Text style={styles.socialText}>Continuar con Apple</Text>
         </Pressable>

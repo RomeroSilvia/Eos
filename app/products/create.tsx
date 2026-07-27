@@ -144,6 +144,7 @@ export default function NewProductScreen() {
 
             <Text style={styles.label}>Nombre del producto</Text>
             <TextInput
+              accessibilityLabel="Nombre del producto"
               onChangeText={setName}
               placeholder="Gentle cleanser Cerave"
               placeholderTextColor={colors.textMuted}
@@ -153,6 +154,7 @@ export default function NewProductScreen() {
 
             <Text style={styles.label}>Descripción (opcional)</Text>
             <TextInput
+              accessibilityLabel="Descripción del producto"
               multiline
               numberOfLines={4}
               onChangeText={setDescription}
@@ -166,6 +168,9 @@ export default function NewProductScreen() {
             <View style={styles.categories}>
               {BRANDS.map((br) => (
                 <Pressable
+                  accessibilityLabel={br.label}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: brand === br.value }}
                   key={br.value}
                   onPress={() => setBrand(br.value)}
                   style={[styles.chip, brand === br.value && styles.chipActive]}
@@ -181,6 +186,9 @@ export default function NewProductScreen() {
             <View style={styles.categories}>
               {CATEGORIES.map((cat) => (
                 <Pressable
+                  accessibilityLabel={cat.label}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: category === cat.value }}
                   key={cat.value}
                   onPress={() => setCategory(cat.value)}
                   style={[styles.chip, category === cat.value && styles.chipActive]}
@@ -192,7 +200,13 @@ export default function NewProductScreen() {
               ))}
             </View>
 
-            <Pressable disabled={compressingImage} onPress={handlePickImage} style={styles.photoBox}>
+            <Pressable
+              accessibilityLabel="Foto del producto"
+              accessibilityRole="button"
+              disabled={compressingImage}
+              onPress={handlePickImage}
+              style={styles.photoBox}
+            >
               {displayImage ? (
                 <Image source={{ uri: displayImage }} style={styles.photoPreview} />
               ) : (

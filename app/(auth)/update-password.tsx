@@ -74,6 +74,7 @@ export default function UpdatePasswordScreen() {
         <Text style={styles.label}>Nueva contraseña</Text>
         <View style={styles.inputContainer}>
           <TextInput
+            accessibilityLabel="Nueva contraseña"
             onChangeText={setPassword}
             placeholder="contraseña"
             placeholderTextColor={colors.textMuted}
@@ -83,6 +84,7 @@ export default function UpdatePasswordScreen() {
           />
           <Pressable
             accessibilityLabel={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+            accessibilityRole="button"
             onPress={() => setShowPassword((value) => !value)}
             style={styles.eyeButton}
           >
@@ -97,6 +99,7 @@ export default function UpdatePasswordScreen() {
         <Text style={styles.label}>Confirmar contraseña</Text>
         <View style={styles.inputContainer}>
           <TextInput
+            accessibilityLabel="Confirmar contraseña"
             onChangeText={setConfirmPassword}
             placeholder="contraseña"
             placeholderTextColor={colors.textMuted}
@@ -106,6 +109,7 @@ export default function UpdatePasswordScreen() {
           />
           <Pressable
             accessibilityLabel={showConfirmPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+            accessibilityRole="button"
             onPress={() => setShowConfirmPassword((value) => !value)}
             style={styles.eyeButton}
           >
@@ -115,6 +119,8 @@ export default function UpdatePasswordScreen() {
       </View>
 
       <Pressable
+        accessibilityLabel="Guardar contraseña"
+        accessibilityRole="button"
         accessibilityState={{ disabled: !canSubmit, busy: isSubmitting }}
         disabled={!canSubmit}
         onPress={handleSavePassword}

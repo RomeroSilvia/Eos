@@ -108,7 +108,7 @@ export default function SpecialistStatusScreen() {
               ) : null}
 
               {canSendApplication ? (
-                <Pressable style={styles.primaryButton} onPress={handleSendApplication}>
+                <Pressable accessibilityRole="button" style={styles.primaryButton} onPress={handleSendApplication}>
                   <Text style={styles.primaryButtonText}>Completar solicitud</Text>
                 </Pressable>
               ) : null}
@@ -118,14 +118,14 @@ export default function SpecialistStatusScreen() {
                   <Text style={styles.description}>
                     Podes volver a enviar la solicitud desde el formulario de especialista.
                   </Text>
-                  <Pressable style={styles.primaryButton} onPress={handleSendApplication}>
+                  <Pressable accessibilityRole="button" style={styles.primaryButton} onPress={handleSendApplication}>
                     <Text style={styles.primaryButtonText}>Reintentar solicitud</Text>
                   </Pressable>
                 </>
               ) : null}
 
               {error || isUnknownStatus ? (
-                <Pressable style={styles.secondaryButton} onPress={refreshStatus}>
+                <Pressable accessibilityRole="button" style={styles.secondaryButton} onPress={refreshStatus}>
                   <Text style={styles.secondaryButtonText}>Reintentar</Text>
                 </Pressable>
               ) : null}
@@ -133,7 +133,7 @@ export default function SpecialistStatusScreen() {
           )}
         </Card>
 
-        <Pressable style={styles.logoutButton} onPress={handleLogout}>
+        <Pressable accessibilityLabel="Cerrar sesion" accessibilityRole="button" style={styles.logoutButton} onPress={handleLogout}>
           <Text style={styles.logoutText}>Cerrar sesion</Text>
         </Pressable>
       </View>

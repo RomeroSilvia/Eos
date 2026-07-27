@@ -19,13 +19,21 @@ export function HomeReminderItem({ reminder, onToggle, onPress }: HomeReminderIt
   const iconName = getIcon(reminder.timeOfDay);
 
   return (
-    <Pressable style={styles.item} onPress={onPress} disabled={!onPress}>
+    <Pressable
+      accessibilityLabel={reminder.title}
+      accessibilityRole={onPress ? 'button' : undefined}
+      style={styles.item}
+      onPress={onPress}
+      disabled={!onPress}
+    >
       <View style={styles.icon}>
         <Ionicons color={colors.textSecondary} name={iconName} size={20} />
       </View>
       <Text style={styles.title}>{reminder.title}</Text>
       {reminder.time ? (
         <Pressable
+          accessibilityLabel={`Horario: ${reminder.time}`}
+          accessibilityRole="button"
           onPress={() => onToggle?.(reminder.id)}
           style={styles.timeBadge}
         >
