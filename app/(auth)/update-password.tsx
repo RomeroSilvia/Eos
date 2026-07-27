@@ -3,7 +3,8 @@ import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { ActivityIndicator, Alert, Image, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { apiConfig, getFriendlyAuthErrorMessage } from '@/services/api/client';
+import { ApiRequestError, getFriendlyAuthErrorMessage } from '@/services/api/client';
+import { updatePasswordWithRecoveryToken } from '@/services/auth';
 
 export default function UpdatePasswordScreen() {
   const router = useRouter();
@@ -45,26 +46,15 @@ export default function UpdatePasswordScreen() {
         return;
       }
 
-      const response = await fetch(`${apiConfig.baseUrl}/auth/update-password`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${accessToken}`
-        },
-        body: JSON.stringify({ newPassword: password, accessToken })
-      });
-
-      if (!response.ok) {
-        await logAuthResponseInDevelopment(response, 'update-password');
-        Alert.alert('Error del Servidor', getFriendlyAuthErrorMessage(response.status));
-        return;
-      }
+      await updatePasswordWithRecoveryToken(password, accessToken);
 
       Alert.alert('Contraseña actualizada', 'Tu contraseña fue actualizada.');
       router.replace('/login');
     } catch (error) {
-      logAuthErrorInDevelopment(error, 'update-password');
-      Alert.alert('Error de Conexión', 'Ocurrió un error. Intentá nuevamente.');
+      if (__DEV__) console.warn('[auth/update-password]', error);
+
+      const status = error instanceof ApiRequestError ? error.status : undefined;
+      Alert.alert('Error', getFriendlyAuthErrorMessage(status));
     } finally {
       setIsSubmitting(false);
     }
@@ -132,24 +122,6 @@ export default function UpdatePasswordScreen() {
       </Pressable>
     </SafeAreaView>
   );
-}
-
-async function logAuthResponseInDevelopment(response: Response, flow: string): Promise<void> {
-  if (!__DEV__) {
-    return;
-  }
-
-  const body = await response.clone().json().catch(() => null);
-  console.warn(`[auth/${flow}]`, {
-    status: response.status,
-    body
-  });
-}
-
-function logAuthErrorInDevelopment(error: unknown, flow: string): void {
-  if (__DEV__) {
-    console.warn(`[auth/${flow}]`, error);
-  }
 }
 
 function isValidPassword(value: string) {

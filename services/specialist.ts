@@ -1,8 +1,7 @@
 import type { ImagePickerAsset } from 'expo-image-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
-import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
-import { apiConfig, apiRequest } from '@/services/api/client';
+import { ApiRequestError, apiRequest } from '@/services/api/client';
 import type { Routine } from '@/types/routine';
 
 export const SPECIALIST_DOCUMENT_MAX_SIZE_BYTES = 5 * 1024 * 1024;
@@ -211,19 +210,18 @@ export async function registerSpecialist(payload: SpecialistRegisterPayload): Pr
   await appendImageToFormData(formData, 'dniPhoto', payload.dniPhoto);
   await appendImageToFormData(formData, 'titlePhoto', payload.titlePhoto);
 
-  const response = await fetch(`${apiConfig.baseUrl}/specialist/register`, {
-    method: 'POST',
-    headers: await getMultipartAuthHeaders(),
-    body: formData
-  });
-
-  if (!response.ok) {
-    await logBackendErrorInDevelopment(response);
-    throw new Error(getFriendlyErrorMessage(response.status));
+  try {
+    const body = await apiRequest<SpecialistStatusResponse>({
+      path: '/specialist/register',
+      method: 'POST',
+      body: formData
+    });
+    return normalizeSpecialistStatusResponse(body);
+  } catch (error) {
+    if (__DEV__) console.warn('[specialist/register]', error);
+    const status = error instanceof ApiRequestError ? error.status : undefined;
+    throw new Error(getFriendlyErrorMessage(status ?? 0));
   }
-
-  const body = await response.json() as SpecialistStatusResponse;
-  return normalizeSpecialistStatusResponse(body);
 }
 
 export async function getSpecialistStatus(): Promise<SpecialistStatus> {
@@ -440,31 +438,6 @@ async function appendImageToFormData(
     type: image.type,
     name: image.name
   } as unknown as Blob);
-}
-
-async function getMultipartAuthHeaders(): Promise<HeadersInit> {
-  const token = await getStoredToken();
-  return token ? { Authorization: `Bearer ${token}` } : {};
-}
-
-async function getStoredToken(): Promise<string | null> {
-  if (Platform.OS === 'web') {
-    return localStorage.getItem('eos-access-token');
-  }
-
-  return SecureStore.getItemAsync('eos-access-token');
-}
-
-async function logBackendErrorInDevelopment(response: Response): Promise<void> {
-  if (!__DEV__) {
-    return;
-  }
-
-  const body = await response.clone().json().catch(() => null);
-  console.warn('[specialist/register]', {
-    status: response.status,
-    body
-  });
 }
 
 async function getPreparedDocument(

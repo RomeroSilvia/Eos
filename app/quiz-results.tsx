@@ -1,27 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import * as SecureStore from 'expo-secure-store';
 import { useEffect, useState } from 'react';
-import { Alert, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { apiConfig } from '@/services/api/client';
-
-type SkinProfileResult = {
-  ageRange: string;
-  skinType: string;
-  imperfections: string;
-  mainGoal: string;
-};
-
-type QuizProfileResponse = {
-  skinProfile?: {
-    age_range?: string | null;
-    skin_type?: string | null;
-    imperfections?: string | null;
-    main_goal?: string | null;
-  };
-  message?: string;
-};
+import { ApiRequestError } from '@/services/api/client';
+import { getQuizProfile, type SkinProfileResult } from '@/services/quiz';
 
 export default function QuizResultsScreen() {
   const router = useRouter();
@@ -31,33 +14,16 @@ export default function QuizResultsScreen() {
   useEffect(() => {
     async function loadSkinProfile() {
       try {
-        const token = await getStoredToken();
+        const profile = await getQuizProfile();
+        setSkinProfile(profile);
+      } catch (error) {
+        if (__DEV__) console.error(error);
 
-        if (!token) {
+        if (error instanceof ApiRequestError && error.status === 401) {
           router.replace('/login');
           return;
         }
 
-        const response = await fetch(`${apiConfig.baseUrl}/quiz/profile`, {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        });
-
-        const data = (await response.json().catch(() => null)) as QuizProfileResponse | null;
-
-        if (!response.ok || !data?.skinProfile) {
-          throw new Error(data?.message ?? 'No pudimos cargar tus resultados.');
-        }
-
-        setSkinProfile({
-          ageRange: data.skinProfile.age_range ?? '',
-          skinType: data.skinProfile.skin_type ?? '',
-          imperfections: data.skinProfile.imperfections ?? '',
-          mainGoal: data.skinProfile.main_goal ?? ''
-        });
-      } catch (error) {
-        if (__DEV__) console.error(error);
         Alert.alert('Error', error instanceof Error ? error.message : 'No pudimos cargar tus resultados.');
       } finally {
         setIsLoading(false);
@@ -111,14 +77,6 @@ export default function QuizResultsScreen() {
       </Pressable>
     </SafeAreaView>
   );
-}
-
-async function getStoredToken() {
-  if (Platform.OS === 'web') {
-    return localStorage.getItem('eos-access-token');
-  }
-
-  return SecureStore.getItemAsync('eos-access-token');
 }
 
 function Badge({ label, variant = 'default' }: { label: string; variant?: 'default' | 'goal' }) {

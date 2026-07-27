@@ -2,7 +2,8 @@ import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { ActivityIndicator, Alert, Image, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { apiConfig, getFriendlyAuthErrorMessage } from '@/services/api/client';
+import { ApiRequestError, getFriendlyAuthErrorMessage } from '@/services/api/client';
+import { resetPassword } from '@/services/auth';
 
 export default function ForgotPasswordScreen() {
   const router = useRouter();
@@ -19,19 +20,7 @@ export default function ForgotPasswordScreen() {
     setIsSubmitting(true);
 
     try {
-      const response = await fetch(`${apiConfig.baseUrl}/auth/reset-password`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ email: email.trim() })
-      });
-
-      if (!response.ok) {
-        await logAuthResponseInDevelopment(response, 'forgot-password');
-        Alert.alert('Error del Servidor', getFriendlyAuthErrorMessage(response.status));
-        return;
-      }
+      await resetPassword(email.trim());
 
       Alert.alert(
         'Correo enviado',
@@ -39,8 +28,10 @@ export default function ForgotPasswordScreen() {
       );
       router.push('/login');
     } catch (error) {
-      logAuthErrorInDevelopment(error, 'forgot-password');
-      Alert.alert('Error de Conexion', 'Ocurrió un error. Intentá nuevamente.');
+      if (__DEV__) console.warn('[auth/forgot-password]', error);
+
+      const status = error instanceof ApiRequestError ? error.status : undefined;
+      Alert.alert('Error', getFriendlyAuthErrorMessage(status));
     } finally {
       setIsSubmitting(false);
     }
@@ -78,24 +69,6 @@ export default function ForgotPasswordScreen() {
       </Pressable>
     </SafeAreaView>
   );
-}
-
-async function logAuthResponseInDevelopment(response: Response, flow: string): Promise<void> {
-  if (!__DEV__) {
-    return;
-  }
-
-  const body = await response.clone().json().catch(() => null);
-  console.warn(`[auth/${flow}]`, {
-    status: response.status,
-    body
-  });
-}
-
-function logAuthErrorInDevelopment(error: unknown, flow: string): void {
-  if (__DEV__) {
-    console.warn(`[auth/${flow}]`, error);
-  }
 }
 
 const styles = StyleSheet.create({

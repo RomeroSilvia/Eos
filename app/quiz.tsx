@@ -1,10 +1,10 @@
 import { useRouter } from 'expo-router';
-import * as SecureStore from 'expo-secure-store';
 import { useState } from 'react';
-import { Alert, Image, Platform, Pressable, StyleSheet, Text, View, type DimensionValue } from 'react-native';
+import { Alert, Image, Pressable, StyleSheet, Text, View, type DimensionValue } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LoadingState } from '@/components/LoadingState';
-import { apiConfig } from '@/services/api/client';
+import { ApiRequestError } from '@/services/api/client';
+import { saveQuiz } from '@/services/quiz';
 
 type QuizOption = {
   label: string;
@@ -87,44 +87,28 @@ export default function QuizScreen() {
       return;
     }
 
+    setCurrentStep(5);
+    setIsSaving(true);
+
     try {
-      const token = await getStoredToken();
-
-      if (!token) {
-        Alert.alert('Sesion requerida', 'Inicia sesion para guardar los resultados del quiz.');
-        router.replace('/login');
-        return;
-      }
-
-      setCurrentStep(5);
-      setIsSaving(true);
-
-      const payload = {
+      await saveQuiz({
         ageRange: getAnswer(finalAnswers, 0),
         skinType: getAnswer(finalAnswers, 1),
         imperfections: getAnswer(finalAnswers, 2),
         mainGoal: getAnswer(finalAnswers, 3),
         routineSteps: getAnswer(finalAnswers, 4)
-      };
-
-      const response = await fetch(`${apiConfig.baseUrl}/quiz/save`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {})
-        },
-        body: JSON.stringify(payload)
       });
-
-      const data = (await response.json().catch(() => null)) as { message?: string } | null;
-
-      if (!response.ok) {
-        throw new Error(data?.message ?? 'No pudimos guardar tus respuestas.');
-      }
 
       router.replace('/resultados');
     } catch (error) {
       if (__DEV__) console.error(error);
+
+      if (error instanceof ApiRequestError && error.status === 401) {
+        Alert.alert('Sesion requerida', 'Inicia sesion para guardar los resultados del quiz.');
+        router.replace('/login');
+        return;
+      }
+
       Alert.alert(
         'Error al guardar',
         error instanceof Error ? error.message : 'No pudimos guardar tus respuestas.'
@@ -133,14 +117,6 @@ export default function QuizScreen() {
     } finally {
       setIsSaving(false);
     }
-  }
-
-  async function getStoredToken() {
-    if (Platform.OS === 'web') {
-      return localStorage.getItem('eos-access-token');
-    }
-
-    return SecureStore.getItemAsync('eos-access-token');
   }
 
   function getAnswer(finalAnswers: Record<number, string>, index: number) {

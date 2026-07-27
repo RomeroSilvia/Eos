@@ -1,5 +1,4 @@
-import * as SecureStore from 'expo-secure-store';
-import { Platform } from 'react-native';
+import { getStoredAccessToken } from '@/services/api/token';
 
 const defaultApiUrl = 'http://localhost:3000/api';
 
@@ -83,13 +82,16 @@ export class ApiClientError extends ApiRequestError {
 
 export async function apiRequest<TResponse>({ path, headers, ...options }: ApiRequestOptions): Promise<TResponse> {
   const url = `${apiConfig.baseUrl}/${path.replace(/^\//, '')}`;
-  const accessToken = await getStoredAccessToken();
   const isFormData = typeof FormData !== 'undefined' && options.body instanceof FormData;
   const requestHeaders = new Headers(headers ?? undefined);
 
   if (!isFormData) {
     requestHeaders.set('Content-Type', 'application/json');
   }
+
+  // Si el caller ya provee su propio Authorization (ej. token de recovery de
+  // reset de contraseña), no lo pisamos con el de la sesión guardada.
+  const accessToken = requestHeaders.has('Authorization') ? null : await getStoredAccessToken();
 
   if (accessToken) {
     requestHeaders.set('Authorization', `Bearer ${accessToken}`);
@@ -132,14 +134,6 @@ export async function apiRequest<TResponse>({ path, headers, ...options }: ApiRe
   }
 
   return response.json() as Promise<TResponse>;
-}
-
-async function getStoredAccessToken(): Promise<string | null> {
-  if (Platform.OS === 'web') {
-    return localStorage.getItem('eos-access-token');
-  }
-
-  return SecureStore.getItemAsync('eos-access-token');
 }
 
 function hasTechnicalDetails(message: string): boolean {
