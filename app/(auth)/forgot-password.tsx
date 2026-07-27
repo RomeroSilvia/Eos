@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { ActivityIndicator, Alert, Image, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors } from '@/constants/colors';
+import { routes } from '@/constants/routes';
 import { ApiRequestError, getFriendlyAuthErrorMessage } from '@/services/api/client';
 import { resetPassword } from '@/services/auth';
 
@@ -27,7 +28,7 @@ export default function ForgotPasswordScreen() {
         'Correo enviado',
         'Si el email está registrado, vas a recibir instrucciones para recuperar tu contraseña.'
       );
-      router.push('/login');
+      router.push(routes.login);
     } catch (error) {
       if (__DEV__) console.warn('[auth/forgot-password]', error);
 

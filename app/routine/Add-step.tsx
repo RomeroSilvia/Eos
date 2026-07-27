@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { View, Text, StyleSheet, TextInput, Pressable, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors } from '@/constants/colors';
+import { routes } from '@/constants/routes';
 import { useFocusEffect } from '@react-navigation/native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -169,7 +170,7 @@ export default function AddStep() {
         <Pressable
           accessibilityLabel="Crear producto y volver al paso"
           accessibilityRole="button"
-          onPress={() => router.push('/products/create?returnTo=add-step')}
+          onPress={() => router.push(`${routes.productCreate}?returnTo=add-step`)}
           style={({ pressed }) => [styles.outlineButton, { opacity: pressed ? 0.7 : 1 }]}
         >
           <Text style={styles.outlineButtonText}>+ Agregar producto</Text>

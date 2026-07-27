@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors } from '@/constants/colors';
+import { routes } from '@/constants/routes';
 import { ApiRequestError } from '@/services/api/client';
 import { getQuizProfile, type SkinProfileResult } from '@/services/quiz';
 
@@ -21,7 +22,7 @@ export default function QuizResultsScreen() {
         if (__DEV__) console.error(error);
 
         if (error instanceof ApiRequestError && error.status === 401) {
-          router.replace('/login');
+          router.replace(routes.login);
           return;
         }
 
@@ -73,7 +74,7 @@ export default function QuizResultsScreen() {
         <Badge label={skinProfile.mainGoal} variant="goal" />
       </View>
 
-      <Pressable style={styles.button} onPress={() => router.replace('/(tabs)/home')}>
+      <Pressable style={styles.button} onPress={() => router.replace(routes.userHome)}>
         <Text style={styles.buttonText}>Ver mi perfil</Text>
       </Pressable>
     </SafeAreaView>

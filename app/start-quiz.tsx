@@ -1,5 +1,6 @@
 import { useRouter } from 'expo-router';
 import { OnboardingScreen } from '@/components/OnboardingScreen';
+import { routes } from '@/constants/routes';
 
 const benefits = [
   'Quiz de piel en 5 preguntas',
@@ -19,7 +20,7 @@ export default function StartQuizScreen() {
         {
           label: 'Comenzar quiz de piel',
           variant: 'primary',
-          onPress: () => router.push('/quiz')
+          onPress: () => router.push(routes.quiz)
         }
       ]}
     />

@@ -18,6 +18,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors } from '@/constants/colors';
+import { routes } from '@/constants/routes';
 import { ApiRequestError, getFriendlyErrorMessage } from '@/services/api/client';
 import { register as registerUser } from '@/services/auth';
 import {
@@ -219,11 +220,11 @@ export default function RegisterScreen() {
           return;
         }
 
-        router.replace('/specialist-status' as never);
+        router.replace(routes.specialistStatus as never);
         return;
       }
 
-      router.push('/start-diagnosis');
+      router.push(routes.startDiagnosis);
     } catch (error) {
       if (__DEV__) {
         console.error(error);
@@ -255,7 +256,7 @@ export default function RegisterScreen() {
         >
           <Pressable
             accessibilityLabel="Volver a la landing"
-            onPress={() => router.replace('/landing')}
+            onPress={() => router.replace(routes.landing)}
             style={styles.backButton}
           >
             <Ionicons color={colors.textPrimary} name="chevron-back" size={26} />

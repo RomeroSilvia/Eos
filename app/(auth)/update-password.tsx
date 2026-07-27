@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { ActivityIndicator, Alert, Image, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors } from '@/constants/colors';
+import { routes } from '@/constants/routes';
 import { ApiRequestError, getFriendlyAuthErrorMessage } from '@/services/api/client';
 import { updatePasswordWithRecoveryToken } from '@/services/auth';
 import { isValidPassword } from '@/utils/password';
@@ -51,7 +52,7 @@ export default function UpdatePasswordScreen() {
       await updatePasswordWithRecoveryToken(password, accessToken);
 
       Alert.alert('Contraseña actualizada', 'Tu contraseña fue actualizada.');
-      router.replace('/login');
+      router.replace(routes.login);
     } catch (error) {
       if (__DEV__) console.warn('[auth/update-password]', error);
 

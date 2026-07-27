@@ -7,6 +7,7 @@ import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
 import { AppHeader } from '@/components/navigation/AppHeader';
 import { colors } from '@/constants/colors';
+import { routes } from '@/constants/routes';
 import { useProfile } from '@/hooks/useProfile';
 import { useProducts } from '@/hooks/useProducts';
 import type { ProductCategory } from '@/types/product';
@@ -50,7 +51,7 @@ export default function ProductDetailScreen() {
       <SafeAreaView style={styles.screen}>
         <View style={styles.notFound}>
           <Text style={styles.notFoundText}>Producto no encontrado</Text>
-          <Button onPress={() => router.push('/products')}>Volver</Button>
+          <Button onPress={() => router.push(routes.products)}>Volver</Button>
         </View>
       </SafeAreaView>
     );
@@ -58,7 +59,7 @@ export default function ProductDetailScreen() {
 
   const handleEdit = () => {
     router.push({
-      pathname: '/products/create',
+      pathname: routes.productCreate,
       params: {
         productId: product.id,
         initialName: product.name,

@@ -8,6 +8,7 @@ import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
 import { LoadingState } from '@/components/LoadingState';
 import { colors } from '@/constants/colors';
+import { routes } from '@/constants/routes';
 import { useProfile } from '@/hooks/useProfile';
 import { changePassword } from '@/services/auth';
 import { areNotificationsEnabled, setNotificationsEnabled } from '@/services/notifications';
@@ -353,7 +354,7 @@ export default function SettingsScreen() {
                 <Text style={styles.sectionText}>Volver a responderlo actualiza tu perfil de piel.</Text>
               </View>
             </View>
-            <Button onPress={() => router.push('/quiz')} style={styles.button} variant="ghost">
+            <Button onPress={() => router.push(routes.quiz)} style={styles.button} variant="ghost">
               Volver a tomar test de piel
             </Button>
           </Card>

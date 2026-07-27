@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { ActivityIndicator, Alert, Image, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors } from '@/constants/colors';
+import { routes } from '@/constants/routes';
 import { getLoginErrorMessage, getPostLoginRoute, login as loginUser } from '@/services/auth';
 
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -53,7 +54,7 @@ export default function LoginScreen() {
     <SafeAreaView style={styles.screen}>
       <Pressable
         accessibilityLabel="Volver a la landing"
-        onPress={() => router.replace('/landing')}
+        onPress={() => router.replace(routes.landing)}
         style={styles.backButton}
       >
         <Ionicons color={colors.textPrimary} name="chevron-back" size={26} />
@@ -122,11 +123,11 @@ export default function LoginScreen() {
         {errors.form ? <Text style={styles.formErrorText}>{errors.form}</Text> : null}
 
         <View style={styles.actionLinks}>
-          <Pressable onPress={() => router.push('/forgot-password')}>
+          <Pressable onPress={() => router.push(routes.forgotPassword)}>
             <Text style={styles.forgotPasswordText}>¿Olvidaste tu contraseña?</Text>
           </Pressable>
 
-          <Pressable onPress={() => router.push('/register')}>
+          <Pressable onPress={() => router.push(routes.register)}>
             <Text style={styles.registerText}>Registrarme</Text>
           </Pressable>
         </View>

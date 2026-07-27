@@ -12,6 +12,7 @@ import { LoadingState } from '@/components/LoadingState';
 
 import { RemindersSection } from '@/components/RemindersSection';
 import { colors } from '@/constants/colors';
+import { routes } from '@/constants/routes';
 import { useHome } from '@/hooks/useHome';
 import { getMySpecialist, type MySpecialist, type SpecialistSpecialty } from '@/services/specialist';
 import { formatStepCount } from '@/utils/progress';
@@ -132,7 +133,7 @@ export default function HomeScreen() {
           <View style={[styles.progressTrack, { backgroundColor: colors.border }]}>
             <View style={[styles.progressFill, { width: `${progress * 100}%`, backgroundColor: colors.primary }]} />
           </View>
-          <Button variant="secondary" onPress={() => router.push('/routine')} style={styles.routineButton}>
+          <Button variant="secondary" onPress={() => router.push(routes.routine)} style={styles.routineButton}>
             {hasActiveRoutine ? 'Ver rutina' : 'Crear rutina'}
           </Button>
         </Card>
@@ -180,7 +181,7 @@ export default function HomeScreen() {
           {!isLoadingSpecialist && !specialistError && mySpecialist ? (
             <View style={styles.specialistActions}>
               <Button
-               onPress={() => router.push('/chat')}
+               onPress={() => router.push(routes.chat)}
                 style={styles.specialistButton}
               >
                 Enviar Consulta
@@ -190,7 +191,7 @@ export default function HomeScreen() {
           ) : null}
 
           {!isLoadingSpecialist && !specialistError && !mySpecialist ? (
-            <Button onPress={() => router.push('/specialists')} style={styles.specialistButton} variant="secondary">
+            <Button onPress={() => router.push(routes.specialists)} style={styles.specialistButton} variant="secondary">
               Buscar especialista
             </Button>
           ) : null}

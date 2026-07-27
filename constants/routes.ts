@@ -21,7 +21,19 @@ export const routes = {
   settings: '/settings',
   notifications: '/notifications',
 
+  startQuiz: '/start-quiz',
+  startDiagnosis: '/start-diagnosis',
+  quiz: '/quiz',
+  quizResults: '/quiz-results',
+  resultados: '/resultados',
+
   routineCreate: '/routine/Create',
+  routineAddStep: '/routine/Add-step',
+  routineEdit: '/routine/routine-edit',
+
+  productCreate: '/products/create',
+  productResult: '/products/result',
+  productDetail: '/products/[id]',
 
   specialistHome: '/(tabs-specialist)',
   specialistConsultas: '/(tabs-specialist)/consultas',
@@ -34,7 +46,8 @@ export const routes = {
   adminPlans: '/(tabs-admin)/plans',
   adminAuditLog: '/(tabs-admin)/audit-log',
   adminCenters: '/(tabs-admin)/centers',
-  adminMetrics: '/(tabs-admin)/metrics'
+  adminMetrics: '/(tabs-admin)/metrics',
+  adminMetricsDetail: '/(tabs-admin)/metrics/[centerId]'
 } as const;
 
 export type AppRoute = (typeof routes)[keyof typeof routes];

@@ -6,6 +6,7 @@ import { Card } from '@/components/Card';
 import { LoadingState } from '@/components/LoadingState';
 import { AppHeader } from '@/components/navigation/AppHeader';
 import { colors } from '@/constants/colors';
+import { routes } from '@/constants/routes';
 import { getSpecialistStatus, type SpecialistStatus } from '@/services/specialist';
 import { logout } from '@/services/auth';
 import { useFocusEffect, useRouter } from 'expo-router';
@@ -24,7 +25,7 @@ export default function SpecialistStatusScreen() {
       const nextStatus = await getSpecialistStatus();
 
       if (nextStatus?.license_status === 'verified') {
-        router.replace('/(tabs-specialist)' as never);
+        router.replace(routes.specialistHome as never);
         return;
       }
 
@@ -58,11 +59,11 @@ export default function SpecialistStatusScreen() {
 
   async function handleLogout() {
     await logout();
-    router.replace('/landing');
+    router.replace(routes.landing);
   }
 
   function handleSendApplication() {
-    router.push('/register?mode=specialist&requestOnly=1' as never);
+    router.push(`${routes.register}?mode=specialist&requestOnly=1` as never);
   }
 
   const content = getStatusContent(status);

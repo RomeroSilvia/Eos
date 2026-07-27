@@ -4,6 +4,7 @@ import { Alert, Image, Pressable, StyleSheet, Text, View, type DimensionValue } 
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LoadingState } from '@/components/LoadingState';
 import { colors } from '@/constants/colors';
+import { routes } from '@/constants/routes';
 import { ApiRequestError } from '@/services/api/client';
 import { saveQuiz } from '@/services/quiz';
 
@@ -100,13 +101,13 @@ export default function QuizScreen() {
         routineSteps: getAnswer(finalAnswers, 4)
       });
 
-      router.replace('/resultados');
+      router.replace(routes.resultados);
     } catch (error) {
       if (__DEV__) console.error(error);
 
       if (error instanceof ApiRequestError && error.status === 401) {
         Alert.alert('Sesion requerida', 'Inicia sesion para guardar los resultados del quiz.');
-        router.replace('/login');
+        router.replace(routes.login);
         return;
       }
 

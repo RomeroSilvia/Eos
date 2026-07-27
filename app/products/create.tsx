@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from '@/components/Button';
 import { AppHeader } from '@/components/navigation/AppHeader';
 import { colors } from '@/constants/colors';
+import { routes } from '@/constants/routes';
 import { useProducts } from '@/hooks/useProducts';
 import type { ProductCategory, ProductBrand } from '@/types/product';
 
@@ -122,10 +123,10 @@ export default function NewProductScreen() {
         });
       }
       const returnParam = returnTo ? `&returnTo=${returnTo}` : '';
-      router.replace(`/products/result?status=success&mode=${isEditMode ? 'edit' : 'create'}${returnParam}`);
+      router.replace(`${routes.productResult}?status=success&mode=${isEditMode ? 'edit' : 'create'}${returnParam}`);
     } catch {
       const returnParam = returnTo ? `&returnTo=${returnTo}` : '';
-      router.replace(`/products/result?status=error&mode=${isEditMode ? 'edit' : 'create'}${returnParam}`);
+      router.replace(`${routes.productResult}?status=error&mode=${isEditMode ? 'edit' : 'create'}${returnParam}`);
     } finally {
       setLoading(false);
     }

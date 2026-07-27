@@ -13,6 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Card } from '@/components/Card';
 import { LoadingState } from '@/components/LoadingState';
 import { colors } from '@/constants/colors';
+import { routes } from '@/constants/routes';
 import {
   getCenterDashboard,
   getCenters,
@@ -64,7 +65,7 @@ export default function CenterMetricsDetailScreen() {
   }, [loadMetrics]);
 
   function goToMetricsList() {
-    router.replace('/(tabs-admin)/metrics' as never);
+    router.replace(routes.adminMetrics as never);
   }
 
   return (

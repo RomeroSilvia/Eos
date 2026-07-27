@@ -7,6 +7,7 @@ import { ActivityIndicator, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FloatingActionMenu } from '@/components/FloatingActionMenu';
 import { colors } from '@/constants/colors';
+import { routes } from '@/constants/routes';
 import { useProfile } from '@/hooks/useProfile';
 import { prepareSupabaseRealtimeClient } from '@/services/supabase';
 import { getMyPatients, getSpecialistStatus } from '@/services/specialist';
@@ -50,24 +51,24 @@ export default function SpecialistTabsLayout() {
         }
 
         if (!profile) {
-          router.replace('/landing' as never);
+          router.replace(routes.landing as never);
           return;
         }
 
         if (profile.role === 'center_admin') {
-          router.replace('/(tabs-admin)' as never);
+          router.replace(routes.adminHome as never);
           return;
         }
 
         if (profile.role !== 'specialist') {
-          router.replace('/(tabs)/home');
+          router.replace(routes.userHome);
           return;
         }
 
         const status = await getSpecialistStatus();
 
         if (status?.license_status !== 'verified') {
-          router.replace('/specialist-status' as never);
+          router.replace(routes.specialistStatus as never);
           return;
         }
 
@@ -75,7 +76,7 @@ export default function SpecialistTabsLayout() {
           setIsCheckingAccess(false);
         }
       } catch {
-        router.replace('/specialist-status' as never);
+        router.replace(routes.specialistStatus as never);
       }
     }
 
@@ -209,10 +210,10 @@ export default function SpecialistTabsLayout() {
       {showFloatingActionMenu ? (
         <FloatingActionMenu
           productRoute={{
-            pathname: '/products/create',
+            pathname: routes.productCreate,
             params: { returnTo: 'specialist-products' }
           }}
-          routineRoute="/routine/Create"
+          routineRoute={routes.routineCreate}
           tabBarHeight={tabBarHeight}
         />
       ) : null}
