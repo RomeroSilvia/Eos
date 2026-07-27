@@ -17,7 +17,7 @@ export default function ProgressStatsScreen() {
         {isLoading ? (
           <ProgressStateCard icon="hourglass-outline" title="Cargando estadísticas..." text="Estamos preparando tu resumen." />
         ) : error ? (
-          <ProgressStateCard icon="alert-circle-outline" title="No pudimos cargar tus estadísticas." text={error.message} />
+          <ProgressStateCard icon="alert-circle-outline" title="No pudimos cargar tus estadísticas." text={error} />
         ) : !stats ? (
           <ProgressStateCard
             icon="bar-chart-outline"

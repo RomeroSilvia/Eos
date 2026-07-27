@@ -17,7 +17,7 @@ import { getMySpecialist, type MySpecialist, type SpecialistSpecialty } from '@/
 import { formatStepCount } from '@/utils/progress';
 
 export default function HomeScreen() {
-  const { summary, refreshSummary } = useHome();
+  const { summary, error, refreshSummary } = useHome();
   const [mySpecialist, setMySpecialist] = useState<MySpecialist | null>(null);
   const [isLoadingSpecialist, setIsLoadingSpecialist] = useState(true);
   const [specialistError, setSpecialistError] = useState(false);
@@ -42,6 +42,21 @@ export default function HomeScreen() {
       void loadMySpecialist();
     }, [loadMySpecialist, refreshSummary])
   );
+
+  if (!summary && error) {
+    return (
+      <SafeAreaView edges={['top', 'left', 'right']} style={styles.screen}>
+        <View style={styles.emptyState}>
+          <Ionicons color={colors.error} name="alert-circle-outline" size={34} />
+          <Text style={styles.emptyTitle}>No pudimos cargar tu información</Text>
+          <Text style={styles.emptyText}>{error}</Text>
+          <Button onPress={() => refreshSummary(true)} style={styles.routineButton} variant="secondary">
+            Reintentar
+          </Button>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   if (!summary) {
     return (

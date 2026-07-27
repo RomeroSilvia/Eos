@@ -4,7 +4,7 @@ import type { ProgressSummary } from '@/types/progress';
 
 export function useProgress() {
   const [summary, setSummary] = useState<ProgressSummary | null>(null);
-  const [error, setError] = useState<Error | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   const refetch = useCallback(async () => {
@@ -17,7 +17,7 @@ export function useProgress() {
       })
       .catch((unknownError) => {
         setSummary(null);
-        setError(unknownError instanceof Error ? unknownError : new Error('No se pudo cargar el progreso'));
+        setError(unknownError instanceof Error ? unknownError.message : 'No se pudo cargar el progreso');
       })
       .finally(() => {
         setIsLoading(false);

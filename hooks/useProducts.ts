@@ -16,6 +16,7 @@ const STALE_AFTER_MS = 30_000;
 
 export function useProducts() {
   const [products, setProducts] = useState<Product[]>([]);
+  const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const lastFetchedAt = useRef<number>(0);
 
@@ -23,11 +24,13 @@ export function useProducts() {
     if (!force && Date.now() - lastFetchedAt.current < STALE_AFTER_MS) return;
     try {
       setIsLoading(true);
+      setError(null);
       const data = await getProducts();
       setProducts(data);
       lastFetchedAt.current = Date.now();
     } catch (err) {
       console.error('No pudimos cargar los productos.', err);
+      setError('No pudimos cargar tus productos. Intentá nuevamente.');
     } finally {
       setIsLoading(false);
     }
@@ -86,6 +89,7 @@ export function useProducts() {
 
   return {
     products,
+    error,
     createProduct,
     updateProduct,
     removeProduct,
