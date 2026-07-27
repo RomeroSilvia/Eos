@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { getFriendlyErrorMessage } from '@/services/api/client';
 import { getProgressStats } from '@/services/progress';
 import type { RoutineStats } from '@/types/progress';
 
@@ -16,7 +17,7 @@ export function useProgressStats() {
       setStats(progressStats);
     } catch (unknownError) {
       setStats(null);
-      setError(unknownError instanceof Error ? unknownError.message : 'No se pudieron cargar las estadísticas');
+      setError(getFriendlyErrorMessage(unknownError, 'No se pudieron cargar las estadísticas.'));
     } finally {
       setIsLoading(false);
     }

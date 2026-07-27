@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { getFriendlyErrorMessage } from '@/services/api/client';
 import { getProgressSummary } from '@/services/progress';
 import type { ProgressSummary } from '@/types/progress';
 
@@ -17,7 +18,7 @@ export function useProgress() {
       })
       .catch((unknownError) => {
         setSummary(null);
-        setError(unknownError instanceof Error ? unknownError.message : 'No se pudo cargar el progreso');
+        setError(getFriendlyErrorMessage(unknownError, 'No se pudo cargar el progreso.'));
       })
       .finally(() => {
         setIsLoading(false);

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { getFriendlyErrorMessage } from '@/services/api/client';
 import { getProgressHistory } from '@/services/progress';
 import type { ProgressHistoryDay } from '@/types/progress';
 
@@ -16,7 +17,7 @@ export function useProgressHistory() {
       setHistory(progressHistory);
     } catch (unknownError) {
       setHistory([]);
-      setError(unknownError instanceof Error ? unknownError.message : 'No se pudo cargar tu historial');
+      setError(getFriendlyErrorMessage(unknownError, 'No se pudo cargar tu historial.'));
     } finally {
       setIsLoading(false);
     }
