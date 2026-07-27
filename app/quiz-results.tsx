@@ -5,7 +5,7 @@ import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors } from '@/constants/colors';
 import { routes } from '@/constants/routes';
-import { ApiRequestError } from '@/services/api/client';
+import { ApiRequestError, getFriendlyErrorMessage } from '@/services/api/client';
 import { getQuizProfile, type SkinProfileResult } from '@/services/quiz';
 
 export default function QuizResultsScreen() {
@@ -26,7 +26,7 @@ export default function QuizResultsScreen() {
           return;
         }
 
-        Alert.alert('Error', error instanceof Error ? error.message : 'No pudimos cargar tus resultados.');
+        Alert.alert('Error', getFriendlyErrorMessage(error, 'No pudimos cargar tus resultados.'));
       } finally {
         setIsLoading(false);
       }

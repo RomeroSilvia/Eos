@@ -9,6 +9,7 @@ import { AppHeader } from '@/components/navigation/AppHeader';
 import { colors } from '@/constants/colors';
 import { routes } from '@/constants/routes';
 import { useProfile } from '@/hooks/useProfile';
+import { getFriendlyErrorMessage } from '@/services/api/client';
 import { useProducts } from '@/hooks/useProducts';
 import type { ProductCategory } from '@/types/product';
 
@@ -88,7 +89,7 @@ export default function ProductDetailScreen() {
           setConflict(result.conflict);
           setSelectedReplacementId(replacementCandidates[0]?.id ?? null);
         } catch (error) {
-          Alert.alert('Productos', error instanceof Error ? error.message : 'No pudimos eliminar el producto.');
+          Alert.alert('Productos', getFriendlyErrorMessage(error, 'No pudimos eliminar el producto.'));
         } finally {
           setIsWorking(false);
         }
@@ -124,7 +125,7 @@ export default function ProductDetailScreen() {
         setConflict(null);
         router.back();
       } catch (error) {
-        Alert.alert('Productos', error instanceof Error ? error.message : 'No pudimos quitar el producto.');
+        Alert.alert('Productos', getFriendlyErrorMessage(error, 'No pudimos quitar el producto.'));
       } finally {
         setIsWorking(false);
       }
@@ -145,7 +146,7 @@ export default function ProductDetailScreen() {
         setConflict(null);
         router.back();
       } catch (error) {
-        Alert.alert('Productos', error instanceof Error ? error.message : 'No pudimos reemplazar el producto.');
+        Alert.alert('Productos', getFriendlyErrorMessage(error, 'No pudimos reemplazar el producto.'));
       } finally {
         setIsWorking(false);
       }

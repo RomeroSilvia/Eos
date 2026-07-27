@@ -9,6 +9,7 @@ import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
 import { LoadingState } from '@/components/LoadingState';
 import { colors } from '@/constants/colors';
+import { routes } from '@/constants/routes';
 import { useProducts } from '@/hooks/useProducts';
 
 export default function ProductsScreen() {
@@ -75,7 +76,7 @@ export default function ProductsScreen() {
         </View>
 
         <View style={styles.footer}>
-          <Button onPress={() => router.push('/products/create')} style={styles.button}>
+          <Button onPress={() => router.push(routes.productCreate)} style={styles.button}>
             Comenzar
           </Button>
         </View>

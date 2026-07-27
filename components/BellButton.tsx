@@ -19,7 +19,12 @@ export function BellButton({ style }: Props) {
   }, [refresh]));
 
   return (
-    <Pressable onPress={() => router.push(routes.notifications as Href)} style={[styles.button, style]}>
+    <Pressable
+      accessibilityLabel={hasUnread ? 'Notificaciones, tenes notificaciones sin leer' : 'Notificaciones'}
+      accessibilityRole="button"
+      onPress={() => router.push(routes.notifications as Href)}
+      style={[styles.button, style]}
+    >
       <Ionicons color={colors.textPrimary} name="notifications-outline" size={24} />
       {hasUnread && <View style={styles.dot} />}
     </Pressable>

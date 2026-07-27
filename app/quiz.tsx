@@ -5,7 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { LoadingState } from '@/components/LoadingState';
 import { colors } from '@/constants/colors';
 import { routes } from '@/constants/routes';
-import { ApiRequestError } from '@/services/api/client';
+import { ApiRequestError, getFriendlyErrorMessage } from '@/services/api/client';
 import { saveQuiz } from '@/services/quiz';
 
 type QuizOption = {
@@ -111,10 +111,7 @@ export default function QuizScreen() {
         return;
       }
 
-      Alert.alert(
-        'Error al guardar',
-        error instanceof Error ? error.message : 'No pudimos guardar tus respuestas.'
-      );
+      Alert.alert('Error al guardar', getFriendlyErrorMessage(error, 'No pudimos guardar tus respuestas.'));
       setCurrentStep(quizQuestions.length - 1);
     } finally {
       setIsSaving(false);

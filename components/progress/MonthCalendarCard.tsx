@@ -50,13 +50,23 @@ export function MonthCalendarCard({ days, onDayPress }: MonthCalendarCardProps) 
   return (
     <View style={styles.card}>
       <View style={styles.header}>
-        <Pressable accessibilityLabel="Ver mes anterior" onPress={handlePreviousMonth} style={styles.navButton}>
+        <Pressable
+          accessibilityLabel="Ver mes anterior"
+          accessibilityRole="button"
+          onPress={handlePreviousMonth}
+          style={styles.navButton}
+        >
           <Ionicons color={colors.primaryDark} name="chevron-back" size={20} />
         </Pressable>
 
         <Text style={styles.title}>{title}</Text>
 
-        <Pressable accessibilityLabel="Ver mes siguiente" onPress={handleNextMonth} style={styles.navButton}>
+        <Pressable
+          accessibilityLabel="Ver mes siguiente"
+          accessibilityRole="button"
+          onPress={handleNextMonth}
+          style={styles.navButton}
+        >
           <Ionicons color={colors.primaryDark} name="chevron-forward" size={20} />
         </Pressable>
       </View>
