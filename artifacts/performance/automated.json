@@ -1,0 +1,81 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-07-28T00:52:50.657Z",
+  "environment": {
+    "node": "v22.14.0",
+    "platform": "win32",
+    "architecture": "x64"
+  },
+  "wizard": {
+    "type": "synthetic-regression-guard",
+    "thresholdP95Ms": 100,
+    "simulatedBackendLatencyMs": 100,
+    "iterations": 500,
+    "status": "PASS",
+    "results": [
+      {
+        "name": "Step2 -> Step3 optimistic create",
+        "minMs": 0,
+        "p95Ms": 0,
+        "maxMs": 0.8
+      },
+      {
+        "name": "Step3 -> Step4 optimistic update",
+        "minMs": 0,
+        "p95Ms": 0,
+        "maxMs": 2.1
+      }
+    ]
+  },
+  "documentedOptimizations": {
+    "status": "PASS",
+    "results": [
+      {
+        "id": "home-ttl-30s",
+        "file": "hooks/useHome.ts",
+        "status": "PASS",
+        "missing": []
+      },
+      {
+        "id": "products-ttl-30s",
+        "file": "hooks/useProducts.ts",
+        "status": "PASS",
+        "missing": []
+      },
+      {
+        "id": "notifications-cross-instance-dedup",
+        "file": "hooks/useHasUnreadNotifications.ts",
+        "status": "PASS",
+        "missing": []
+      },
+      {
+        "id": "chat-memory-disk-dedup",
+        "file": "services/chatImageCache.ts",
+        "status": "PASS",
+        "missing": []
+      },
+      {
+        "id": "specialist-image-compression",
+        "file": "services/specialist.ts",
+        "status": "PASS",
+        "missing": []
+      },
+      {
+        "id": "product-image-compression",
+        "file": "app/products/create.tsx",
+        "status": "PASS",
+        "missing": []
+      },
+      {
+        "id": "notification-scheduling-mutex",
+        "file": "services/notifications.ts",
+        "status": "PASS",
+        "missing": []
+      }
+    ]
+  },
+  "limitations": [
+    "El p95 es una guardia sintética; tap-to-first-frame real se obtiene en dispositivo.",
+    "Cold start, memoria PSS y batería requieren Android Platform-Tools/ADB y un build depurable."
+  ]
+}

@@ -11,6 +11,10 @@
     "doctor": "expo-doctor",
     "lint": "expo lint",
     "perf:routine-wizard": "node scripts/routine-wizard-performance.js",
+    "perf:audit": "node scripts/performance/optimization-audit.js",
+    "perf:verify": "npm run perf:routine-wizard && npm run perf:audit",
+    "perf:android": "node scripts/performance/android-runtime.js",
+    "perf:evidence": "node scripts/performance/evidence-report.js",
     "supabase": "node scripts/supabase-local.js",
     "supabase:db:push": "node scripts/supabase-local.js db push",
     "supabase:types": "node scripts/supabase-local.js gen types typescript --schema public"
