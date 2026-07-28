@@ -29,7 +29,6 @@ routinesRouter.put('/steps/:stepId/products', setStepProducts);
 routinesRouter.post('/steps/:stepId/products', attachProduct);
 routinesRouter.delete('/steps/:stepId/products/:productId', detachProduct);
 
-// Rutas de pasos
 routinesRouter.patch('/steps/:stepId', updateStep);
 routinesRouter.delete('/steps/:stepId', deleteStep);
 

@@ -23,7 +23,6 @@ export const app = express();
 app.use(cors({ origin: env.corsOrigin }));
 app.use(express.json({ limit: '10mb' }));
 
-// Request logger
 app.use((req, _res, next) => {
   console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
   next();

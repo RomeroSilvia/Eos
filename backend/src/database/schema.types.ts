@@ -7,8 +7,6 @@
 
 import type { Tables, TablesInsert, TablesUpdate } from './database.types';
 
-// ─── Row types (lectura) ──────────────────────────────────────────────────────
-
 export type ProfileRow            = Tables<'profiles'>;
 export type RoutineRow            = Tables<'routines'>;
 export type RoutineStepRow        = Tables<'routine_steps'>;
@@ -24,8 +22,6 @@ export type SubscriptionRow       = Tables<'subscriptions'>;
 export type CenterRow             = Tables<'centers'>;
 export type CenterAdminRow        = Tables<'center_admins'>;
 
-// ─── Insert types (escritura) ─────────────────────────────────────────────────
-
 export type ProfileInsert           = TablesInsert<'profiles'>;
 export type RoutineInsert           = TablesInsert<'routines'>;
 export type RoutineStepInsert       = TablesInsert<'routine_steps'>;
@@ -38,8 +34,6 @@ export type RoutineStepLogInsert    = TablesInsert<'routine_step_logs'>;
 export type PushTokenInsert         = TablesInsert<'push_tokens'>;
 export type SubscriptionPlanInsert  = TablesInsert<'subscription_plans'>;
 export type SubscriptionInsert      = TablesInsert<'subscriptions'>;
-
-// ─── Update types (actualización parcial) ─────────────────────────────────────
 
 export type ProfileUpdate        = TablesUpdate<'profiles'>;
 export type RoutineUpdate        = TablesUpdate<'routines'>;

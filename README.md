@@ -370,3 +370,11 @@ npm run supabase -- link --project-ref <PROJECT_REF>
 npm run supabase:db:push
 npm run supabase:types -- --project-id <PROJECT_ID> > backend/src/database/database.types.ts
 ```
+
+## Créditos
+
+- Sofia Lara Goszko ([@sofiagoszko](https://github.com/sofiagoszko))
+- Sofia Lindon ([@LindonSofi](https://github.com/LindonSofi))
+- Silvia Noelia Romero ([@RomeroSilvia](https://github.com/RomeroSilvia))
+- Dana Natasha Cadabon ([@natashacadabon](https://github.com/natashacadabon))
+- Yael Noemi Pilar Luque ([@yaelPilarL](https://github.com/yaelPilarL))

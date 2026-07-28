@@ -545,8 +545,6 @@ export type Database = {
   };
 };
 
-// ─── Shortcuts para no escribir Database['public']['Tables']['x']['Row'] ───────
-
 export type Tables<T extends keyof Database['public']['Tables']> =
   Database['public']['Tables'][T]['Row'];
 
